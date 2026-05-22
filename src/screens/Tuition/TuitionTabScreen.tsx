@@ -1,0 +1,427 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
+} from 'react-native';
+import { colors } from '../../theme';
+import { Avatar } from '../../components/ui/Avatar';
+import { IconZalo, IconSend, IconCheck, IconWallet } from '../../components/icons';
+import { useClassesStore } from '../../store/classes';
+import { getTuition, recordPayment } from '../../api/tuition';
+
+const VND = (n: number) => n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : (n / 1000).toFixed(0) + 'k';
+const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+
+const ZALO_TEMPLATES = [
+  { tone: 'Nhẹ nhàng', body: 'Chào anh/chị! Cô nhắc nhẹ là tháng này con vẫn còn thiếu học phí. Anh/chị tiện thì gửi cô trong tuần này nhé 🌿' },
+  { tone: 'Trực tiếp', body: 'Anh/chị ơi, con đang nợ học phí tháng này. Tuần này nhớ gửi cho cô nhé. Cảm ơn anh/chị.' },
+  { tone: 'Có chuyển khoản', body: 'Chào anh/chị, học phí con tháng này. Anh/chị có thể chuyển khoản: Vietcombank · 0123 456 789 · Ng. T. Mai. Cảm ơn!' },
+];
+
+// ── Demo data ─────────────────────────────────────────────────
+
+type Item = {
+  student_id: string; student_name: string;
+  amount: number; paid: boolean; classId: string; className: string;
+};
+
+const DEMO_TUITION: Item[] = [
+  { student_id: 'd1', student_name: 'Nguyễn Minh Anh', amount: 500000, paid: true, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd2', student_name: 'Trần Bảo Long', amount: 500000, paid: false, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd3', student_name: 'Lê Hoàng Phúc', amount: 500000, paid: true, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd4', student_name: 'Phạm Quỳnh Như', amount: 500000, paid: false, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd5', student_name: 'Đỗ Minh Khôi', amount: 500000, paid: true, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd6', student_name: 'Vũ Hà My', amount: 500000, paid: true, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd7', student_name: 'Bùi Nam Sơn', amount: 500000, paid: false, classId: 'c1', className: 'Lớp 9' },
+  { student_id: 'd8', student_name: 'Hoàng Tuấn Kiệt', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd9', student_name: 'Mai Khánh Linh', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd10', student_name: 'Trương Gia Hân', amount: 600000, paid: false, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd11', student_name: 'Đặng Hữu Thắng', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd12', student_name: 'Lý Bích Ngọc', amount: 600000, paid: false, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd13', student_name: 'Phan Tấn Phát', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd14', student_name: 'Ngô Thuỳ Dương', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd15', student_name: 'Cao Việt Hưng', amount: 600000, paid: false, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd16', student_name: 'Trịnh Yến Nhi', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+  { student_id: 'd17', student_name: 'Hồ Quang Duy', amount: 600000, paid: true, classId: 'c2', className: 'Lớp 10' },
+];
+
+const DEMO_TRANSACTIONS = [
+  { name: 'Hoàng Tuấn Kiệt', cls: 'Lớp 10', when: 'Hôm nay · 14:22', amt: 600000 },
+  { name: 'Mai Khánh Linh', cls: 'Lớp 10', when: 'Hôm qua · 19:05', amt: 600000 },
+  { name: 'Phan Tấn Phát', cls: 'Lớp 10', when: 'Hôm qua · 09:30', amt: 600000 },
+  { name: 'Nguyễn Minh Anh', cls: 'Lớp 9', when: '17/05 · 20:12', amt: 500000 },
+  { name: 'Đỗ Minh Khôi', cls: 'Lớp 9', when: '15/05', amt: 0, note: 'Học bổng — miễn phí' },
+];
+
+const MONTHLY_TREND = [
+  { label: 'T1', amt: 5800000 },
+  { label: 'T2', amt: 6200000 },
+  { label: 'T3', amt: 6000000 },
+  { label: 'T4', amt: 5900000 },
+  { label: 'T5', amt: 6200000 },
+];
+
+// ── Components ────────────────────────────────────────────────
+
+function MiniBarChart({ data }: { data: typeof MONTHLY_TREND }) {
+  const maxAmt = Math.max(...data.map(d => d.amt));
+  const currentIdx = data.length - 1;
+  return (
+    <View style={bc.wrap}>
+      {data.map((d, i) => {
+        const h = Math.round((d.amt / maxAmt) * 52);
+        const isCurrent = i === currentIdx;
+        return (
+          <View key={d.label} style={bc.col}>
+            <View style={bc.barWrap}>
+              <View style={[bc.bar, { height: h, backgroundColor: isCurrent ? colors.green500 : colors.green100 }]} />
+            </View>
+            <Text style={[bc.label, isCurrent && { color: colors.green700, fontWeight: '700' }]}>{d.label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+const bc = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 68, paddingTop: 4 },
+  col: { flex: 1, alignItems: 'center' },
+  barWrap: { flex: 1, justifyContent: 'flex-end', width: '100%' },
+  bar: { borderRadius: 5, width: '100%' },
+  label: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginTop: 4 },
+});
+
+function ClassBreakdown({ cls, paidCount, totalCount, paidAmt, targetAmt }: any) {
+  const pct = totalCount > 0 ? paidCount / totalCount : 0;
+  return (
+    <View style={cb.row}>
+      <View style={{ flex: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <Text style={cb.clsName}>{cls}</Text>
+          <Text style={cb.paidLabel}>{VND(paidAmt)} / {VND(targetAmt)}</Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Text style={cb.paidRatio}>{paidCount}/{totalCount} đã nộp</Text>
+          <Text style={cb.pct}>{Math.round(pct * 100)}%</Text>
+        </View>
+        <View style={cb.track}>
+          <View style={[cb.fill, { width: `${pct * 100}%` as any }]} />
+        </View>
+      </View>
+    </View>
+  );
+}
+const cb = StyleSheet.create({
+  row: { padding: 14, paddingHorizontal: 16 },
+  clsName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  paidLabel: { fontSize: 13, fontWeight: '600', color: colors.green700 },
+  paidRatio: { fontSize: 12, color: colors.textSecondary },
+  pct: { fontSize: 12, fontWeight: '700', color: colors.green700 },
+  track: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
+  fill: { height: 6, borderRadius: 3, backgroundColor: colors.green500 },
+});
+
+// ── Main screen ───────────────────────────────────────────────
+
+export function TuitionTabScreen({ route }: any) {
+  const { classes, fetchClasses } = useClassesStore();
+  const [allData, setAllData] = useState<Item[]>([]);
+  const [demoData, setDemoData] = useState<Item[]>(DEMO_TUITION);
+  const [showZaloModal, setShowZaloModal] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
+  const month = new Date().toISOString().slice(0, 7);
+  const monthLabel = `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
+
+  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => {
+    if (classes.length === 0) return;
+    Promise.all(
+      classes.map(cls =>
+        getTuition(cls.id, month)
+          .then((rows: any[]) => rows.map(r => ({ ...r, classId: cls.id, className: cls.name })))
+          .catch(() => [] as Item[])
+      )
+    ).then(res => setAllData(res.flat()));
+  }, [classes]);
+
+  const isDemo = allData.length === 0;
+  const rawData = isDemo ? demoData : allData;
+  const displayData = classFilter === 'all' ? rawData : rawData.filter(d => d.classId === classFilter || d.className === classFilter);
+
+  const paidList = displayData.filter(d => d.paid);
+  const unpaidList = displayData.filter(d => !d.paid);
+  const totalPaid = paidList.reduce((a, d) => a + (d.amount || 0), 0);
+  const totalUnpaid = unpaidList.reduce((a, d) => a + (d.amount || 0), 0);
+  const totalTarget = displayData.reduce((a, d) => a + (d.amount || 0), 0);
+  const pctGoal = totalTarget > 0 ? totalPaid / totalTarget : 0;
+
+  // Per-class breakdown (always from raw for chips; from displayData for cards)
+  const allClassIds = [...new Set(rawData.map(d => d.classId))];
+  const allClassChips = allClassIds.map(cid => ({ id: cid, name: rawData.find(d => d.classId === cid)!.className }));
+  const classIds = [...new Set(displayData.map(d => d.classId))];
+  const classBreakdowns = classIds.map(cid => {
+    const items = displayData.filter(d => d.classId === cid);
+    const paid = items.filter(d => d.paid);
+    return {
+      id: cid,
+      name: items[0].className,
+      paidCount: paid.length,
+      totalCount: items.length,
+      paidAmt: paid.reduce((a, d) => a + d.amount, 0),
+      targetAmt: items.reduce((a, d) => a + d.amount, 0),
+    };
+  });
+
+  const markPaid = async (item: Item) => {
+    if (isDemo) {
+      setDemoData(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: true } : x));
+      return;
+    }
+    await recordPayment(item.classId, { student_id: item.student_id, paid: true, amount: item.amount }).catch(() => {});
+    setAllData(d => d.map(x => x.student_id === item.student_id && x.classId === item.classId ? { ...x, paid: true } : x));
+  };
+
+  return (
+    <View style={s.container}>
+      {/* Header */}
+      <View style={s.header}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Học phí</Text>
+          <Text style={s.subtitle}>{monthLabel}</Text>
+        </View>
+      </View>
+      {/* Class filter chips */}
+      <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row', alignItems: 'center' }} showsHorizontalScrollIndicator={false}>
+        {[{ id: 'all', label: 'Tất cả' }, ...allClassChips.map(c => ({ id: c.id, label: c.name }))].map(chip => (
+          <TouchableOpacity
+            key={chip.id}
+            style={[s.chip, classFilter === chip.id && s.chipActive]}
+            onPress={() => setClassFilter(chip.id)}
+          >
+            <Text style={[s.chipText, classFilter === chip.id && s.chipTextActive]}>{chip.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* ── Revenue summary hero ── */}
+        <View style={s.heroCard}>
+          <Text style={s.heroLabel}>ĐÃ THU THÁNG NÀY</Text>
+          <Text style={s.heroAmt}>{VND_FULL(totalPaid)}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 10 }}>
+            <Text style={s.heroSub}>{Math.round(pctGoal * 100)}% mục tiêu</Text>
+            <Text style={s.heroSub2}>Còn thiếu {VND_FULL(totalUnpaid)}</Text>
+          </View>
+          <View style={s.heroTrack}>
+            <View style={[s.heroFill, { width: `${pctGoal * 100}%` as any }]} />
+          </View>
+
+          {/* Monthly trend chart */}
+          <View style={{ marginTop: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={s.trendLabel}>Doanh thu 5 tháng</Text>
+              <Text style={s.trendBadge}>+12% vs cùng kỳ</Text>
+            </View>
+            <MiniBarChart data={isDemo ? MONTHLY_TREND : MONTHLY_TREND} />
+          </View>
+        </View>
+
+        {/* ── Per-class breakdown ── */}
+        <Text style={s.sectionLabel}>THEO LỚP</Text>
+        <View style={s.card}>
+          {classBreakdowns.map((cls, i) => (
+            <View key={cls.id} style={i > 0 ? { borderTopWidth: 1, borderTopColor: colors.border } : {}}>
+              <ClassBreakdown
+                cls={`${cls.name}`}
+                paidCount={cls.paidCount}
+                totalCount={cls.totalCount}
+                paidAmt={cls.paidAmt}
+                targetAmt={cls.targetAmt}
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* ── Zalo nudge prompt ── */}
+        {unpaidList.length > 0 && !sent && (
+          <View style={s.zaloPrompt}>
+            <View style={s.zaloPromptIcon}>
+              <IconZalo size={20} color={colors.green600} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.zaloPromptTitle}>{unpaidList.length} phụ huynh chưa nộp</Text>
+              <Text style={s.zaloPromptSub}>Gửi Zalo nhắc nhẹ nhàng?</Text>
+            </View>
+            <TouchableOpacity style={s.zaloPromptBtn} onPress={() => setShowZaloModal(true)}>
+              <Text style={s.zaloPromptBtnText}>Gửi nhắc</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {sent && (
+          <View style={[s.zaloPrompt, { backgroundColor: colors.green100 }]}>
+            <View style={[s.zaloPromptIcon, { backgroundColor: colors.green500 }]}>
+              <IconCheck size={18} color="white" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.zaloPromptTitle, { color: colors.green700 }]}>Đã gửi {unpaidList.length} tin Zalo</Text>
+              <Text style={[s.zaloPromptSub, { color: colors.green600 }]}>Phụ huynh sẽ nhận trong vài phút</Text>
+            </View>
+          </View>
+        )}
+
+        {/* ── Recent transactions ── */}
+        <Text style={s.sectionLabel}>GIAO DỊCH GẦN ĐÂY</Text>
+        <View style={s.card}>
+          {(isDemo ? DEMO_TRANSACTIONS : paidList.slice(0, 5).map(d => ({
+            name: d.student_name, cls: d.className, when: 'Gần đây', amt: d.amount, note: undefined,
+          }))).map((tx, i, arr) => (
+            <View key={i} style={[s.txRow, i > 0 && s.txDivider]}>
+              <Avatar name={tx.name} size={38} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.txName}>{tx.name}</Text>
+                <Text style={s.txSub}>{tx.cls} · {tx.when}</Text>
+              </View>
+              {tx.note ? (
+                <Text style={s.txNote}>{tx.note}</Text>
+              ) : (
+                <Text style={s.txAmt}>+{VND(tx.amt)}</Text>
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* ── Unpaid students (quick tick) ── */}
+        {unpaidList.length > 0 && (
+          <>
+            <Text style={s.sectionLabel}>CHƯA NỘP · {unpaidList.length} HỌC SINH</Text>
+            <View style={s.card}>
+              {unpaidList.map((d, i) => (
+                <View key={d.student_id + d.classId} style={[s.txRow, i > 0 && s.txDivider]}>
+                  <Avatar name={d.student_name} size={38} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={s.txName}>{d.student_name}</Text>
+                    <Text style={s.txSub}>{d.className} · {VND_FULL(d.amount)}</Text>
+                  </View>
+                  <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
+                    <Text style={s.tickBtnText}>Tick đã thu</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* Zalo modal */}
+      {showZaloModal && (
+        <ZaloModal
+          count={unpaidList.length}
+          onClose={() => setShowZaloModal(false)}
+          onSent={() => { setSent(true); setShowZaloModal(false); }}
+        />
+      )}
+    </View>
+  );
+}
+
+function ZaloModal({ count, onClose, onSent }: any) {
+  const [tpl, setTpl] = useState(0);
+  const [sending, setSending] = useState(false);
+  const doSend = () => { setSending(true); setTimeout(() => onSent(), 1100); };
+
+  return (
+    <TouchableOpacity style={s.overlay} onPress={onClose} activeOpacity={1}>
+      <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
+        <View style={s.handle} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+          <IconZalo size={22} color={colors.green600} />
+          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>Gửi {count} tin nhắn Zalo</Text>
+        </View>
+        <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 14 }}>
+          Tên con và số tiền sẽ tự động thêm vào tin.
+        </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 12 }}>
+          {ZALO_TEMPLATES.map((t, i) => (
+            <TouchableOpacity key={i} style={[s.tplChip, tpl === i && s.tplChipActive]} onPress={() => setTpl(i)}>
+              <Text style={[s.tplChipText, tpl === i && s.tplChipTextActive]}>{t.tone}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <View style={s.previewBox}>
+          <Text style={s.previewLabel}>XEM TRƯỚC</Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <View style={s.zaloBubble}>
+              <Text style={{ fontSize: 13.5, lineHeight: 21, color: 'white' }}>{ZALO_TEMPLATES[tpl].body}</Text>
+            </View>
+          </View>
+        </View>
+        <TouchableOpacity style={[s.sendBtn, sending && { opacity: 0.7 }]} onPress={doSend} disabled={sending}>
+          {sending ? <ActivityIndicator color="white" size="small" /> : (
+            <><IconSend size={18} color="white" /><Text style={s.sendBtnText}>Gửi cho {count} phụ huynh</Text></>
+          )}
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' },
+  title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+
+  heroCard: {
+    backgroundColor: 'white', marginHorizontal: 16, marginBottom: 8,
+    borderRadius: 22, borderWidth: 1, borderColor: colors.border, padding: 18,
+  },
+  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 4 },
+  heroAmt: { fontSize: 32, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.8 },
+  heroSub: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  heroSub2: { fontSize: 12, color: colors.coral700, fontWeight: '600' },
+  heroTrack: { height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' },
+  heroFill: { height: 8, borderRadius: 4, backgroundColor: colors.green500 },
+  trendLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
+  trendBadge: { fontSize: 12, fontWeight: '600', color: colors.green700, backgroundColor: colors.green100, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 10, marginTop: 20, marginHorizontal: 16 },
+  card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, marginHorizontal: 16, overflow: 'hidden' },
+
+  zaloPrompt: {
+    backgroundColor: '#f0faf4', borderRadius: 18, borderWidth: 1, borderColor: colors.green100,
+    marginHorizontal: 16, marginTop: 16, padding: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  zaloPromptIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.green50, alignItems: 'center', justifyContent: 'center' },
+  zaloPromptTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  zaloPromptSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  zaloPromptBtn: { backgroundColor: colors.green500, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  zaloPromptBtnText: { fontSize: 13, fontWeight: '700', color: 'white' },
+
+  txRow: { flexDirection: 'row', alignItems: 'center', padding: 12, paddingHorizontal: 16 },
+  txDivider: { borderTopWidth: 1, borderTopColor: colors.border },
+  txName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  txSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  txAmt: { fontSize: 15, fontWeight: '700', color: colors.green700 },
+  txNote: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
+  tickBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: 'white' },
+  tickBtnText: { fontSize: 12, fontWeight: '600', color: colors.green700 },
+
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignSelf: 'center' },
+  chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  chipTextActive: { color: colors.green700 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.45)', justifyContent: 'flex-end' } as any,
+  sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 16 },
+  tplChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
+  tplChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  tplChipText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
+  tplChipTextActive: { color: colors.green700 },
+  previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14, marginBottom: 18 },
+  previewLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 8 },
+  zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '85%' as any },
+  sendBtn: { height: 52, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  sendBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
+});
