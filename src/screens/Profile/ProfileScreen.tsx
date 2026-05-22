@@ -6,7 +6,7 @@ import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuthStore, Gender } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
-import { IconChevron, IconWallet, IconBell } from '../../components/icons';
+import { IconChevron, IconWallet } from '../../components/icons';
 
 // ── Static sub-components ─────────────────────────────────────
 
@@ -71,6 +71,69 @@ const gp = StyleSheet.create({
   chipTextActive: { color: colors.green700 },
 });
 
+// ── Change password modal ─────────────────────────────────────
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [done, setDone] = useState(false);
+
+  const valid = current.length >= 4 && next.length >= 6 && next === confirm;
+
+  const handleSave = () => {
+    if (next !== confirm) { Alert.alert('Mật khẩu không khớp', 'Mật khẩu mới và xác nhận phải giống nhau.'); return; }
+    if (next.length < 6) { Alert.alert('Quá ngắn', 'Mật khẩu mới phải có ít nhất 6 ký tự.'); return; }
+    setDone(true);
+    setTimeout(onClose, 1400);
+  };
+
+  return (
+    <TouchableOpacity style={cp.overlay} onPress={onClose} activeOpacity={1}>
+      <TouchableOpacity style={cp.sheet} activeOpacity={1} onPress={() => {}}>
+        <View style={cp.handle} />
+        {done ? (
+          <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+            <Text style={{ fontSize: 36, marginBottom: 12 }}>✓</Text>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.green700 }}>Đã đổi mật khẩu!</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={cp.title}>Đổi mật khẩu</Text>
+            <Text style={cp.label}>Mật khẩu hiện tại</Text>
+            <TextInput style={cp.input} value={current} onChangeText={setCurrent} secureTextEntry placeholder="••••••••" placeholderTextColor={colors.textMuted} />
+            <Text style={cp.label}>Mật khẩu mới</Text>
+            <TextInput style={cp.input} value={next} onChangeText={setNext} secureTextEntry placeholder="Tối thiểu 6 ký tự" placeholderTextColor={colors.textMuted} />
+            <Text style={cp.label}>Xác nhận mật khẩu mới</Text>
+            <TextInput
+              style={[cp.input, confirm.length > 0 && next !== confirm && { borderColor: colors.coral500 }]}
+              value={confirm} onChangeText={setConfirm} secureTextEntry
+              placeholder="Nhập lại mật khẩu mới" placeholderTextColor={colors.textMuted}
+            />
+            {confirm.length > 0 && next !== confirm && (
+              <Text style={{ fontSize: 12, color: colors.coral700, marginTop: -10, marginBottom: 10 }}>Mật khẩu không khớp</Text>
+            )}
+            <TouchableOpacity style={[cp.btn, !valid && cp.btnDisabled]} onPress={handleSave} disabled={!valid}>
+              <Text style={cp.btnText}>Lưu mật khẩu mới</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+const cp = StyleSheet.create({
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.4)', justifyContent: 'flex-end' } as any,
+  sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 36 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 18 },
+  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 18 },
+  label: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.2, marginBottom: 6 },
+  input: { borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 13, fontSize: 15, color: colors.textPrimary, marginBottom: 14, backgroundColor: 'white' },
+  btn: { height: 52, borderRadius: 16, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  btnDisabled: { opacity: 0.4 },
+  btnText: { color: 'white', fontSize: 15, fontWeight: '600' },
+});
+
 // ── Main screen ───────────────────────────────────────────────
 
 export function ProfileScreen({ navigation }: any) {
@@ -83,6 +146,12 @@ export function ProfileScreen({ navigation }: any) {
   const [editEmail, setEditEmail] = useState('ngthumai@gmail.com');
   const [editGender, setEditGender] = useState<Gender>(teacher?.gender ?? 'co');
   const [saving, setSaving] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
+
+  // Bank info state
+  const [bankName, setBankName] = useState('Vietcombank');
+  const [bankNumber, setBankNumber] = useState('0123 456 789');
+  const [bankHolder, setBankHolder] = useState('NG. T. MAI');
 
   const totalStudents = classes.reduce((a, c) => a + (c.student_count || 0), 0) || 17;
   const gender = teacher?.gender ?? 'co';
@@ -218,7 +287,7 @@ export function ProfileScreen({ navigation }: any) {
                 />
               : <Text style={s.rowValue}>{editEmail}</Text>}
           </View>
-          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Đổi mật khẩu', 'Tính năng đang phát triển.')}>
+          <TouchableOpacity style={s.row} onPress={() => setShowChangePwd(true)}>
             <Text style={s.rowLabel}>Đổi mật khẩu</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
@@ -232,12 +301,47 @@ export function ProfileScreen({ navigation }: any) {
               <IconWallet size={18} color={colors.green700} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.bankName}>Vietcombank · 0123 456 789</Text>
-              <Text style={s.bankSub}>Tên chủ TK: NG. T. MAI</Text>
+              {editing ? (
+                <>
+                  <TextInput
+                    style={s.bankInput}
+                    value={bankName}
+                    onChangeText={setBankName}
+                    placeholder="Tên ngân hàng"
+                    placeholderTextColor={colors.textMuted}
+                  />
+                  <TextInput
+                    style={[s.bankInput, { marginTop: 6 }]}
+                    value={bankNumber}
+                    onChangeText={setBankNumber}
+                    placeholder="Số tài khoản"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                  />
+                </>
+              ) : (
+                <>
+                  <Text style={s.bankName}>{bankName} · {bankNumber}</Text>
+                </>
+              )}
+              {editing ? (
+                <TextInput
+                  style={[s.bankInput, { marginTop: 6 }]}
+                  value={bankHolder}
+                  onChangeText={setBankHolder}
+                  placeholder="Tên chủ tài khoản"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="characters"
+                />
+              ) : (
+                <Text style={s.bankSub}>Tên chủ TK: {bankHolder}</Text>
+              )}
             </View>
-            <View style={s.qrBadge}>
-              <Text style={s.qrBadgeText}>QR · Đã tạo</Text>
-            </View>
+            {!editing && (
+              <View style={s.qrBadge}>
+                <Text style={s.qrBadgeText}>QR · Đã tạo</Text>
+              </View>
+            )}
           </View>
           <Text style={s.bankNote}>
             Phụ huynh sẽ thấy thông tin này trong tin nhắn nộp tiền
@@ -288,6 +392,8 @@ export function ProfileScreen({ navigation }: any) {
           Dữ liệu lớp & học sinh được lưu trên máy chủ.{'\n'}Đăng nhập lại sẽ thấy lại toàn bộ.
         </Text>
       </ScrollView>
+
+      {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
     </View>
   );
 }
@@ -347,10 +453,15 @@ const s = StyleSheet.create({
     paddingBottom: 2, minWidth: 120, textAlign: 'right',
   },
 
-  bankRow: { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  bankIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center' },
+  bankRow: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, gap: 12 },
+  bankIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   bankName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   bankSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  bankInput: {
+    fontSize: 14, fontWeight: '500', color: colors.textPrimary,
+    borderWidth: 1, borderColor: colors.border, borderRadius: 10,
+    paddingHorizontal: 10, paddingVertical: 7, backgroundColor: colors.bg,
+  },
   qrBadge: { backgroundColor: colors.green100, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   qrBadgeText: { fontSize: 11, fontWeight: '600', color: colors.green700 },
   bankNote: { fontSize: 12, color: colors.textSecondary, lineHeight: 18, paddingHorizontal: 16, paddingBottom: 14, marginTop: -4 },
