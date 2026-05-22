@@ -213,19 +213,17 @@ export function ReportTabScreen({ navigation, route }: any) {
       </View>
 
       {/* Class filter chips */}
-      {allClasses.length > 1 && (
-        <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row', alignItems: 'center' }} showsHorizontalScrollIndicator={false}>
-          {[{ id: 'all', name: 'Tất cả' }, ...allClasses].map((c: any) => (
-            <TouchableOpacity
-              key={c.id}
-              style={[s.clsChip, classFilter === c.id && s.clsChipActive]}
-              onPress={() => setClassFilter(c.id)}
-            >
-              <Text style={[s.clsChipText, classFilter === c.id && s.clsChipTextActive]}>{c.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
+      <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row', alignItems: 'center' }} showsHorizontalScrollIndicator={false}>
+        {[{ id: 'all', name: 'Tất cả' }, ...allClasses].map((c: any) => (
+          <TouchableOpacity
+            key={c.id}
+            style={[s.clsChip, classFilter === c.id && s.clsChipActive]}
+            onPress={() => setClassFilter(c.id)}
+          >
+            <Text style={[s.clsChipText, classFilter === c.id && s.clsChipTextActive]}>{c.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: sending ? 24 : 110 }}

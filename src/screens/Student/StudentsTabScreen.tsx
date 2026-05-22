@@ -6,6 +6,7 @@ import {
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron } from '../../components/icons';
+import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { useClassesStore } from '../../store/classes';
 
 // ── Demo data ─────────────────────────────────────────────────
@@ -114,6 +115,7 @@ const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
 function StudentProfile({ student, clsName, onClose }: any) {
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
+  const [showZalo, setShowZalo] = useState(false);
   const isRisk = student.status === 'risk';
 
   return (
@@ -144,7 +146,7 @@ function StudentProfile({ student, clsName, onClose }: any) {
           <View style={pp.actionRow}>
             <TouchableOpacity
               style={pp.btnPrimary}
-              onPress={() => Alert.alert('Nhắn Zalo', `Tin nhắn sẽ được gửi đến phụ huynh của ${student.name} qua Zalo.`)}
+              onPress={() => setShowZalo(true)}
             >
               <IconZalo size={16} color="white" />
               <Text style={pp.btnPrimaryText}>Nhắn Zalo</Text>
@@ -250,6 +252,17 @@ function StudentProfile({ student, clsName, onClose }: any) {
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {showZalo && (
+        <ZaloCopySheet
+          title={`Nhắn Zalo · ${student.name}`}
+          recipient={`Phụ huynh của ${student.name}`}
+          message={`Chào anh/chị, cô muốn hỏi thăm bé ${student.name.split(' ').slice(-1)[0]} ạ. Tuần này bé học như thế nào rồi? Anh/chị có điều gì muốn trao đổi thêm với cô không ạ? 🌿`}
+          hint={`phụ huynh của ${student.name}`}
+          onConfirm={() => setShowZalo(false)}
+          onClose={() => setShowZalo(false)}
+        />
+      )}
     </View>
   );
 }
@@ -335,12 +348,15 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const unpaidCount = unpaidStus.length;
   const riskCount = riskStus.length;
 
-  // Build filtered groups
+  // Normalize filter — ignore unknown IDs (e.g. real UUID when in demo mode)
+  const validFilterIds = new Set(['all', 'unpaid', 'risk', ...displayGroups.map(g => g.id)]);
+  const effectiveFilter = validFilterIds.has(filter) ? filter : 'all';
+
   const filteredGroups = displayGroups.map(g => {
     let stus = g.students;
-    if (filter === 'unpaid') stus = stus.filter(s => s.debt > 0);
-    else if (filter === 'risk') stus = stus.filter(s => s.status === 'risk');
-    else if (filter !== 'all') stus = filter === g.id ? g.students : [];
+    if (effectiveFilter === 'unpaid') stus = stus.filter(s => s.debt > 0);
+    else if (effectiveFilter === 'risk') stus = stus.filter(s => s.status === 'risk');
+    else if (effectiveFilter !== 'all') stus = effectiveFilter === g.id ? g.students : [];
     return { ...g, students: stus };
   }).filter(g => g.students.length > 0);
 
@@ -388,10 +404,10 @@ export function StudentsTabScreen({ navigation, route }: any) {
         {filterChips.map(chip => (
           <TouchableOpacity
             key={chip.id}
-            style={[s.chip, filter === chip.id && s.chipActive]}
+            style={[s.chip, effectiveFilter === chip.id && s.chipActive]}
             onPress={() => setFilter(chip.id)}
           >
-            <Text style={[s.chipText, filter === chip.id && s.chipTextActive]}>{chip.label}</Text>
+            <Text style={[s.chipText, effectiveFilter === chip.id && s.chipTextActive]}>{chip.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>

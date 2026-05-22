@@ -199,11 +199,15 @@ export function MakeupPollScreen({ route, navigation }: any) {
         {slots.length < 4 && (
           <TouchableOpacity
             style={s.addSlotBtn}
-            onPress={() => setSlots([...slots, {
-              id: 's' + (slots.length + 1),
-              day: 'Thứ 3 · 27/05',
-              time: '19:00 – 20:30',
-            }])}
+            onPress={() => {
+              const next = new Date();
+              next.setDate(next.getDate() + slots.length + 1);
+              const dayNames = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+              const dayLabel = `${dayNames[next.getDay()]} · ${next.getDate()}/${next.getMonth() + 1}`;
+              const newId = `slot-${Date.now()}`;
+              setSlots(prev => [...prev, { id: newId, day: dayLabel, time: '19:00 – 20:30' }]);
+              setVotes(v => ({ ...v, [newId]: [] }));
+            }}
           >
             <IconPlus size={16} color={colors.textSecondary} />
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>Thêm khung giờ</Text>

@@ -92,7 +92,7 @@ export function AttendanceScreen({ route, navigation }: any) {
             </View>
             <Text style={s.nudgeText}>
               <Text style={{ fontWeight: '700' }}>{firstAbsent.name.split(' ').slice(-1)[0]}</Text>
-              {' '}đã vắng 2 buổi liên tiếp. Nhắn phụ huynh hỏi thăm?
+              {' '}hôm nay vắng. Muốn nhắn Zalo hỏi thăm phụ huynh?
             </Text>
             <TouchableOpacity style={s.zaloPrimary} onPress={() => setShowZalo(true)}>
               <IconZalo size={16} color="white" />

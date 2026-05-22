@@ -14,12 +14,12 @@ import {
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function greeting(hour: number) {
-  if (hour < 11) return { text: 'Chào buổi sáng', sub: 'Cô có vài việc nho nhỏ' };
-  if (hour < 14) return { text: 'Chào cô buổi trưa', sub: 'Tối nay cô có lớp' };
+function greeting(hour: number, g: string) {
+  if (hour < 11) return { text: 'Chào buổi sáng', sub: `${g} có vài việc nho nhỏ` };
+  if (hour < 14) return { text: `Chào ${g} buổi trưa`, sub: `Tối nay ${g} có lớp` };
   if (hour < 17) return { text: 'Chào buổi chiều', sub: 'Sắp đến giờ vào lớp rồi' };
   if (hour < 21) return { text: 'Chào buổi tối', sub: 'Sau buổi học cần xử lý vài việc' };
-  return { text: 'Cô đi nghỉ sớm nhé', sub: 'Còn vài việc cho ngày mai' };
+  return { text: `${g} đi nghỉ sớm nhé`, sub: 'Còn vài việc cho ngày mai' };
 }
 
 function todayStr() {
@@ -308,8 +308,9 @@ export function HomeScreen({ navigation }: any) {
   };
 
   const now = new Date();
-  const greet = greeting(now.getHours());
-  const firstName = teacher?.name?.trim().split(/\s+/).pop() || 'cô';
+  const genderStr = teacher?.gender === 'thay' ? 'thầy' : 'cô';
+  const greet = greeting(now.getHours(), genderStr);
+  const firstName = teacher?.name?.trim().split(/\s+/).pop() || genderStr;
   const done = totalCards - cards.length;
 
   return (
@@ -333,7 +334,7 @@ export function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
-        <Text style={s.greetTitle}>{greet.text}, cô {firstName}.</Text>
+        <Text style={s.greetTitle}>{greet.text}, {genderStr} {firstName}.</Text>
         <Text style={s.greetSub}>
           {cards.length === 0
             ? 'Tất cả việc trong ngày đã xong rồi 🌿'

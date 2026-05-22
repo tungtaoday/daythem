@@ -147,7 +147,10 @@ export function TuitionTabScreen({ route }: any) {
 
   const isDemo = allData.length === 0;
   const rawData = isDemo ? demoData : allData;
-  const displayData = classFilter === 'all' ? rawData : rawData.filter(d => d.classId === classFilter || d.className === classFilter);
+  const allClassIds = [...new Set(rawData.map(d => d.classId))];
+  const allClassChips = allClassIds.map(cid => ({ id: cid, name: rawData.find(d => d.classId === cid)!.className }));
+  const effectiveFilter = new Set(['all', ...allClassIds]).has(classFilter) ? classFilter : 'all';
+  const displayData = effectiveFilter === 'all' ? rawData : rawData.filter(d => d.classId === effectiveFilter);
 
   const paidList = displayData.filter(d => d.paid);
   const unpaidList = displayData.filter(d => !d.paid);
@@ -156,9 +159,7 @@ export function TuitionTabScreen({ route }: any) {
   const totalTarget = displayData.reduce((a, d) => a + (d.amount || 0), 0);
   const pctGoal = totalTarget > 0 ? totalPaid / totalTarget : 0;
 
-  // Per-class breakdown (always from raw for chips; from displayData for cards)
-  const allClassIds = [...new Set(rawData.map(d => d.classId))];
-  const allClassChips = allClassIds.map(cid => ({ id: cid, name: rawData.find(d => d.classId === cid)!.className }));
+  // Per-class breakdown
   const classIds = [...new Set(displayData.map(d => d.classId))];
   const classBreakdowns = classIds.map(cid => {
     const items = displayData.filter(d => d.classId === cid);
@@ -196,10 +197,10 @@ export function TuitionTabScreen({ route }: any) {
         {[{ id: 'all', label: 'Tất cả' }, ...allClassChips.map(c => ({ id: c.id, label: c.name }))].map(chip => (
           <TouchableOpacity
             key={chip.id}
-            style={[s.chip, classFilter === chip.id && s.chipActive]}
+            style={[s.chip, effectiveFilter === chip.id && s.chipActive]}
             onPress={() => setClassFilter(chip.id)}
           >
-            <Text style={[s.chipText, classFilter === chip.id && s.chipTextActive]}>{chip.label}</Text>
+            <Text style={[s.chipText, effectiveFilter === chip.id && s.chipTextActive]}>{chip.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>

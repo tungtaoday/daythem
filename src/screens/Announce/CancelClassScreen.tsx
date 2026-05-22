@@ -103,7 +103,13 @@ export function CancelClassScreen({ route, navigation }: any) {
         </View>
         <Text style={s.successTitle}>Đã báo nghỉ</Text>
         <Text style={s.successSub}>
-          Đã đăng lên nhóm Zalo{toIndividual ? ' và gửi riêng từng phụ huynh' : ''}.
+          {toGroup && toIndividual
+            ? 'Đã đăng lên nhóm Zalo và gửi riêng từng phụ huynh.'
+            : toGroup
+            ? 'Đã đăng lên nhóm Zalo.'
+            : toIndividual
+            ? 'Đã gửi riêng từng phụ huynh.'
+            : 'Thông báo đã được ghi nhận.'}
         </Text>
         {makeup && (
           <View style={s.nextStep}>
