@@ -3,27 +3,28 @@ import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { colors, spacing, radius, typography } from '../../theme';
-import { useAuthStore } from '../../store/auth';
+import { colors, spacing, radius } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuthStore } from '../../store/auth';
 
 type Phase = 'welcome' | 'phone';
 
 export function WelcomeScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('welcome');
   const [phone, setPhone] = useState('');
-  const [zaloLoading, setZaloLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
   const { requestOTP, verifyOTP, isLoading } = useAuthStore();
 
   const phoneValid = /^0\d{9}$/.test(phone);
 
-  const handleZalo = async () => {
-    setZaloLoading(true);
+  const handleSocialLogin = async (provider: 'google' | 'facebook') => {
+    setSocialLoading(provider);
     try {
+      // Mock OAuth — bypass with demo credentials
       await requestOTP('0901234567');
       await verifyOTP('0901234567', '123456');
     } catch {
-      setZaloLoading(false);
+      setSocialLoading(null);
     }
   };
 
@@ -39,11 +40,11 @@ export function WelcomeScreen({ navigation }: any) {
         style={s.container}
       >
         <TouchableOpacity onPress={() => setPhase('welcome')} style={s.backBtn}>
-          <Text style={s.backBtnText}>←</Text>
+          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
 
         <View style={s.phoneContent}>
-          <Text style={s.phoneTitle}>Số điện thoại của cô</Text>
+          <Text style={s.phoneTitle}>Số điện thoại của bạn</Text>
           <Text style={s.phoneSub}>
             Chúng tôi sẽ gửi mã xác thực qua tin nhắn.
           </Text>
@@ -73,7 +74,7 @@ export function WelcomeScreen({ navigation }: any) {
 
         <View style={s.phoneFooter}>
           <TouchableOpacity
-            style={[s.btnPrimary, (!phoneValid || isLoading) && s.btnDisabled]}
+            style={[s.btnPrimary, s.btnRow, (!phoneValid || isLoading) && s.btnDisabled]}
             onPress={handleSendOTP}
             disabled={!phoneValid || isLoading}
           >
@@ -86,6 +87,8 @@ export function WelcomeScreen({ navigation }: any) {
     );
   }
 
+  const loading = socialLoading !== null;
+
   return (
     <View style={s.container}>
       {/* Brand */}
@@ -96,14 +99,14 @@ export function WelcomeScreen({ navigation }: any) {
         <Text style={s.brandName}>DayThem</Text>
       </View>
 
-      {/* Hero illustration */}
+      {/* Hero */}
       <View style={s.heroWrap}>
         <HeroArt />
       </View>
 
-      {/* Title block */}
+      {/* Title */}
       <View style={s.titleBlock}>
-        <Text style={s.title}>Quản lý lớp dạy thêm{'\n'}nhẹ như nhắn Zalo.</Text>
+        <Text style={s.title}>Quản lý lớp dạy thêm{'\n'}nhẹ như nhắn tin.</Text>
         <Text style={s.subtitle}>
           Điểm danh, thu học phí, báo nghỉ, học bù — tất cả 1 nút.
         </Text>
@@ -111,24 +114,48 @@ export function WelcomeScreen({ navigation }: any) {
 
       {/* Buttons */}
       <View style={s.buttons}>
+        {/* Google */}
         <TouchableOpacity
-          style={[s.btnPrimary, s.btnRow]}
-          onPress={handleZalo}
-          disabled={zaloLoading}
+          style={[s.btnSocial, s.btnRow]}
+          onPress={() => handleSocialLogin('google')}
+          disabled={loading}
         >
-          {zaloLoading
-            ? <ActivityIndicator color="white" />
+          {socialLoading === 'google'
+            ? <ActivityIndicator color={colors.textPrimary} size="small" />
             : <>
-                <Ionicons name="chatbubble-ellipses" size={20} color="white" />
-                <Text style={s.btnPrimaryText}>Đăng nhập với Zalo</Text>
+                <GoogleIcon />
+                <Text style={s.btnSocialText}>Tiếp tục với Google</Text>
               </>}
         </TouchableOpacity>
 
+        {/* Facebook */}
+        <TouchableOpacity
+          style={[s.btnFacebook, s.btnRow]}
+          onPress={() => handleSocialLogin('facebook')}
+          disabled={loading}
+        >
+          {socialLoading === 'facebook'
+            ? <ActivityIndicator color="white" size="small" />
+            : <>
+                <Ionicons name="logo-facebook" size={20} color="white" />
+                <Text style={s.btnFacebookText}>Tiếp tục với Facebook</Text>
+              </>}
+        </TouchableOpacity>
+
+        {/* Divider */}
+        <View style={s.divider}>
+          <View style={s.dividerLine} />
+          <Text style={s.dividerText}>hoặc</Text>
+          <View style={s.dividerLine} />
+        </View>
+
+        {/* Phone */}
         <TouchableOpacity
           style={[s.btnOutline, s.btnRow]}
           onPress={() => setPhase('phone')}
+          disabled={loading}
         >
-          <Ionicons name="call-outline" size={20} color={colors.textPrimary} />
+          <Ionicons name="call-outline" size={20} color={colors.textSecondary} />
           <Text style={s.btnOutlineText}>Tiếp tục với số điện thoại</Text>
         </TouchableOpacity>
       </View>
@@ -139,16 +166,28 @@ export function WelcomeScreen({ navigation }: any) {
         <Text style={s.termsLink}>Chính sách bảo mật</Text>
       </Text>
 
-      {/* Zalo loading overlay */}
-      {zaloLoading && (
+      {/* Social loading overlay */}
+      {loading && (
         <View style={s.overlay}>
           <View style={s.overlayIcon}>
-            <Ionicons name="chatbubble-ellipses" size={30} color="white" />
+            {socialLoading === 'google'
+              ? <GoogleIcon size={28} />
+              : <Ionicons name="logo-facebook" size={28} color="white" />}
           </View>
-          <Text style={s.overlayTitle}>Đang kết nối Zalo...</Text>
+          <Text style={s.overlayTitle}>
+            Đang đăng nhập {socialLoading === 'google' ? 'Google' : 'Facebook'}...
+          </Text>
           <Text style={s.overlaySub}>Lấy tên & ảnh đại diện</Text>
         </View>
       )}
+    </View>
+  );
+}
+
+function GoogleIcon({ size = 20 }: { size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ fontSize: size * 0.65, fontWeight: '700', color: '#4285F4', lineHeight: size }}>G</Text>
     </View>
   );
 }
@@ -168,8 +207,8 @@ function HeroArt() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={[h.dot, { backgroundColor: '#d9a23b' }]} />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <View style={[h.line, { width: '80%', backgroundColor: '#5a4a2a' }]} />
-              <View style={[h.line, { width: '55%', backgroundColor: '#a08e6c', marginTop: 5 }]} />
+              <View style={[h.line, { width: '80%' as any, backgroundColor: '#5a4a2a' }]} />
+              <View style={[h.line, { width: '55%' as any, backgroundColor: '#a08e6c', marginTop: 5 }]} />
             </View>
           </View>
         </View>
@@ -177,8 +216,8 @@ function HeroArt() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <View style={[h.dot, { backgroundColor: colors.coral500 }]} />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <View style={[h.line, { width: '70%', backgroundColor: '#a85e5e' }]} />
-              <View style={[h.line, { width: '50%', backgroundColor: '#c98e8e', marginTop: 5 }]} />
+              <View style={[h.line, { width: '70%' as any, backgroundColor: '#a85e5e' }]} />
+              <View style={[h.line, { width: '50%' as any, backgroundColor: '#c98e8e', marginTop: 5 }]} />
             </View>
           </View>
         </View>
@@ -204,50 +243,60 @@ const h = StyleSheet.create({
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  // Brand
   brand: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, paddingTop: 56 },
   brandMark: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   brandLeaf: { color: 'white', fontSize: 14, fontWeight: '700' },
   brandName: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3 },
 
-  // Hero
   heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 180, maxHeight: 240 },
 
-  // Title
   titleBlock: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
   title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5, lineHeight: 32, marginBottom: 10 },
   subtitle: { fontSize: 15, color: colors.textSecondary, lineHeight: 22 },
 
-  // Buttons
   buttons: { paddingHorizontal: spacing.lg, gap: 10 },
   btnRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  btnOutline: { height: 52, borderRadius: radius.lg, backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  btnOutlineText: { color: colors.textPrimary, fontSize: 15, fontWeight: '500' },
+
+  btnSocial: {
+    height: 52, borderRadius: radius.lg, backgroundColor: 'white',
+    borderWidth: 1.5, borderColor: colors.border,
+  },
+  btnSocialText: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+
+  btnFacebook: {
+    height: 52, borderRadius: radius.lg, backgroundColor: '#1877F2',
+  },
+  btnFacebookText: { fontSize: 15, fontWeight: '600', color: 'white' },
+
+  btnOutline: {
+    height: 52, borderRadius: radius.lg, backgroundColor: 'transparent',
+  },
+  btnOutlineText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
   btnDisabled: { opacity: 0.5 },
 
-  // Terms
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
+
   terms: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 14, marginBottom: 24, lineHeight: 18 },
   termsLink: { color: colors.green600, fontWeight: '600' },
 
-  // Overlay
-  overlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(250,248,242,0.95)', alignItems: 'center', justifyContent: 'center' } as any,
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(250,248,242,0.95)', alignItems: 'center', justifyContent: 'center' } as any,
   overlayIcon: { width: 64, height: 64, borderRadius: 18, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   overlayTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 6 },
   overlaySub: { fontSize: 13, color: colors.textSecondary },
 
-  // Phone phase
   backBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', margin: spacing.lg, marginTop: 56 },
-  backBtnText: { fontSize: 18, color: colors.textPrimary },
   phoneContent: { flex: 1, paddingHorizontal: spacing.lg },
   phoneTitle: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, lineHeight: 30, marginBottom: 8 },
   phoneSub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 28 },
   phoneRow: { flexDirection: 'row', gap: 8 },
   countryCode: { paddingHorizontal: 14, height: 52, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center' },
   countryCodeText: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  phoneInput: { flex: 1, height: 52, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, fontSize: 16, fontWeight: '600', color: colors.textPrimary, backgroundColor: 'white' },
+  phoneInput: { flex: 1, height: 52, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.lg, fontSize: 16, fontWeight: '600', color: colors.textPrimary, backgroundColor: 'white' },
   phoneInputError: { borderColor: colors.coral500 },
   phoneError: { fontSize: 12, color: colors.coral700, marginTop: 6 },
   phoneFooter: { padding: spacing.lg, paddingBottom: 32 },
+  btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
+  btnPrimaryText: { color: 'white', fontSize: 15, fontWeight: '600' },
 });
