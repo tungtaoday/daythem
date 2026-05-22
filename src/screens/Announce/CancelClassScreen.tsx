@@ -5,6 +5,7 @@ import {
 import { colors, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
+import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { cancelClass, proposeMakeup } from '../../api/announcements';
 
 const REASONS = ['Cô bận việc đột xuất', 'Sức khoẻ', 'Thời tiết xấu', 'Học sinh bận thi', 'Khác'];
@@ -60,9 +61,13 @@ export function CancelClassScreen({ route, navigation }: any) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [annId, setAnnId] = useState<string | null>(null);
+  const [showZalo, setShowZalo] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
-  const send = async () => {
+  const send = () => setShowZalo(true);
+
+  const confirmSent = async () => {
+    setShowZalo(false);
     setSending(true);
     try {
       const ann = await cancelClass(classId, {
@@ -72,7 +77,7 @@ export function CancelClassScreen({ route, navigation }: any) {
       });
       setAnnId(ann.id);
     } catch {}
-    setTimeout(() => { setSending(false); setSent(true); }, 800);
+    setTimeout(() => { setSending(false); setSent(true); }, 400);
   };
 
   const handleMakeup = async () => {
@@ -223,22 +228,29 @@ export function CancelClassScreen({ route, navigation }: any) {
       {/* Bottom bar */}
       {!sending ? (
         <View style={s.bottomBar}>
-          <TouchableOpacity
-            style={[s.btnPrimary, (!toGroup && !toIndividual) && { opacity: 0.4 }]}
-            onPress={send}
-            disabled={!toGroup && !toIndividual}
-          >
-            <IconSend size={20} color="white" />
-            <Text style={s.btnPrimaryText}>Gửi thông báo nghỉ</Text>
+          <TouchableOpacity style={s.btnPrimary} onPress={send}>
+            <IconZalo size={20} color="white" />
+            <Text style={s.btnPrimaryText}>Soạn tin nhắn Zalo</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={s.sendingBar}>
           <ActivityIndicator color={colors.green500} size="small" />
           <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginLeft: 12 }}>
-            Đang đăng lên nhóm Zalo...
+            Đang lưu thông báo...
           </Text>
         </View>
+      )}
+
+      {showZalo && (
+        <ZaloCopySheet
+          title="Báo nghỉ · Thông báo phụ huynh"
+          recipient={`Nhóm Zalo ${groupName}`}
+          message={`Cô gửi thông báo: Buổi học ${today.split('-').reverse().join('/')} sẽ tạm nghỉ vì ${reason.toLowerCase()}.${note ? '\n' + note : ''}${makeup ? '\n\nCô sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿' : '\n\nCảm ơn anh/chị!'}`}
+          hint={groupName}
+          onConfirm={confirmSent}
+          onClose={() => setShowZalo(false)}
+        />
       )}
     </View>
   );

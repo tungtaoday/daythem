@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { colors, spacing, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { recordAttendance } from '../../api/attendance';
@@ -43,6 +44,7 @@ export function AttendanceScreen({ route, navigation }: any) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [showZalo, setShowZalo] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => { fetchStudents(classId); }, [classId]);
@@ -73,6 +75,7 @@ export function AttendanceScreen({ route, navigation }: any) {
 
   if (submitted) {
     return (
+      <>
       <View style={[s.container, s.successWrap]}>
         <View style={s.successCircle}>
           <Text style={{ fontSize: 36, color: colors.green600 }}>✓</Text>
@@ -91,12 +94,9 @@ export function AttendanceScreen({ route, navigation }: any) {
               <Text style={{ fontWeight: '700' }}>{firstAbsent.name.split(' ').slice(-1)[0]}</Text>
               {' '}đã vắng 2 buổi liên tiếp. Nhắn phụ huynh hỏi thăm?
             </Text>
-            <TouchableOpacity
-              style={s.zaloPrimary}
-              onPress={() => Alert.alert('Đã gửi Zalo', `Tin nhắn hỏi thăm đã được gửi đến phụ huynh của ${firstAbsent?.name}.`)}
-            >
+            <TouchableOpacity style={s.zaloPrimary} onPress={() => setShowZalo(true)}>
               <IconZalo size={16} color="white" />
-              <Text style={s.zaloPrimaryText}>Gửi Zalo nhắc nhở</Text>
+              <Text style={s.zaloPrimaryText}>Nhắn Zalo hỏi thăm</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -104,6 +104,18 @@ export function AttendanceScreen({ route, navigation }: any) {
           <Text style={s.ghostBtnText}>Về trang chính</Text>
         </TouchableOpacity>
       </View>
+
+      {showZalo && firstAbsent && (
+        <ZaloCopySheet
+          title="Hỏi thăm học sinh vắng"
+          recipient={`Phụ huynh của ${firstAbsent.name}`}
+          message={`Chào anh/chị, cô xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} hôm nay không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. Cô mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
+          hint={`phụ huynh của ${firstAbsent.name}`}
+          onConfirm={() => setShowZalo(false)}
+          onClose={() => setShowZalo(false)}
+        />
+      )}
+      </>
     );
   }
 

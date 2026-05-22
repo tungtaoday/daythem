@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconZalo, IconSend, IconCheck, IconWallet } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { getTuition, recordPayment } from '../../api/tuition';
@@ -313,56 +314,19 @@ export function TuitionTabScreen({ route }: any) {
         )}
       </ScrollView>
 
-      {/* Zalo modal */}
+      {/* Zalo copy sheet */}
       {showZaloModal && (
-        <ZaloModal
-          count={unpaidList.length}
+        <ZaloCopySheet
+          title={`Nhắc học phí · ${unpaidList.length} phụ huynh`}
+          recipient={`${unpaidList.length} phụ huynh chưa nộp`}
+          message={ZALO_TEMPLATES[0].body}
+          hint="nhóm lớp hoặc nhắn riêng từng phụ huynh"
+          templates={ZALO_TEMPLATES}
+          onConfirm={() => { setSent(true); setShowZaloModal(false); }}
           onClose={() => setShowZaloModal(false)}
-          onSent={() => { setSent(true); setShowZaloModal(false); }}
         />
       )}
     </View>
-  );
-}
-
-function ZaloModal({ count, onClose, onSent }: any) {
-  const [tpl, setTpl] = useState(0);
-  const [sending, setSending] = useState(false);
-  const doSend = () => { setSending(true); setTimeout(() => onSent(), 1100); };
-
-  return (
-    <TouchableOpacity style={s.overlay} onPress={onClose} activeOpacity={1}>
-      <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
-        <View style={s.handle} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <IconZalo size={22} color={colors.green600} />
-          <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary }}>Gửi {count} tin nhắn Zalo</Text>
-        </View>
-        <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 14 }}>
-          Tên con và số tiền sẽ tự động thêm vào tin.
-        </Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 12 }}>
-          {ZALO_TEMPLATES.map((t, i) => (
-            <TouchableOpacity key={i} style={[s.tplChip, tpl === i && s.tplChipActive]} onPress={() => setTpl(i)}>
-              <Text style={[s.tplChipText, tpl === i && s.tplChipTextActive]}>{t.tone}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <View style={s.previewBox}>
-          <Text style={s.previewLabel}>XEM TRƯỚC</Text>
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={s.zaloBubble}>
-              <Text style={{ fontSize: 13.5, lineHeight: 21, color: 'white' }}>{ZALO_TEMPLATES[tpl].body}</Text>
-            </View>
-          </View>
-        </View>
-        <TouchableOpacity style={[s.sendBtn, sending && { opacity: 0.7 }]} onPress={doSend} disabled={sending}>
-          {sending ? <ActivityIndicator color="white" size="small" /> : (
-            <><IconSend size={18} color="white" /><Text style={s.sendBtnText}>Gửi cho {count} phụ huynh</Text></>
-          )}
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </TouchableOpacity>
   );
 }
 
@@ -412,16 +376,4 @@ const s = StyleSheet.create({
   chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   chipTextActive: { color: colors.green700 },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.45)', justifyContent: 'flex-end' } as any,
-  sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 },
-  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 16 },
-  tplChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
-  tplChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
-  tplChipText: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
-  tplChipTextActive: { color: colors.green700 },
-  previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14, marginBottom: 18 },
-  previewLabel: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 8 },
-  zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '85%' as any },
-  sendBtn: { height: 52, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  sendBtnText: { color: 'white', fontSize: 15, fontWeight: '600' },
 });

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { colors } from '../../theme';
+import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconSend, IconStar, IconWarn, IconBook, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
@@ -149,6 +150,7 @@ export function ReportTabScreen({ navigation, route }: any) {
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
+  const [showZalo, setShowZalo] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
 
   const allClasses = classes.length > 0 ? classes : DEMO_CLASSES as any[];
@@ -158,7 +160,8 @@ export function ReportTabScreen({ navigation, route }: any) {
 
   useEffect(() => { fetchClasses(); }, []);
 
-  const handleSend = async () => {
+  const handleConfirmSend = async () => {
+    setShowZalo(false);
     setSending(true);
     setProgress(0);
     let p = 0;
@@ -166,7 +169,7 @@ export function ReportTabScreen({ navigation, route }: any) {
       p += 1;
       setProgress(p);
       if (p >= totalStudents) { clearInterval(interval); setTimeout(() => setDone(true), 200); }
-    }, 110);
+    }, 80);
     for (const cls of classes) {
       generateReport(cls.id, getMondayOfWeek()).catch(() => {});
     }
@@ -344,9 +347,9 @@ export function ReportTabScreen({ navigation, route }: any) {
       {/* Bottom bar */}
       {!sending ? (
         <View style={[s.bottomBar, { backgroundImage: 'linear-gradient(to top, #f7f5f0 60%, transparent)' } as any]}>
-          <TouchableOpacity style={s.btnPrimary} onPress={handleSend}>
+          <TouchableOpacity style={s.btnPrimary} onPress={() => setShowZalo(true)}>
             <IconZalo size={20} color="white" />
-            <Text style={s.btnPrimaryText}>Gửi qua Zalo · {totalStudents} phụ huynh</Text>
+            <Text style={s.btnPrimaryText}>Soạn báo cáo Zalo · {totalStudents} phụ huynh</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -360,6 +363,17 @@ export function ReportTabScreen({ navigation, route }: any) {
             </View>
           </View>
         </View>
+      )}
+
+      {showZalo && (
+        <ZaloCopySheet
+          title={`Báo cáo tuần · ${totalStudents} phụ huynh`}
+          recipient={`${totalStudents} phụ huynh · ${displayClasses.length} lớp`}
+          message={`Báo cáo tuần ${weekLabel()} của [Tên con]:\n• Đi học: 1/1 buổi\n• Bài tập: làm đầy đủ\n• Học phí: đã thu T${new Date().getMonth() + 1}\n\nMọi thắc mắc anh/chị nhắn lại cho cô nhé. Cảm ơn! 🌿`}
+          hint="nhóm lớp hoặc từng phụ huynh"
+          onConfirm={handleConfirmSend}
+          onClose={() => setShowZalo(false)}
+        />
       )}
     </View>
   );
