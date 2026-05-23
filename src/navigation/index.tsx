@@ -29,6 +29,7 @@ import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { ClassSettingsScreen } from '../screens/Class/ClassSettingsScreen';
 import { ClassTuitionScreen } from '../screens/Class/ClassTuitionScreen';
 import { ClassReportScreen } from '../screens/Class/ClassReportScreen';
+import { ClassStudentsScreen } from '../screens/Class/ClassStudentsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -191,6 +192,17 @@ export function AppNavigator() {
               options={({ route }: any) => ({
                 headerShown: true,
                 title: `Báo cáo · ${route.params?.className || 'Lớp học'}`,
+                headerStyle: { backgroundColor: '#ffffff' },
+                headerTintColor: '#3d8760',
+                headerTitleStyle: { fontWeight: '700' },
+              })}
+            />
+            <Stack.Screen
+              name="ClassStudents"
+              component={ClassStudentsScreen}
+              options={({ route }: any) => ({
+                headerShown: true,
+                title: `Học sinh · ${route.params?.className || 'Lớp học'}`,
                 headerStyle: { backgroundColor: '#ffffff' },
                 headerTintColor: '#3d8760',
                 headerTitleStyle: { fontWeight: '700' },

@@ -15,7 +15,7 @@ const ACTIONS: Action[] = [
   { Icon: IconWallet,   iconColor: '#b85a42', label: 'Thu tiền',   kind: 'ClassTuition', color: '#ffe5da' },
   { Icon: IconBell,     iconColor: '#b85a42', label: 'Báo nghỉ',  kind: 'CancelClass',  color: '#fff4f0' },
   { Icon: IconChart,    iconColor: '#2f6849', label: 'Báo cáo',   kind: 'ClassReport',  color: '#f0faf4' },
-  { Icon: IconUsers,    iconColor: '#555',    label: 'Học sinh',  kind: 'tab:Students',color: '#f5f3ed' },
+  { Icon: IconUsers,    iconColor: '#555',    label: 'Học sinh',  kind: 'ClassStudents', color: '#f5f3ed' },
   { Icon: IconSettings, iconColor: '#555',    label: 'Cài đặt',   kind: 'settings',    color: '#f5f3ed' },
 ];
 
