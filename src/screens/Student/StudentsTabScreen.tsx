@@ -328,8 +328,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
   useEffect(() => { fetchClasses(); }, []);
   useEffect(() => { classes.forEach(c => fetchStudents(c.id)); }, [classes.length]);
 
-  const hasRealStudents = classes.some(c => (students[c.id]?.length ?? 0) > 0);
-  const isDemo = classes.length === 0 || !hasRealStudents;
+  const isDemo = classes.length === 0;
   const displayGroups: DemoClsGroup[] = isDemo
     ? DEMO_GROUPS
     : classes.map(c => ({
@@ -358,7 +357,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
     else if (effectiveFilter === 'risk') stus = stus.filter(s => s.status === 'risk');
     else if (effectiveFilter !== 'all') stus = effectiveFilter === g.id ? g.students : [];
     return { ...g, students: stus };
-  }).filter(g => g.students.length > 0);
+  }).filter(g => g.students.length > 0 || !isDemo);
 
   const handleAdd = async () => {
     if (!name.trim() || !addClsId) return;
@@ -448,13 +447,15 @@ export function StudentsTabScreen({ navigation, route }: any) {
               ))}
             </View>
 
-            {/* Add student button for real classes */}
+            {/* Add student button — shown for real classes (not demo) */}
             {!isDemo && (
               <TouchableOpacity
-                style={s.addInlineBtn}
+                style={[s.addInlineBtn, group.students.length === 0 && s.addInlineBtnEmpty]}
                 onPress={() => { setAddClsId(group.id); setShowAdd(true); }}
               >
-                <Text style={s.addInlineBtnText}>+ Thêm học sinh vào {group.name}</Text>
+                <Text style={s.addInlineBtnText}>
+                  {group.students.length === 0 ? '+ Thêm học sinh đầu tiên' : `+ Thêm học sinh vào ${group.name}`}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -463,8 +464,12 @@ export function StudentsTabScreen({ navigation, route }: any) {
         {filteredGroups.length === 0 && (
           <View style={s.empty}>
             <Text style={{ fontSize: 36, marginBottom: 10 }}>👥</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 }}>Không có kết quả</Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary }}>Thử bộ lọc khác nhé cô</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 }}>
+              {effectiveFilter === 'all' ? 'Chưa có học sinh' : 'Không có kết quả'}
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary }}>
+              {effectiveFilter === 'all' ? 'Thêm học sinh từ màn hình chi tiết lớp.' : 'Thử bộ lọc khác nhé.'}
+            </Text>
           </View>
         )}
 
@@ -517,6 +522,11 @@ const s = StyleSheet.create({
   clsLink: { fontSize: 12, fontWeight: '600', color: colors.green700 },
   card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   addInlineBtn: { marginTop: 8, paddingVertical: 10, alignItems: 'center' },
+  addInlineBtnEmpty: {
+    backgroundColor: colors.green50, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.green200 ?? '#aee6c5',
+    paddingVertical: 14, marginTop: 4,
+  },
   addInlineBtnText: { fontSize: 13, color: colors.green600, fontWeight: '600' },
   empty: { alignItems: 'center', paddingVertical: 60 },
   modal: { flex: 1, padding: 24, backgroundColor: colors.bg },
