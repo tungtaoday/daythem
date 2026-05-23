@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
+import { useClassesStore } from '../../store/classes';
 
-// ── Demo data for "Lớp 9" ─────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────────
 
 type FeeMode = 'month' | 'session' | 'course';
 
@@ -15,32 +16,22 @@ type StuFee = {
   override: number | null; overrideNote: string | null;
 };
 
+// ── Demo fallback (used when students not yet fetched from API) ─
+
 const DEMO_STUS: StuFee[] = [
   { id: 's1', name: 'Nguyễn Minh Anh',  baseAmt: 500000, override: null, overrideNote: null },
   { id: 's2', name: 'Trần Bảo Long',    baseAmt: 500000, override: null, overrideNote: null },
-  { id: 's3', name: 'Lê Hoàng Phúc',   baseAmt: 500000, override: 250000, overrideNote: 'Con của bạn cô' },
-  { id: 's4', name: 'Phạm Quỳnh Như',  baseAmt: 500000, override: null, overrideNote: null },
-  { id: 's5', name: 'Đỗ Minh Khôi',    baseAmt: 500000, override: 0,      overrideNote: 'Học bổng xuất sắc' },
-  { id: 's6', name: 'Vũ Hà My',        baseAmt: 500000, override: null, overrideNote: null },
-  { id: 's7', name: 'Bùi Nam Sơn',     baseAmt: 500000, override: 600000, overrideNote: 'Phụ đạo cuối tuần' },
+  { id: 's3', name: 'Lê Hoàng Phúc',    baseAmt: 500000, override: 250000, overrideNote: 'Con của bạn cô' },
+  { id: 's4', name: 'Phạm Quỳnh Như',   baseAmt: 500000, override: null, overrideNote: null },
+  { id: 's5', name: 'Đỗ Minh Khôi',     baseAmt: 500000, override: 0,      overrideNote: 'Học bổng xuất sắc' },
+  { id: 's6', name: 'Vũ Hà My',         baseAmt: 500000, override: null, overrideNote: null },
+  { id: 's7', name: 'Bùi Nam Sơn',      baseAmt: 500000, override: 600000, overrideNote: 'Phụ đạo cuối tuần' },
 ];
-
-const DAYS_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
 // ── Sub-components ────────────────────────────────────────────
 
 function SectionHeader({ children }: { children: string }) {
   return <Text style={s.sectionHeader}>{children}</Text>;
-}
-
-function Row({ label, value, chevron, onPress }: any) {
-  return (
-    <TouchableOpacity style={s.row} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
-      <Text style={s.rowLabel}>{label}</Text>
-      {value !== undefined && <Text style={s.rowValue}>{value}</Text>}
-      {chevron && <IconChevron size={16} color={colors.textMuted} />}
-    </TouchableOpacity>
-  );
 }
 
 function FeeTag({ override, base, note }: { override: number | null; base: number; note: string | null }) {
@@ -131,23 +122,65 @@ function FeeModal({ stu, base, onSave, onClose }: any) {
 
 export function ClassSettingsScreen({ route, navigation }: any) {
   const { classId } = route.params;
-  const [className, setClassName] = useState('Lớp 9');
-  const [subject, setSubject] = useState('Toán');
-  const [defaultFee, setDefaultFee] = useState(500000);
-  const [feeMode, setFeeMode] = useState<FeeMode>('month');
+  const { classes, students, fetchStudents, updateClass, setStudentFee } = useClassesStore();
+
+  const klass = classes.find(c => c.id === classId);
+  const classStudents = students[classId] || [];
+  const isDemo = classes.length === 0;
+
+  const [className, setClassName] = useState(klass?.name ?? 'Lớp 9');
+  const [subject, setSubject] = useState(klass?.subject ?? 'Toán');
+  const [defaultFee, setDefaultFee] = useState(klass?.default_fee ?? 500000);
+  const [feeMode, setFeeMode] = useState<FeeMode>((klass?.fee_type as FeeMode) ?? 'month');
   const [stus, setStus] = useState<StuFee[]>(DEMO_STUS);
   const [editingStu, setEditingStu] = useState<StuFee | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { fetchStudents(classId); }, [classId]);
+
+  // Sync student list when real students load from API
+  useEffect(() => {
+    if (classStudents.length > 0) {
+      setStus(classStudents.map(stu => ({
+        id: stu.id,
+        name: stu.name,
+        baseAmt: klass?.default_fee ?? 500000,
+        override: (stu.fee_setting as any)?.override ?? null,
+        overrideNote: (stu.fee_setting as any)?.note ?? null,
+      })));
+    }
+  }, [classStudents.length, klass?.default_fee]);
 
   const customCount = stus.filter(s => s.override !== null).length;
 
-  const handleStuFee = (amt: number, note: string) => {
+  const handleStuFee = async (amt: number, note: string) => {
     if (!editingStu) return;
+    const newOverride = amt === defaultFee ? null : amt;
     setStus(prev => prev.map(s =>
       s.id === editingStu.id
-        ? { ...s, override: amt === defaultFee ? null : amt, overrideNote: note || null }
+        ? { ...s, override: newOverride, overrideNote: note || null }
         : s
     ));
+    if (!isDemo) {
+      await setStudentFee(editingStu.id, { override: newOverride, note: note || null }).catch(() => {});
+    }
     setEditingStu(null);
+  };
+
+  const handleSave = async () => {
+    if (isDemo) return;
+    try {
+      await updateClass(classId, {
+        name: className,
+        subject,
+        default_fee: defaultFee,
+        fee_type: feeMode,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch {
+      Alert.alert('Lỗi', 'Không thể lưu thay đổi. Kiểm tra kết nối mạng.');
+    }
   };
 
   const handleArchive = () => {
@@ -177,6 +210,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
               placeholder="Lớp 9"
               placeholderTextColor={colors.textMuted}
               textAlign="right"
+              editable={!isDemo}
             />
           </View>
           <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
@@ -188,6 +222,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
               placeholder="Toán"
               placeholderTextColor={colors.textMuted}
               textAlign="right"
+              editable={!isDemo}
             />
           </View>
           <View style={s.row}>
@@ -255,7 +290,11 @@ export function ClassSettingsScreen({ route, navigation }: any) {
             </View>
           )}
         </View>
-        <Text style={s.stuFeeHint}>Mặc định kế thừa {(defaultFee / 1000).toFixed(0)}k. Chạm để đặt mức riêng.</Text>
+        <Text style={s.stuFeeHint}>
+          {isDemo
+            ? 'Mẫu dữ liệu · kết nối API để xem học sinh thực'
+            : `Mặc định kế thừa ${(defaultFee / 1000).toFixed(0)}k. Chạm để đặt mức riêng.`}
+        </Text>
         <View style={s.card}>
           {stus.map((stu, i) => (
             <TouchableOpacity
@@ -274,20 +313,45 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         {/* ── NHÓM ZALO ── */}
         <SectionHeader>NHÓM ZALO</SectionHeader>
         <View style={s.card}>
-          <View style={s.zaloRow}>
-            <View style={s.zaloIcon}>
-              <IconZalo size={20} color="#3a7dd3" />
+          {klass?.zalo_group_id ? (
+            <View style={s.zaloRow}>
+              <View style={s.zaloIcon}>
+                <IconZalo size={20} color="#3a7dd3" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.zaloName}>Zalo {klass.name}</Text>
+                <Text style={s.zaloBadgeText}>Đã liên kết · Đang hoạt động</Text>
+              </View>
+              <IconChevron size={16} color={colors.textMuted} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.zaloName}>Zalo {className} · Toán</Text>
-              <Text style={s.zaloBadgeText}>Đã liên kết · 8 thành viên · Đang hoạt động</Text>
-            </View>
-            <IconChevron size={16} color={colors.textMuted} />
-          </View>
+          ) : (
+            <TouchableOpacity
+              style={s.zaloRow}
+              onPress={() => Alert.alert('Liên kết Zalo', 'Tính năng đang phát triển.')}
+            >
+              <View style={[s.zaloIcon, { backgroundColor: colors.surfaceAlt }]}>
+                <IconZalo size={20} color={colors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.zaloName}>Chưa liên kết nhóm Zalo</Text>
+                <Text style={s.zaloBadgeText}>Nhấn để kết nối nhóm phụ huynh</Text>
+              </View>
+              <IconChevron size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
 
+        {/* ── LƯU THAY ĐỔI ── */}
+        <TouchableOpacity
+          style={[s.saveBtn, isDemo && { opacity: 0.4 }]}
+          onPress={handleSave}
+          disabled={isDemo}
+        >
+          <Text style={s.saveBtnText}>{saved ? '✓ Đã lưu' : 'Lưu thay đổi'}</Text>
+        </TouchableOpacity>
+
         {/* ── Danger zone ── */}
-        <View style={s.card}>
+        <View style={[s.card, { marginTop: 8 }]}>
           <TouchableOpacity style={[s.row, { justifyContent: 'center' }]} onPress={handleArchive}>
             <Text style={[s.rowLabel, { color: colors.coral700, textAlign: 'center', flex: 0 }]}>Lưu trữ lớp này</Text>
           </TouchableOpacity>
@@ -353,6 +417,9 @@ const s = StyleSheet.create({
   zaloIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
   zaloName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
   zaloBadgeText: { fontSize: 12, color: colors.textSecondary },
+
+  saveBtn: { marginHorizontal: 16, marginTop: 20, height: 52, borderRadius: 16, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.4)', justifyContent: 'flex-end' } as any,
   sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 36 },

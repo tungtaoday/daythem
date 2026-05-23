@@ -123,8 +123,10 @@ const cb = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────
 
-export function TuitionTabScreen({ route }: any) {
+export function TuitionTabScreen({ navigation, route }: any) {
   const { classes, fetchClasses } = useClassesStore();
+  const originClassId: string | undefined = route?.params?.filterClassId;
+  const originClass = originClassId ? classes.find(c => c.id === originClassId) : undefined;
   const [allData, setAllData] = useState<Item[]>([]);
   const [demoData, setDemoData] = useState<Item[]>(DEMO_TUITION);
   const [showZaloModal, setShowZaloModal] = useState(false);
@@ -192,6 +194,16 @@ export function TuitionTabScreen({ route }: any) {
           <Text style={s.subtitle}>{monthLabel}</Text>
         </View>
       </View>
+      {/* Breadcrumb — shown when navigated from ClassDetail */}
+      {originClass && (
+        <TouchableOpacity
+          style={s.breadcrumb}
+          onPress={() => navigation.navigate('ClassDetail', { classId: originClassId, className: originClass.name })}
+        >
+          <Text style={s.breadcrumbText}>‹ {originClass.name}</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Class filter chips */}
       <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row', alignItems: 'center' }} showsHorizontalScrollIndicator={false}>
         {[{ id: 'all', label: 'Tất cả' }, ...allClassChips.map(c => ({ id: c.id, label: c.name }))].map(chip => (
@@ -373,6 +385,8 @@ const s = StyleSheet.create({
   tickBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: 'white' },
   tickBtnText: { fontSize: 12, fontWeight: '600', color: colors.green700 },
 
+  breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
+  breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignSelf: 'center' },
   chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },

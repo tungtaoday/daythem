@@ -154,7 +154,11 @@ export function ReportTabScreen({ navigation, route }: any) {
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
 
   const allClasses = classes.length > 0 ? classes : DEMO_CLASSES as any[];
-  const displayClasses = classFilter === 'all' ? allClasses : allClasses.filter((c: any) => c.id === classFilter);
+  const validClassIds = new Set(['all', ...allClasses.map((c: any) => c.id)]);
+  const effectiveFilter = validClassIds.has(classFilter) ? classFilter : 'all';
+  const displayClasses = effectiveFilter === 'all' ? allClasses : allClasses.filter((c: any) => c.id === effectiveFilter);
+  const originClassId: string | undefined = route?.params?.filterClassId;
+  const originClass = originClassId ? (classes as any[]).find(c => c.id === originClassId) : undefined;
   const totalStudents = displayClasses.reduce((a: number, c: any) => a + (c.student_count || 0), 0) || 17;
   const presentCount = totalStudents - 2;
 
@@ -212,15 +216,25 @@ export function ReportTabScreen({ navigation, route }: any) {
         </View>
       </View>
 
+      {/* Breadcrumb — shown when navigated from ClassDetail */}
+      {originClass && (
+        <TouchableOpacity
+          style={s.breadcrumb}
+          onPress={() => navigation.navigate('ClassDetail', { classId: originClassId, className: originClass.name })}
+        >
+          <Text style={s.breadcrumbText}>‹ {originClass.name}</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Class filter chips */}
       <ScrollView horizontal style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8, gap: 8, flexDirection: 'row', alignItems: 'center' }} showsHorizontalScrollIndicator={false}>
         {[{ id: 'all', name: 'Tất cả' }, ...allClasses].map((c: any) => (
           <TouchableOpacity
             key={c.id}
-            style={[s.clsChip, classFilter === c.id && s.clsChipActive]}
+            style={[s.clsChip, effectiveFilter === c.id && s.clsChipActive]}
             onPress={() => setClassFilter(c.id)}
           >
-            <Text style={[s.clsChipText, classFilter === c.id && s.clsChipTextActive]}>{c.name}</Text>
+            <Text style={[s.clsChipText, effectiveFilter === c.id && s.clsChipTextActive]}>{c.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -406,6 +420,8 @@ const s = StyleSheet.create({
   successSub: { fontSize: 14, color: colors.textSecondary, maxWidth: 280, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
   ghostBtn: { padding: 12 },
   ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
+  breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
+  breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
   clsChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignSelf: 'center' },
   clsChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
   clsChipText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },

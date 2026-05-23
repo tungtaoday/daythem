@@ -318,6 +318,8 @@ type Filter = 'all' | 'unpaid' | 'risk' | string; // string = classId
 export function StudentsTabScreen({ navigation, route }: any) {
   const { classes, students, fetchClasses, fetchStudents, addStudent } = useClassesStore();
   const [filter, setFilter] = useState<Filter>(route?.params?.filterClassId ?? 'all');
+  const originClassId: string | undefined = route?.params?.filterClassId;
+  const originClass = originClassId ? classes.find(c => c.id === originClassId) : undefined;
   const [profileStu, setProfileStu] = useState<any>(null);
   const [profileCls, setProfileCls] = useState<string>('');
   const [showAdd, setShowAdd] = useState(false);
@@ -393,6 +395,16 @@ export function StudentsTabScreen({ navigation, route }: any) {
           <Text style={s.subtitle}>{totalCount} con · {displayGroups.length} lớp</Text>
         </View>
       </View>
+
+      {/* Breadcrumb — shown when navigated from ClassDetail */}
+      {originClass && (
+        <TouchableOpacity
+          style={s.breadcrumb}
+          onPress={() => navigation.navigate('ClassDetail', { classId: originClassId, className: originClass.name })}
+        >
+          <Text style={s.breadcrumbText}>‹ {originClass.name}</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Filter chips */}
       <ScrollView
@@ -510,6 +522,8 @@ const s = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 4, flexDirection: 'row', alignItems: 'flex-end' },
   title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
+  breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, alignItems: 'center' },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surfaceAlt, alignSelf: 'center' },

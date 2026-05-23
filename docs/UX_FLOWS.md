@@ -91,17 +91,32 @@ sequenceDiagram
 
     Teacher->>App: ClassesScreen → tap vào lớp
     App->>Teacher: ClassDetailScreen
-    Note over App,Teacher: 6 action tiles
+    Note over App,Teacher: 6 action tiles + danh sách học sinh có thể tap
 
     Teacher->>App: Tap "Điểm danh" → AttendanceScreen {classId}
-    Teacher->>App: Tap "Thu tiền" → TuitionTab {filterClassId}
     Teacher->>App: Tap "Báo nghỉ" → CancelClassScreen {classId}
-    Teacher->>App: Tap "Báo cáo" → ReportTab {filterClassId}
-    Teacher->>App: Tap "Học sinh" → StudentsTab {filterClassId}
     Teacher->>App: Tap "Cài đặt" → ClassSettingsScreen {classId}
+
+    alt Tab screen (Thu tiền / Báo cáo / Học sinh)
+        Teacher->>App: Tap "Thu tiền" → TuitionTab {filterClassId}
+        App->>Teacher: TuitionTab hiển thị breadcrumb "‹ [Tên lớp]"
+        Teacher->>App: Tap breadcrumb → về ClassDetailScreen
+
+        Teacher->>App: Tap "Báo cáo" → ReportTab {filterClassId}
+        App->>Teacher: ReportTab hiển thị breadcrumb "‹ [Tên lớp]"
+        Teacher->>App: Tap breadcrumb → về ClassDetailScreen
+
+        Teacher->>App: Tap "Học sinh" → StudentsTab {filterClassId}
+        App->>Teacher: StudentsTab hiển thị breadcrumb "‹ [Tên lớp]"
+        Teacher->>App: Tap breadcrumb → về ClassDetailScreen
+    end
+
+    Teacher->>App: Tap học sinh trong danh sách → StudentsTab {filterClassId}
 ```
 
-### 2.3 Cài đặt học phí từng học sinh
+> **Quy tắc breadcrumb:** Breadcrumb `‹ [Tên lớp]` chỉ hiện khi API backend hoạt động (class tồn tại trong store). Trong chế độ demo, breadcrumb ẩn vì không có class thật để quay về. Lọc `filterClassId` được fallback về `'all'` nếu ID không khớp dữ liệu hiện tại.
+
+### 2.3 Cài đặt lớp học (ClassSettings)
 
 ```mermaid
 sequenceDiagram
@@ -109,14 +124,46 @@ sequenceDiagram
     participant App
     participant API
 
-    Teacher->>App: ClassSettingsScreen → tap học sinh
+    Teacher->>App: ClassDetailScreen → "Cài đặt"
+    App->>API: GET /classes/{id}/students
+    API-->>App: students[]
+    App->>Teacher: ClassSettingsScreen (tên lớp, môn, học phí từ store)
+    Note over App,Teacher: State khởi tạo từ klass trong Zustand store
+
+    Teacher->>App: Chỉnh tên lớp / môn học / học phí mặc định / cách tính
+    Teacher->>App: Tap "Lưu thay đổi"
+    App->>API: PUT /classes/{id} {name, subject, default_fee, fee_type}
+    API-->>App: Class updated
+    App->>App: Update store
+    App->>Teacher: Button hiển thị "✓ Đã lưu"
+
+    Teacher->>App: Tap học sinh → FeeModal
     App->>Teacher: FeeModal (preset: mặc định / giảm 50% / miễn phí / tuỳ chỉnh)
-    Teacher->>App: Chọn preset hoặc nhập số tiền + ghi chú
-    Teacher->>App: Tap "Lưu"
+    Teacher->>App: Chọn preset hoặc nhập số tiền + ghi chú → Tap "Lưu"
     App->>API: PUT /students/{id}/fee {override, note}
     API-->>App: ok
     App->>App: Update local state
     App->>Teacher: Badge "cá biệt" cập nhật
+```
+
+### 2.4 Thêm học sinh trực tiếp từ ClassDetail
+
+```mermaid
+sequenceDiagram
+    actor Teacher
+    participant App
+    participant API
+
+    Teacher->>App: ClassDetailScreen → tap "+ Thêm" (góc phải section Học sinh)
+    App->>Teacher: AddStudentModal (pageSheet)
+
+    Teacher->>App: Nhập tên học sinh (bắt buộc)
+    Teacher->>App: Nhập SĐT phụ huynh (tuỳ chọn)
+    Teacher->>App: Tap "Thêm học sinh"
+    App->>API: POST /classes/{id}/students {name, parent_phone}
+    API-->>App: Student {id, ...}
+    App->>App: Store: students[classId].push(student), student_count++
+    App->>Teacher: Modal đóng, học sinh xuất hiện ngay trong danh sách
 ```
 
 ---

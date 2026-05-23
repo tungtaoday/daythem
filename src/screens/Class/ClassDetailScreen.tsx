@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { colors, spacing, typography, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
@@ -21,10 +21,13 @@ const ACTIONS: Action[] = [
 
 export function ClassDetailScreen({ route, navigation }: any) {
   const { classId } = route.params;
-  const { classes, students, fetchStudents } = useClassesStore();
+  const { classes, students, fetchStudents, addStudent } = useClassesStore();
   const klass = classes.find(c => c.id === classId);
   const classStudents = students[classId] || [];
   const [loaded, setLoaded] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addName, setAddName] = useState('');
+  const [addPhone, setAddPhone] = useState('');
 
   useEffect(() => {
     if (!loaded) { fetchStudents(classId); setLoaded(true); }
@@ -32,14 +35,26 @@ export function ClassDetailScreen({ route, navigation }: any) {
 
   if (!klass) return null;
 
+  const handleAdd = async () => {
+    if (!addName.trim()) return;
+    try {
+      await addStudent(classId, { name: addName.trim(), parent_phone: addPhone || null });
+      setAddName(''); setAddPhone(''); setShowAdd(false);
+    } catch {
+      Alert.alert('Lỗi', 'Không thể thêm học sinh.');
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Class info card */}
       <View style={styles.classInfo}>
         <Text style={styles.classSubject}>{klass.subject} · Lớp {klass.grade}</Text>
         <Text style={styles.className}>{klass.name}</Text>
         <Text style={styles.classMeta}>{klass.student_count} học sinh · {klass.default_fee.toLocaleString('vi-VN')}đ/tháng</Text>
       </View>
 
+      {/* 6 action tiles */}
       <View style={styles.grid}>
         {ACTIONS.map(a => (
           <TouchableOpacity
@@ -63,21 +78,69 @@ export function ClassDetailScreen({ route, navigation }: any) {
         ))}
       </View>
 
-      <Text style={styles.sectionTitle}>Học sinh ({classStudents.length})</Text>
+      {/* Student section — tappable rows + inline add */}
+      <View style={styles.sectionRow}>
+        <Text style={styles.sectionTitle}>Học sinh ({classStudents.length})</Text>
+        <TouchableOpacity onPress={() => setShowAdd(true)}>
+          <Text style={styles.addLink}>+ Thêm</Text>
+        </TouchableOpacity>
+      </View>
       <Card>
-        {classStudents.length === 0
-          ? <Text style={styles.emptyText}>Chưa có học sinh. Thêm từ màn hình Học sinh.</Text>
-          : classStudents.map((s, i) => (
-            <View key={s.id} style={[styles.studentRow, i > 0 && styles.divider]}>
+        {classStudents.length === 0 ? (
+          <TouchableOpacity style={styles.emptyRow} onPress={() => setShowAdd(true)}>
+            <Text style={styles.emptyText}>+ Thêm học sinh đầu tiên vào lớp</Text>
+          </TouchableOpacity>
+        ) : (
+          classStudents.map((s, i) => (
+            <TouchableOpacity
+              key={s.id}
+              style={[styles.studentRow, i > 0 && styles.divider]}
+              onPress={() => navigation.navigate('MainTabs', { screen: 'Students', params: { filterClassId: classId } })}
+              activeOpacity={0.7}
+            >
               <Avatar name={s.name} size={36} />
               <View style={styles.studentInfo}>
                 <Text style={styles.studentName}>{s.name}</Text>
                 {s.parent_phone && <Text style={styles.studentPhone}>{s.parent_phone}</Text>}
               </View>
-            </View>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
           ))
-        }
+        )}
       </Card>
+
+      {/* Add student modal */}
+      <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet">
+        <View style={styles.modal}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Thêm học sinh</Text>
+            <TouchableOpacity onPress={() => { setShowAdd(false); setAddName(''); setAddPhone(''); }}>
+              <Text style={styles.modalClose}>Huỷ</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Tên học sinh *"
+            value={addName}
+            onChangeText={setAddName}
+            autoFocus
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="SĐT phụ huynh"
+            value={addPhone}
+            onChangeText={setAddPhone}
+            keyboardType="phone-pad"
+          />
+          <TouchableOpacity
+            style={[styles.saveBtn, !addName.trim() && { opacity: 0.5 }]}
+            onPress={handleAdd}
+            disabled={!addName.trim()}
+          >
+            <Text style={styles.saveBtnText}>Thêm học sinh</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -92,11 +155,22 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   action: { width: '31%', aspectRatio: 1, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   actionLabel: { ...typography.caption, fontWeight: '600', textAlign: 'center' },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...typography.h3 },
-  emptyText: { ...typography.caption, textAlign: 'center', paddingVertical: spacing.md },
-  studentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
+  emptyRow: { paddingVertical: spacing.md, alignItems: 'center' },
+  emptyText: { ...typography.caption, color: colors.green600, fontWeight: '600' },
+  studentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   studentInfo: { flex: 1 },
   studentName: { ...typography.bodyMedium },
   studentPhone: { ...typography.caption },
+  chevron: { fontSize: 20, color: colors.textMuted },
+  modal: { flex: 1, padding: 24, backgroundColor: colors.bg },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  modalClose: { fontSize: 16, color: colors.green600, fontWeight: '600' },
+  input: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 14, fontSize: 16, marginBottom: 12, color: colors.textPrimary },
+  saveBtn: { backgroundColor: colors.green500, padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 8 },
+  saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });
