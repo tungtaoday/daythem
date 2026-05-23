@@ -27,6 +27,8 @@ import { MakeupPollScreen } from '../screens/Announce/MakeupPollScreen';
 import { ProfileScreen } from '../screens/Profile/ProfileScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
 import { ClassSettingsScreen } from '../screens/Class/ClassSettingsScreen';
+import { ClassTuitionScreen } from '../screens/Class/ClassTuitionScreen';
+import { ClassReportScreen } from '../screens/Class/ClassReportScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -167,6 +169,28 @@ export function AppNavigator() {
               options={({ route }: any) => ({
                 headerShown: true,
                 title: `Cài đặt · ${route.params?.className || 'Lớp học'}`,
+                headerStyle: { backgroundColor: '#ffffff' },
+                headerTintColor: '#3d8760',
+                headerTitleStyle: { fontWeight: '700' },
+              })}
+            />
+            <Stack.Screen
+              name="ClassTuition"
+              component={ClassTuitionScreen}
+              options={({ route }: any) => ({
+                headerShown: true,
+                title: `Thu tiền · ${route.params?.className || 'Lớp học'}`,
+                headerStyle: { backgroundColor: '#ffffff' },
+                headerTintColor: '#3d8760',
+                headerTitleStyle: { fontWeight: '700' },
+              })}
+            />
+            <Stack.Screen
+              name="ClassReport"
+              component={ClassReportScreen}
+              options={({ route }: any) => ({
+                headerShown: true,
+                title: `Báo cáo · ${route.params?.className || 'Lớp học'}`,
                 headerStyle: { backgroundColor: '#ffffff' },
                 headerTintColor: '#3d8760',
                 headerTitleStyle: { fontWeight: '700' },
