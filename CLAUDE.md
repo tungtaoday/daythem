@@ -1,6 +1,12 @@
-# DayThem Mobile — CLAUDE.md
+# DayThem — Project Configuration
 
-App quản lý lớp dạy thêm cho giáo viên cá nhân. React Native + Expo, chạy trên web để prototype.
+@claude/CLAUDE.md
+
+## Project Context
+
+**DayThem** — App quản lý lớp dạy thêm cho giáo viên cá nhân (private tutoring management app for individual teachers). Vietnamese market, mobile-first, friendly UX ưu tiên người không rành tech.
+
+**Type:** `frontend-prototype` — standalone HTML/JSX prototype, no backend, no Python.
 
 ---
 
@@ -8,133 +14,116 @@ App quản lý lớp dạy thêm cho giáo viên cá nhân. React Native + Expo,
 
 | Layer | Tech |
 |-------|------|
-| Framework | React Native 0.81.5 + Expo SDK 54 |
-| Language | TypeScript (strict) |
-| Navigation | `@react-navigation/native-stack` + `@react-navigation/bottom-tabs` |
-| State | Zustand v5 |
-| HTTP | Axios — base URL `http://localhost:8000/api/v1` |
-| Icons | `@expo/vector-icons` (Ionicons) — xem `src/components/icons/index.tsx` |
-| Font | Be Vietnam Pro — load qua `web/index.html` |
-| Web mode | `react-native-web` — chạy bằng `npx expo start --web` |
+| Runtime | Browser (React 18 + Babel standalone, no build step) |
+| Language | JSX transpiled in-browser via `@babel/standalone` |
+| Styling | CSS custom properties (`oklch()` color space) + Be Vietnam Pro font |
+| Output | `DayThem.html` — single self-contained file (~240 KB) |
 
 ---
 
-## Cấu trúc thư mục
+## File Map
 
 ```
-src/
-├── api/              # axios calls: auth, classes, students, attendance, tuition, announcements, reports
-├── components/
-│   ├── icons/        # index.tsx — tất cả icon map sang Ionicons
-│   └── ui/           # Avatar, Button, Card
-├── navigation/
-│   └── index.tsx     # AppNavigator: Auth stack / MainTabs / feature screens
-├── screens/
-│   ├── Auth/         # WelcomeScreen, OTPScreen, SetupScreen
-│   ├── Home/         # HomeScreen
-│   ├── Classes/      # ClassesScreen (tab)
-│   ├── Class/        # ClassDetailScreen, CreateClassScreen
-│   ├── Attendance/   # AttendanceScreen
-│   ├── Student/      # StudentsTabScreen (tab + inline profile)
-│   ├── Tuition/      # TuitionTabScreen (tab)
-│   ├── Report/       # ReportTabScreen (tab)
-│   └── Announce/     # CancelClassScreen, MakeupPollScreen
-├── store/            # auth.ts, classes.ts, storage.ts
-└── theme/            # index.ts — colors, spacing, radius, typography
-```
+C:\DayThem\
+├── DayThem.html                         # ← Main deliverable (single-file app)
+└── claude\                              # Team Claude Code config (read-only reference)
 
----
-
-## Design system
-
-Màu sắc xấp xỉ từ oklch trong `DayThem.html` sang hex:
-
-```typescript
-colors.green500   = '#4a9e72'   // primary — button, active state
-colors.green600   = '#3d8760'
-colors.green700   = '#2f6849'
-colors.coral500   = '#e07a5f'   // accent — warning, absent
-colors.coral700   = '#b85a42'
-colors.honey100   = '#fef5e1'   // warm highlight
-colors.bg         = '#faf8f2'   // screen background
-colors.border     = '#e8e4da'
-colors.textSecondary = '#6b6b6b'
-```
-
----
-
-## Patterns quan trọng
-
-### SVG inline (web-only, không cần react-native-svg)
-```tsx
-const SvgEl = 'svg' as any;
-const CircleEl = 'circle' as any;
-// Dùng cho ring counter, progress circle — render đúng trên expo web
-```
-
-### Gradient background (web-only)
-```tsx
-// KHÔNG đặt trong StyleSheet.create — TypeScript sẽ báo lỗi
-<View style={[s.card, { backgroundImage: 'linear-gradient(160deg, #f0faf4, #d8f3e3)' } as any]}>
-```
-
-### Overlay / absolute fill
-```tsx
-// Cần cast as any vì inset không có trong RN TypeScript types
-style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as any}
-```
-
-### Demo fallback data
-Các tab screen (Students, Tuition, Report) có demo data hiện khi API trả về rỗng:
-- `StudentsTabScreen`: `DEMO_STUDENTS` — 7 học sinh mẫu
-- `TuitionTabScreen`: `DEMO_TUITION` — 9 học sinh 2 lớp, mix paid/unpaid
-- `ReportTabScreen`: `DEMO_CLASSES` — Lớp 9 + Lớp 10
-
----
-
-## Navigation
-
-```
-Stack
-├── Welcome / OTP              (chưa login)
-├── Setup                      (đã login, chưa có tên)
-└── MainTabs                   (đã login)
-    ├── Home
-    ├── Classes
-    ├── Students
-    ├── Tuition
-    └── Reports
-    + Stack overlays:
-      ├── ClassDetail
-      ├── CreateClass
-      ├── Attendance   (params: classId, className)
-      ├── CancelClass  (params: classId, className)
-      └── MakeupPoll   (params: announcementId, makeupId)
-```
-
-Auth flow: `useAuthStore` — `logout()` xóa `auth_token` khỏi storage → navigator tự redirect về Welcome.
-
----
-
-## Chạy và kiểm tra
-
-```bash
-npx expo start --web      # mở browser, hot reload
-npx tsc --noEmit          # type check — phải clean trước khi xem là xong
-```
-
----
-
-## Design reference
-
-Prototype gốc: `C:\DayThem\DayThem.html` (single-file, mở bằng browser).
-
-Source JSX tham khảo:
-```
+Source bundle (design2):
 C:\Users\cts\.claude\projects\C--DayThem\
-  771d8795-b38d-4636-9635-f3ccc6f704cb\tool-results\design2_files\daythem\project\
-    flows.jsx     # Attendance, Tuition, StudentProfile, Report
-    announce.jsx  # CancelClass, MakeupFlow
-    shared.jsx    # icons, seed data (STUDENTS_9, STUDENTS_10, CLASSES)
-    home.jsx      # HomeA/B/C variants
+  771d8795-b38d-4636-9635-f3ccc6f704cb\
+    tool-results\design2_files\daythem\project\
+      ├── styles.css          Design tokens, CSS vars, animations
+      ├── design-canvas.jsx   Pan/zoom canvas: DCSection, DCArtboard, DCPostIt
+      ├── shared.jsx          Icons, StatusBar, TabBar, Avatar, Chip, seed data
+      ├── home.jsx            HomeA/B/C (dashboard variants)
+      ├── home_d.jsx          HomeD assistant feed + NudgeCard
+      ├── flows.jsx           Attendance, Tuition, StudentProfile, ReportFlow
+      ├── announce.jsx        CancelClass, MakeupFlow (poll), ZaloGroupPreview
+      ├── settings.jsx        ClassSettings, StudentFeeModal, ScheduleModal
+      ├── onboarding.jsx      5-step onboarding (Zalo OAuth, Phone OTP, Setup)
+      ├── ios-frame.jsx       iOS 26 Liquid Glass components (IOSDevice, etc.)
+      └── canvas.jsx          Root App component — DCSection layout
 ```
+
+---
+
+## Design System
+
+- **Colors:** `--green-500` (primary), `--coral-500` (accent), `--honey-100` (warm bg)
+- **Font:** Be Vietnam Pro (loaded via Google Fonts `<link>`)
+- **Screens:** 390×820 px iOS frames (borderRadius 36px)
+- **Canvas sections:** Onboarding → Home → Attendance → Tuition → Student → Report → Announce → Settings
+
+---
+
+## Aggregate Abbreviations (DayThem Domain)
+
+| Aggregate | Abbrev | Notes |
+|-----------|--------|-------|
+| Class (Lớp) | CLS | The main teaching class |
+| Student (Học sinh) | STU | |
+| Attendance (Điểm danh) | ATT | |
+| Tuition (Học phí) | TUI | |
+| Announcement (Thông báo) | ANN | Includes makeup/cancel |
+| Report (Báo cáo) | RPT | Weekly parent report |
+| Teacher (Giáo viên) | TCH | App owner / single user |
+
+---
+
+## Building DayThem.html
+
+To rebuild `DayThem.html` from the source files, read all 9 JSX files + styles.css from the design2 bundle path above and concatenate them into one `<script type="text/babel" data-presets="react">` block in order:
+
+1. `styles.css` (inline as `<style>`, strip `@import` line)
+2. `shared.jsx`
+3. `design-canvas.jsx`
+4. `home.jsx`
+5. `home_d.jsx`
+6. `flows.jsx`
+7. `announce.jsx`
+8. `settings.jsx`
+9. `onboarding.jsx`
+10. `ios-frame.jsx`
+11. `canvas.jsx`
+
+HTML shell needs:
+- `<link>` to Google Fonts (Be Vietnam Pro 400/500/600/700)
+- React 18 + ReactDOM from unpkg CDN
+- `@babel/standalone` from unpkg CDN
+- `<div id="root">` mount point
+
+---
+
+## Workflow Adaptation (Frontend Prototype)
+
+This project is a **design prototype**, not a production service. Apply the team workflow with adjustments:
+
+| Stage | Standard | DayThem adaptation |
+|-------|----------|--------------------|
+| 📋 Document UC | Use cases in `docs/` | Brief note in chat is enough |
+| 🏗️ Design Domain | Aggregate model | Design token / component planning |
+| 🧪 Write Tests | E2E tests | Visual check in browser |
+| 💻 Implement | Python code | Edit JSX source → rebuild HTML |
+| ▶️ Run Tests | pytest | Open `DayThem.html` in browser |
+| 🔎 Review | Code review | Check all 8+ canvas sections render |
+
+**Task Mode:** Default **Flexible** for UI/UX changes, **Strict** for new domain flows (new screen, new user journey).
+
+---
+
+## Zalo Integration Notes
+
+- **Zalo OAuth** = happy path for login (1 tap, gets name + avatar)
+- **Phone + OTP** = fallback (6-cell auto-advance, auto-submit)
+- Zalo used for: group announcements, parent messages, makeup poll, tuition reminders
+- App distinguishes: **group messages** (cancel, makeup, announcements) vs **private messages** (tuition, individual alerts)
+
+---
+
+## Key UX Decisions
+
+- Default all students **present** in attendance — tap to mark absent
+- Tuition reminder has 3 templates: nhẹ nhàng / trực tiếp / kèm số tài khoản
+- Makeup poll: live vote simulation, slot badge "Nhiều nhất" → confirm 1 tap
+- Onboarding Zalo link step is **skippable** — never block teacher from entering app
+- HomeD (assistant feed) cards: each card = 1 decision → swipe/dismiss → "Tất cả việc xong 🌿"

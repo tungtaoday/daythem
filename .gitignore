@@ -1,41 +1,27 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Claude local settings
+.claude/settings.local.json
+.log
 
-# dependencies
-node_modules/
+# Screenshots / temp files
+*.png
+*.jpg
+*.jpeg
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
+# Backend Python artifacts
+backend/__pycache__/
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/.env
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
 
-# Native
-.kotlin/
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
+# OS
 .DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
+Thumbs.db
+claude/
