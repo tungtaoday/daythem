@@ -141,13 +141,19 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   // Sync student list when real students load from API
   useEffect(() => {
     if (classStudents.length > 0) {
-      setStus(classStudents.map(stu => ({
-        id: stu.id,
-        name: stu.name,
-        baseAmt: klass?.default_fee ?? 500000,
-        override: (stu.fee_setting as any)?.override ?? null,
-        overrideNote: (stu.fee_setting as any)?.note ?? null,
-      })));
+      setStus(classStudents.map(stu => {
+        const fs = (stu as any).fee_setting as { fee_type: string; amount: number | null; note: string | null } | null;
+        const override = !fs || fs.fee_type === 'default' ? null
+          : fs.fee_type === 'free' ? 0
+          : fs.amount ?? null;
+        return {
+          id: stu.id,
+          name: stu.name,
+          baseAmt: klass?.default_fee ?? 500000,
+          override,
+          overrideNote: fs?.note ?? null,
+        };
+      }));
     }
   }, [classStudents.length, klass?.default_fee]);
 
@@ -162,7 +168,15 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         : s
     ));
     if (!isDemo) {
-      await setStudentFee(editingStu.id, { override: newOverride, note: note || null }).catch(() => {});
+      const feeType = newOverride === null ? 'default'
+        : newOverride === 0 ? 'free'
+        : newOverride < defaultFee ? 'discount'
+        : 'custom';
+      await setStudentFee(editingStu.id, {
+        fee_type: feeType,
+        amount: newOverride !== null ? newOverride : undefined,
+        note: note || undefined,
+      }).catch(() => {});
     }
     setEditingStu(null);
   };
