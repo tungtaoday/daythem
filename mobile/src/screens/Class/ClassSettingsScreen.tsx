@@ -131,12 +131,21 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   const [className, setClassName] = useState(klass?.name ?? 'Lớp 9');
   const [subject, setSubject] = useState(klass?.subject ?? 'Toán');
   const [defaultFee, setDefaultFee] = useState(klass?.default_fee ?? 500000);
+  const [feeInput, setFeeInput] = useState(String(Math.round((klass?.default_fee ?? 500000) / 1000)));
   const [feeMode, setFeeMode] = useState<FeeMode>((klass?.fee_type as FeeMode) ?? 'month');
   const [stus, setStus] = useState<StuFee[]>(DEMO_STUS);
   const [editingStu, setEditingStu] = useState<StuFee | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => { fetchStudents(classId); }, [classId]);
+
+  useEffect(() => {
+    if (klass) {
+      setDefaultFee(klass.default_fee);
+      setFeeInput(String(Math.round(klass.default_fee / 1000)));
+      setFeeMode((klass.fee_type as FeeMode) ?? 'month');
+    }
+  }, [klass?.id]);
 
   // Sync student list when real students load from API
   useEffect(() => {
@@ -275,10 +284,42 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         {/* ── HỌC PHÍ MẶC ĐỊNH ── */}
         <SectionHeader>HỌC PHÍ MẶC ĐỊNH</SectionHeader>
         <View style={s.card}>
+          {/* Amount input */}
           <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-            <Text style={s.feeAmt}>{defaultFee.toLocaleString('vi-VN')}đ / tháng</Text>
-            <Text style={s.feeMeta}>4 buổi/tháng · {(defaultFee / 4 / 1000).toFixed(0)}k/buổi</Text>
+            <Text style={s.rowLabel}>Số tiền</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TextInput
+                style={s.feeAmtInput}
+                value={feeInput}
+                onChangeText={v => {
+                  setFeeInput(v);
+                  const n = parseInt(v, 10) * 1000;
+                  if (!isNaN(n) && n >= 0) setDefaultFee(n);
+                }}
+                keyboardType="numeric"
+                placeholder="500"
+                placeholderTextColor={colors.textMuted}
+                editable={!isDemo}
+              />
+              <Text style={s.feeMeta}>nghìn đ</Text>
+            </View>
           </View>
+          {/* Presets */}
+          <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border, paddingVertical: 10 }]}>
+            {[200, 300, 400, 500, 600, 800, 1000].map(k => (
+              <TouchableOpacity
+                key={k}
+                style={[s.modeChip, defaultFee === k * 1000 && s.modeChipActive]}
+                onPress={() => { setDefaultFee(k * 1000); setFeeInput(String(k)); }}
+                disabled={isDemo}
+              >
+                <Text style={[s.modeChipText, defaultFee === k * 1000 && s.modeChipTextActive]}>
+                  {k >= 1000 ? '1tr' : `${k}k`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {/* Fee mode */}
           <View style={s.row}>
             <Text style={[s.rowLabel, { marginBottom: 0 }]}>Cách tính</Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -411,6 +452,7 @@ const s = StyleSheet.create({
   addScheduleBtnText: { fontSize: 14, fontWeight: '600', color: colors.green600 },
 
   feeAmt: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4 },
+  feeAmtInput: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, minWidth: 56, textAlign: 'right' },
   feeMeta: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
   modeChip: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
   modeChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
