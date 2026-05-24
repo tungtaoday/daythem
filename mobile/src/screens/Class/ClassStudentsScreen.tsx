@@ -6,8 +6,9 @@ import {
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
-import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron } from '../../components/icons';
+import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
+import { exportStudentsExcel } from '../../utils/exportExcel';
 
 // ── Types & demo data ─────────────────────────────────────────
 
@@ -325,11 +326,30 @@ export function ClassStudentsScreen({ route }: any) {
         {/* Summary bar */}
         <View style={s.summaryBar}>
           <Text style={s.summaryText}>{displayStus.length} học sinh</Text>
-          {!isDemo && (
-            <TouchableOpacity onPress={() => setShowAdd(true)}>
-              <Text style={s.addLink}>+ Thêm học sinh</Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            {displayStus.length > 0 && (
+              <TouchableOpacity
+                style={s.exportBtn}
+                onPress={() => exportStudentsExcel(
+                  displayStus.map(st => ({
+                    name: st.name,
+                    parent_phone: st.parent_phone,
+                    attend: st.attend,
+                    debt: st.debt,
+                  })),
+                  className
+                )}
+              >
+                <IconDownload size={14} color={colors.green700} />
+                <Text style={s.exportBtnText}>Xuất Excel</Text>
+              </TouchableOpacity>
+            )}
+            {!isDemo && (
+              <TouchableOpacity onPress={() => setShowAdd(true)}>
+                <Text style={s.addLink}>+ Thêm</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Student list */}
@@ -399,6 +419,8 @@ const s = StyleSheet.create({
   emptyText: { fontSize: 14, fontWeight: '600', color: colors.green600 },
   addInlineBtn: { marginTop: 10, paddingVertical: 10, alignItems: 'center' },
   addInlineBtnText: { fontSize: 13, color: colors.green600, fontWeight: '600' },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, borderWidth: 1, borderColor: colors.green200, backgroundColor: colors.green50 },
+  exportBtnText: { fontSize: 12, fontWeight: '600', color: colors.green700 },
   modal: { flex: 1, padding: 24, backgroundColor: colors.bg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },

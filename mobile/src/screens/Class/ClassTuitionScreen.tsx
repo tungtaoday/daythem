@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
-import { IconZalo, IconCheck } from '../../components/icons';
+import { IconZalo, IconCheck, IconDownload } from '../../components/icons';
 import { getTuition, recordPayment } from '../../api/tuition';
+import { exportTuitionExcel } from '../../utils/exportExcel';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 const VND = (n: number) => n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : (n / 1000).toFixed(0) + 'k';
@@ -72,7 +73,18 @@ export function ClassTuitionScreen({ route }: any) {
 
         {/* Hero summary */}
         <View style={s.hero}>
-          <Text style={s.heroLabel}>ĐÃ THU · {monthLabel}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <Text style={s.heroLabel}>ĐÃ THU · {monthLabel}</Text>
+            {items.length > 0 && (
+              <TouchableOpacity
+                style={s.exportBtn}
+                onPress={() => exportTuitionExcel(items, className, monthLabel)}
+              >
+                <IconDownload size={13} color={colors.green700} />
+                <Text style={s.exportBtnText}>Xuất Excel</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={s.heroAmt}>{VND_FULL(totalPaid)}</Text>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, marginBottom: 10 }}>
             <Text style={s.heroSub}>{Math.round(pct * 100)}% · {paidList.length}/{items.length} học sinh</Text>
@@ -166,7 +178,9 @@ const s = StyleSheet.create({
     backgroundColor: 'white', margin: 16, borderRadius: 20,
     borderWidth: 1, borderColor: colors.border, padding: 18,
   },
-  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 4 },
+  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 4, flex: 1 },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: colors.green200, backgroundColor: colors.green50 },
+  exportBtnText: { fontSize: 11, fontWeight: '600', color: colors.green700 },
   heroAmt: { fontSize: 32, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.8 },
   heroSub: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
   heroSubRed: { fontSize: 12, color: colors.coral700, fontWeight: '600' },

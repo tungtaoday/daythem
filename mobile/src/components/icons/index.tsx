@@ -35,6 +35,7 @@ export const IconSettings    = ico('settings-outline');
 export const IconTrash       = ico('trash-outline');
 export const IconEdit        = ico('create-outline');
 export const IconShare       = ico('share-social-outline');
+export const IconDownload    = ico('download-outline');
 
 // Zalo — custom SVG via Text approximation (no official icon in Ionicons)
 export function IconZalo({ size = 22, color = '#0068FF' }: { size?: number; color?: string }) {
