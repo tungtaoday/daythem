@@ -13,24 +13,21 @@ export function WelcomeScreen({ navigation }: any) {
   const [phase, setPhase] = useState<Phase>('welcome');
   const [phone, setPhone] = useState('');
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
-  const { requestOTP, verifyOTP, isLoading } = useAuthStore();
+  const { loginWithPassword, isLoading } = useAuthStore();
 
   const phoneValid = /^0\d{9}$/.test(phone);
 
   const handleSocialLogin = async (provider: 'google' | 'facebook') => {
     setSocialLoading(provider);
     try {
-      // Mock OAuth — bypass with demo credentials
-      await requestOTP('0901234567');
-      await verifyOTP('0901234567', '123456');
+      await loginWithPassword('0901234567', 'demo123');
     } catch {
       setSocialLoading(null);
     }
   };
 
-  const handleSendOTP = async () => {
-    await requestOTP(phone);
-    navigation.navigate('OTP', { phone });
+  const handlePhoneNext = () => {
+    navigation.navigate('Password', { phone });
   };
 
   if (phase === 'phone') {
@@ -74,13 +71,11 @@ export function WelcomeScreen({ navigation }: any) {
 
         <View style={s.phoneFooter}>
           <TouchableOpacity
-            style={[s.btnPrimary, s.btnRow, (!phoneValid || isLoading) && s.btnDisabled]}
-            onPress={handleSendOTP}
-            disabled={!phoneValid || isLoading}
+            style={[s.btnPrimary, s.btnRow, !phoneValid && s.btnDisabled]}
+            onPress={handlePhoneNext}
+            disabled={!phoneValid}
           >
-            {isLoading
-              ? <ActivityIndicator color="white" />
-              : <Text style={s.btnPrimaryText}>Gửi mã xác thực</Text>}
+            <Text style={s.btnPrimaryText}>Tiếp tục</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

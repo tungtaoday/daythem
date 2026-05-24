@@ -37,26 +37,24 @@ sequenceDiagram
     App->>Teacher: HomeScreen (MainTabs)
 ```
 
-### 1.2 Đăng nhập bằng số điện thoại (OTP)
+### 1.2 Đăng nhập bằng số điện thoại (Mật khẩu)
 
 ```mermaid
 sequenceDiagram
     actor Teacher
     participant App
     participant API
-    participant SMS
 
     Teacher->>App: Tap "Tiếp tục với số điện thoại"
     Teacher->>App: Nhập SĐT (0xxxxxxxxx)
-    Teacher->>App: Tap "Gửi mã xác thực"
-    App->>API: POST /auth/request-otp {phone}
-    API->>SMS: Gửi OTP 6 số
-    API-->>App: {dev_code} (dev only)
-    App->>Teacher: OTPScreen
+    Teacher->>App: Tap "Tiếp tục"
+    App->>Teacher: PasswordScreen (SĐT đã masked)
 
-    Teacher->>App: Nhập 6 số (auto-advance mỗi ô)
-    App->>API: POST /auth/verify-otp {phone, code}
+    Teacher->>App: Nhập mật khẩu (≥ 6 ký tự)
+    Teacher->>App: Tap "Đăng nhập"
+    App->>API: POST /auth/login {phone, password}
     API-->>App: {token, teacher}
+    note over App: Nếu API không khả dụng → demo fallback (teacher.name = null)
     App->>App: Lưu token → navigate Setup (nếu chưa có tên)
 ```
 
@@ -404,7 +402,7 @@ sequenceDiagram
 | Screen | Path | Trigger |
 |--------|------|---------|
 | WelcomeScreen | `/Auth/WelcomeScreen` | Chưa đăng nhập |
-| OTPScreen | `/Auth/OTPScreen` | Đăng nhập SĐT |
+| PasswordScreen | `/Auth/PasswordScreen` | Đăng nhập SĐT |
 | SetupScreen | `/Auth/SetupScreen` | Đã đăng nhập, chưa có tên |
 | HomeScreen | `MainTabs/Home` | Default sau login |
 | CalendarScreen | `Stack/Calendar` | Icon lịch ở Home |
@@ -427,7 +425,7 @@ sequenceDiagram
 ```
 Stack (Root)
 ├── WelcomeScreen
-├── OTPScreen
+├── PasswordScreen
 ├── SetupScreen
 └── MainTabs
     ├── Tab: Home

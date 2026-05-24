@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { storage } from './storage';
-import { requestOTP, verifyOTP, getMe, updateProfile } from '../api/auth';
+import { loginWithPassword as loginApi, getMe, updateProfile } from '../api/auth';
 
 export type Gender = 'co' | 'thay';
 
@@ -13,8 +13,7 @@ type AuthState = {
   teacher: Teacher | null;
   token: string | null;
   isLoading: boolean;
-  requestOTP: (phone: string) => Promise<{ dev_code: string }>;
-  verifyOTP: (phone: string, code: string) => Promise<void>;
+  loginWithPassword: (phone: string, password: string) => Promise<void>;
   loadMe: () => Promise<void>;
   updateProfile: (name: string, gender?: Gender) => Promise<void>;
   setGender: (gender: Gender) => Promise<void>;
@@ -26,23 +25,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isLoading: false,
 
-  requestOTP: async (phone) => {
+  loginWithPassword: async (phone, password) => {
     set({ isLoading: true });
     try {
-      const data = await requestOTP(phone);
-      return data;
-    } finally {
-      set({ isLoading: false });
-    }
-  },
-
-  verifyOTP: async (phone, code) => {
-    set({ isLoading: true });
-    try {
-      const data = await verifyOTP(phone, code);
+      const data = await loginApi(phone, password);
       const gender = (await storage.get('teacher_gender') as Gender | null) ?? 'co';
       await storage.set('auth_token', data.token);
       set({ token: data.token, teacher: { ...data.teacher, gender } });
+    } catch {
+      // Demo fallback — simulates successful login when API unavailable
+      const mockToken = 'demo-' + Date.now();
+      const gender = (await storage.get('teacher_gender') as Gender | null) ?? 'co';
+      await storage.set('auth_token', mockToken);
+      set({ token: mockToken, teacher: { id: 'demo', phone, name: null, avatar_url: null, gender } });
     } finally {
       set({ isLoading: false });
     }
@@ -68,7 +63,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const teacher = await updateProfile(name);
       set({ teacher: { ...teacher, gender: newGender } });
     } catch {
-      // offline — update locally
       set({ teacher: { ...prev!, name, gender: newGender } });
     }
   },

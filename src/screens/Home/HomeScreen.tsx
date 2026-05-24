@@ -216,7 +216,7 @@ function EmptyState() {
           <Text style={{ fontSize: 40 }}>🌿</Text>
         </View>
         <Text style={es.title}>Tất cả việc xong rồi!</Text>
-        <Text style={es.sub}>Hôm nay cô làm tốt lắm.{'\n'}Tận hưởng buổi chiều nhé.</Text>
+        <Text style={es.sub}>Làm tốt lắm hôm nay!{'\n'}Tận hưởng buổi chiều nhé.</Text>
       </View>
     </View>
   );
@@ -338,7 +338,7 @@ export function HomeScreen({ navigation }: any) {
         <Text style={s.greetSub}>
           {cards.length === 0
             ? 'Tất cả việc trong ngày đã xong rồi 🌿'
-            : `Có ${cards.length} việc cô nên xem hôm nay:`}
+            : `Có ${cards.length} việc ${genderStr} nên xem hôm nay:`}
         </Text>
 
         {/* ── Card feed ── */}

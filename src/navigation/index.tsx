@@ -8,7 +8,7 @@ import { IconHome, IconCalendar, IconUsers, IconWallet, IconChart } from '../com
 
 // Auth screens
 import { WelcomeScreen } from '../screens/Auth/WelcomeScreen';
-import { OTPScreen } from '../screens/Auth/OTPScreen';
+import { PasswordScreen } from '../screens/Auth/PasswordScreen';
 import { SetupScreen } from '../screens/Auth/SetupScreen';
 
 // Tab screens
@@ -124,7 +124,7 @@ export function AppNavigator() {
         {!token ? (
           <>
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
-            <Stack.Screen name="OTP" component={OTPScreen} />
+            <Stack.Screen name="Password" component={PasswordScreen} />
           </>
         ) : needsSetup ? (
           <Stack.Screen name="Setup" component={SetupScreen} />
