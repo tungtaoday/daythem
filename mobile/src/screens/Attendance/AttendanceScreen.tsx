@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
@@ -10,7 +10,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
-import { recordAttendance } from '../../api/attendance';
+import { recordAttendance, listSessions } from '../../api/attendance';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // Hero progress ring — react-native-svg renders on iOS, Android and web.
@@ -40,14 +40,31 @@ function HeroRing({ present, total }: { present: number; total: number }) {
 }
 
 const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+const WD_SHORT = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
-function formatDateLine(): string {
-  const d = new Date();
+const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const parseYmd = (s: string) => { const [y, m, dd] = s.split('-').map(Number); return new Date(y, m - 1, dd); };
+
+function formatDateLine(s: string): string {
+  const d = parseYmd(s);
   const dd = String(d.getDate()).padStart(2, '0');
   const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mi = String(d.getMinutes()).padStart(2, '0');
-  return `${WEEKDAYS[d.getDay()]} · ${dd}/${mm}/${d.getFullYear()} · ${hh}:${mi}`;
+  return `${WEEKDAYS[d.getDay()]} · ${dd}/${mm}/${d.getFullYear()}`;
+}
+
+// Các buổi gần nhất theo lịch lớp (lùi về quá khứ). Không có lịch → vài ngày gần đây.
+function recentSessionDates(scheduleDay: number | undefined, count = 5): Date[] {
+  const out: Date[] = [];
+  const today = new Date();
+  if (scheduleDay) {
+    const targetJs = scheduleDay % 7; // 1=Mon..6=Sat, 7(CN)→0
+    const cur = new Date(today);
+    while (cur.getDay() !== targetJs) cur.setDate(cur.getDate() - 1);
+    for (let i = 0; i < count; i++) { out.push(new Date(cur)); cur.setDate(cur.getDate() - 7); }
+  } else {
+    for (let i = 0; i < count; i++) { const x = new Date(today); x.setDate(today.getDate() - i); out.push(x); }
+  }
+  return out;
 }
 
 type Mark = 'present' | 'absent';
@@ -59,7 +76,6 @@ export function AttendanceScreen({ route, navigation }: any) {
   const cls = classes.find((c: any) => c.id === classId);
   const className = route.params.className || cls?.name || 'Lớp';
   const subject = cls?.subject || '';
-  const dateLine = formatDateLine();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const teacher = useAuthStore(st => st.teacher);
   const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
@@ -69,15 +85,53 @@ export function AttendanceScreen({ route, navigation }: any) {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+
+  // ── Chọn buổi (cho điểm danh buổi quá khứ) ──
+  const todayYmd = ymd(new Date());
+  // Các buổi chọn được: vài buổi gần nhất theo lịch lớp + buổi truyền từ Lịch (nếu có).
+  const sessionDates = useMemo(() => {
+    const list = recentSessionDates(cls?.schedule?.day, 5).map(ymd);
+    const fromParam: string | undefined = route.params?.sessionDate;
+    if (fromParam && !list.includes(fromParam)) list.unshift(fromParam);
+    return list;
+  }, [cls?.schedule?.day, route.params?.sessionDate]);
+  const [sessionDate, setSessionDate] = useState<string>(route.params?.sessionDate || sessionDates[0] || todayYmd);
+  const [sessionsByDate, setSessionsByDate] = useState<Record<string, any>>({});
+  const dateLine = formatDateLine(sessionDate);
 
   useEffect(() => { fetchStudents(classId); }, [classId]);
 
+  // Tải các buổi đã điểm danh để (a) đánh dấu chip đã có, (b) nạp lại khi sửa.
   useEffect(() => {
-    if (classStudents.length > 0 && Object.keys(marks).length === 0) {
+    if (isDemo) return;
+    listSessions(classId)
+      .then((sessions: any[]) => {
+        const map: Record<string, any> = {};
+        sessions.forEach(s => { map[s.session_date] = s; });
+        setSessionsByDate(map);
+      })
+      .catch(() => {});
+  }, [classId, isDemo]);
+
+  // Khi đổi buổi (hoặc dữ liệu sẵn sàng): nạp trạng thái buổi đó (nếu đã điểm danh) hoặc mặc định có mặt.
+  useEffect(() => {
+    if (classStudents.length === 0) return;
+    const existing = sessionsByDate[sessionDate];
+    if (existing) {
+      const m: Record<string, Mark> = {};
+      const n: Record<string, string> = {};
+      classStudents.forEach(s => { m[s.id] = 'present'; });
+      existing.records?.forEach((r: any) => {
+        m[r.student_id] = r.present ? 'present' : 'absent';
+        if (r.absence_reason) n[r.student_id] = r.absence_reason;
+      });
+      setMarks(m);
+      setNotes(n);
+    } else {
       setMarks(Object.fromEntries(classStudents.map(s => [s.id, 'present' as Mark])));
+      setNotes({});
     }
-  }, [classStudents]);
+  }, [classStudents, sessionDate, sessionsByDate]);
 
   const toggle = (id: string) => {
     setMarks(m => ({ ...m, [id]: m[id] === 'present' ? 'absent' : 'present' }));
@@ -99,7 +153,8 @@ export function AttendanceScreen({ route, navigation }: any) {
       return;
     }
     try {
-      await recordAttendance(classId, { session_date: today, records });
+      const saved = await recordAttendance(classId, { session_date: sessionDate, records });
+      setSessionsByDate(prev => ({ ...prev, [sessionDate]: saved }));
       setSubmitted(true);
     } catch {
       Alert.alert('Chưa lưu được', 'Không lưu được điểm danh. Kiểm tra mạng và thử lại.');
@@ -125,7 +180,7 @@ export function AttendanceScreen({ route, navigation }: any) {
             </View>
             <Text style={s.nudgeText}>
               <Text style={{ fontWeight: '700' }}>{firstAbsent.name.split(' ').slice(-1)[0]}</Text>
-              {' '}hôm nay vắng. Muốn nhắn Zalo hỏi thăm phụ huynh?
+              {' '}vắng buổi này. Muốn nhắn Zalo hỏi thăm phụ huynh?
             </Text>
             <TouchableOpacity style={s.zaloPrimary} onPress={() => setShowZalo(true)}>
               <IconZalo size={16} color="white" />
@@ -142,7 +197,7 @@ export function AttendanceScreen({ route, navigation }: any) {
         <ZaloCopySheet
           title="Hỏi thăm học sinh vắng"
           recipient={`Phụ huynh của ${firstAbsent.name}`}
-          message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} hôm nay không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
+          message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} buổi vừa rồi không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
           hint={`phụ huynh của ${firstAbsent.name}`}
           onConfirm={() => setShowZalo(false)}
           onClose={() => setShowZalo(false)}
@@ -179,6 +234,29 @@ export function AttendanceScreen({ route, navigation }: any) {
             {allPresent ? 'Cả lớp có mặt 🎉' : `${presentCount}/${total} có mặt`}
           </Text>
           <Text style={s.heroHint}>Chạm vào tên để đổi có mặt / vắng</Text>
+        </View>
+
+        {/* Chọn buổi — cho phép điểm danh / sửa buổi quá khứ */}
+        <View style={s.dateChipsWrap}>
+          <Text style={s.dateChipsLabel}>CHỌN BUỔI</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
+            {sessionDates.map(d => {
+              const dt = parseYmd(d);
+              const active = d === sessionDate;
+              const done = !!sessionsByDate[d];
+              return (
+                <TouchableOpacity key={d} style={[s.dateChip, active && s.dateChipActive]} onPress={() => setSessionDate(d)} activeOpacity={0.8}>
+                  <Text style={[s.dateChipText, active && s.dateChipTextActive]}>
+                    {d === todayYmd ? 'Hôm nay' : `${WD_SHORT[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`}
+                  </Text>
+                  {done && <View style={[s.dateChipDot, active && { backgroundColor: 'white' }]} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {sessionsByDate[sessionDate] && (
+            <Text style={s.dateChipsHint}>Buổi này đã điểm danh — chỉnh rồi lưu lại để cập nhật.</Text>
+          )}
         </View>
 
         <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
@@ -326,6 +404,14 @@ const s = StyleSheet.create({
     fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.8)',
     marginTop: 4, textAlign: 'center',
   },
+  dateChipsWrap: { paddingLeft: 16, marginTop: 16 },
+  dateChipsLabel: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4, color: colors.textSecondary, marginBottom: 8 },
+  dateChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, backgroundColor: 'white' },
+  dateChipActive: { borderColor: colors.green500, backgroundColor: colors.green500 },
+  dateChipText: { fontSize: 13, fontWeight: '700', color: colors.textSecondary },
+  dateChipTextActive: { color: 'white' },
+  dateChipDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.green500 },
+  dateChipsHint: { fontSize: 12, color: colors.textSecondary, marginTop: 8, paddingRight: 16 },
   card: {
     backgroundColor: 'white', borderRadius: 18,
     borderWidth: 1, borderColor: colors.border, padding: 6,

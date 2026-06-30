@@ -75,6 +75,11 @@ export function CalendarScreen({ navigation }: any) {
   const selDayN = selDow === 0 ? 7 : selDow;
   const selectedClasses = classes.filter((c: any) => c.schedule?.day === selDayN);
 
+  // Ngày đã chọn là buổi đã qua / hôm nay → cho điểm danh đúng buổi đó.
+  const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const selYmd = ymd(selectedDate);
+  const isPastOrToday = selYmd <= ymd(new Date());
+
   // Monthly stats — scheduled is a reasonable estimate (~4 buổi/tháng mỗi lớp).
   // Buổi bù / buổi nghỉ chỉ có số liệu trong phiên demo.
   const monthlyScheduled = classes.length * 4;
@@ -178,12 +183,21 @@ export function CalendarScreen({ navigation }: any) {
                       {cls.schedule?.location ? ` · ${cls.schedule.location}` : ''}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={s.openBtn}
-                    onPress={() => navigation.navigate('ClassDetail', { classId: cls.id, className: cls.name })}
-                  >
-                    <Text style={s.openBtnText}>Mở lớp →</Text>
-                  </TouchableOpacity>
+                  {isPastOrToday ? (
+                    <TouchableOpacity
+                      style={s.attendBtn}
+                      onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
+                    >
+                      <Text style={s.attendBtnText}>Điểm danh</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={s.openBtn}
+                      onPress={() => navigation.navigate('ClassDetail', { classId: cls.id, className: cls.name })}
+                    >
+                      <Text style={s.openBtnText}>Mở lớp →</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ))}
             </View>
@@ -324,6 +338,8 @@ const s = StyleSheet.create({
     backgroundColor: colors.green100, borderRadius: 10,
   },
   openBtnText: { fontSize: 12, fontWeight: '700', color: colors.green700 },
+  attendBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.green500, borderRadius: 10 },
+  attendBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
   emptyDay: {
     backgroundColor: 'white', borderRadius: 18, borderWidth: 1,
     borderColor: colors.border, padding: 20, alignItems: 'center',
