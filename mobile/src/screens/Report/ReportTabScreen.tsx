@@ -319,7 +319,7 @@ export function ReportTabScreen({ navigation, route }: any) {
   if (!isDemo && allClasses.length === 0) {
     return (
       <View style={s.container}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>Báo cáo</Text>
             <Text style={s.subtitle}>{weekLabel()}</Text>
@@ -339,7 +339,7 @@ export function ReportTabScreen({ navigation, route }: any) {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Báo cáo</Text>
           <Text style={s.subtitle}>{weekLabel()} · {displayClasses.length} lớp</Text>

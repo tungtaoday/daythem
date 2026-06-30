@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { useClassesStore } from '../../store/classes';
 import { classColor } from '../../theme/classColors';
@@ -32,6 +33,7 @@ function getDaysInMonth(year: number, month: number) {
 }
 
 export function CalendarScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { classes } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const today = new Date();
@@ -92,7 +94,7 @@ export function CalendarScreen({ navigation }: any) {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
           <View style={{ transform: [{ rotate: '180deg' }] }}>
             <IconChevron size={20} color={colors.textPrimary} />

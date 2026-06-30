@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Modal, Alert, Linking, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron } from '../../components/icons';
@@ -120,6 +121,7 @@ const DEMO_MONEY = [
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
 function StudentProfile({ student, clsName, isDemo, onClose }: any) {
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
   const teacher = useAuthStore(s => s.teacher);
@@ -129,7 +131,7 @@ function StudentProfile({ student, clsName, isDemo, onClose }: any) {
   return (
     <View style={pp.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={pp.backRow}>
+        <View style={[pp.backRow, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity style={pp.backBtn} onPress={onClose}>
             <View style={{ transform: [{ rotate: '180deg' }] }}><IconChevron size={18} color={colors.textPrimary} /></View>
           </TouchableOpacity>
@@ -357,6 +359,7 @@ const pp = StyleSheet.create({
 type Filter = 'all' | 'unpaid' | 'risk' | string; // string = classId
 
 export function StudentsTabScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { classes, students, fetchClasses, fetchStudents, addStudent } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const [filter, setFilter] = useState<Filter>(route?.params?.filterClassId ?? 'all');
@@ -456,7 +459,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Học sinh</Text>
           <Text style={s.subtitle}>{totalCount} học sinh · {displayGroups.length} lớp</Text>

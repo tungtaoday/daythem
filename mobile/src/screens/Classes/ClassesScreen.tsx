@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/ui/Avatar';
@@ -306,6 +307,7 @@ const hc = StyleSheet.create({
 // ── ClassesScreen (HomeB) ─────────────────────────────────────
 
 export function ClassesScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { teacher } = useAuthStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const { classes, students, isLoading, fetchClasses, fetchStudents } = useClassesStore();
@@ -362,7 +364,7 @@ export function ClassesScreen({ navigation }: any) {
   return (
     <View style={s.container}>
       {/* ── Header ── */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>{dateStr}</Text>
           <Text style={s.headerTitle}>Lớp của {teacher?.gender === 'thay' ? 'thầy' : 'cô'}{teacher?.name ? ` ${teacher.name.trim().split(/\s+/).pop()}` : ''}</Text>

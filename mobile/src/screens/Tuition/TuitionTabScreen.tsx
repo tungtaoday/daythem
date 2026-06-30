@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
@@ -128,6 +129,7 @@ const cb = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────
 
 export function TuitionTabScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { classes, fetchClasses } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const teacher = useAuthStore(st => st.teacher);
@@ -218,7 +220,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
     const hasClass = classes.length > 0;
     return (
       <View style={s.container}>
-        <View style={s.header}>
+        <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>Học phí</Text>
             <Text style={s.subtitle}>{monthLabel}</Text>
@@ -246,7 +248,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
   return (
     <View style={s.container}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Học phí</Text>
           <Text style={s.subtitle}>{monthLabel}</Text>

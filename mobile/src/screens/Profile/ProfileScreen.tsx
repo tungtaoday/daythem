@@ -254,7 +254,7 @@ export function ProfileScreen({ navigation }: any) {
   return (
     <View style={s.container}>
       {/* Top bar */}
-      <View style={s.topBar}>
+      <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
           <View style={{ transform: [{ rotate: '180deg' }] }}>
             <IconChevron size={20} color={colors.textPrimary} />

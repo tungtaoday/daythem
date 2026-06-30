@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   RefreshControl, Animated, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/ui/Avatar';
 import { PromoBanner } from '../../components/ui/PromoBanner';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -378,6 +379,7 @@ const gs = StyleSheet.create({
 // ── Main HomeScreen (HomeD) ───────────────────────────────────
 
 export function HomeScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { teacher } = useAuthStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const { classes, isLoading, fetchClasses } = useClassesStore();
@@ -491,7 +493,7 @@ export function HomeScreen({ navigation }: any) {
     <View style={s.container}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={s.scroll}
+        contentContainerStyle={[s.scroll, { paddingTop: insets.top + 12 }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor="#4a9e72" />}
       >
