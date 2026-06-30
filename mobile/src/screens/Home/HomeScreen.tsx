@@ -518,7 +518,7 @@ export function HomeScreen({ navigation }: any) {
               ? (!hasClass ? `Cùng thiết lập lớp đầu tiên nào!` : `Lớp đã tạo — giờ thêm học sinh nhé!`)
               : cards.length === 0
                 ? 'Tất cả việc trong ngày đã xong rồi 🌿'
-                : `Có ${cards.length} việc ${genderStr} nên xem hôm nay:`}
+                : 'Cùng xử lý gọn vài việc hôm nay nhé 🌿'}
         </Text>
 
         {/* ── Owner promo banner (server-driven, dismissible) ── */}
@@ -531,15 +531,20 @@ export function HomeScreen({ navigation }: any) {
             : needsSetup
               ? <GettingStarted hasClass={hasClass} hasStudents={hasStudents} firstClass={classes[0]} navigation={navigation} />
               : cards.length > 0
-                ? cards.map((card, i) => (
-                    <NudgeCard
-                      key={card.id}
-                      card={card}
-                      isPrimary={i === 0}
-                      onDone={() => handlePrimary(card)}
-                      onLater={() => dismiss(card.id)}
-                    />
-                  ))
+                ? (
+                    <>
+                      <Text style={s.feedHeader}>CÓ {cards.length} VIỆC {genderStr === 'thầy' ? 'THẦY' : 'CÔ'} NÊN XEM</Text>
+                      {cards.map((card, i) => (
+                        <NudgeCard
+                          key={card.id}
+                          card={card}
+                          isPrimary={i === 0}
+                          onDone={() => handlePrimary(card)}
+                          onLater={() => dismiss(card.id)}
+                        />
+                      ))}
+                    </>
+                  )
                 : hasClass
                   ? <WarmRestCard genderStr={genderStr} classes={classes} />
                   : <EmptyState />}
@@ -574,6 +579,7 @@ const s = StyleSheet.create({
 
   // Feed
   feed: { gap: 12 },
+  feedHeader: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: colors.textSecondary, marginBottom: 2 },
 
   // Progress
   progress: { marginTop: 18, backgroundColor: '#f0faf4', borderRadius: 16, padding: 14 },
