@@ -10,6 +10,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
+import { listSessions } from '../../api/attendance';
 import { exportStudentsExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
@@ -106,8 +107,22 @@ const HERO = {
   star: { bg: colors.honey500, grad: ['#e9b84d', '#c8902a'] as const, fg: '#5e4715', fgDim: 'rgba(94,71,21,0.72)', chipBg: 'rgba(94,71,21,0.10)', statBg: 'rgba(255,255,255,0.42)', btnBg: 'rgba(94,71,21,0.10)', label: 'Xuất sắc ★' },
 } as const;
 
-function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; className?: string; subject?: string }) {
+function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject, sessions }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; className?: string; subject?: string; sessions?: any[] }) {
   const insets = useSafeAreaInsets();
+
+  // Lịch sử điểm danh thật của em này (từ các buổi đã điểm danh).
+  const realHistory = (!isDemo && sessions ? sessions : [])
+    .map((s: any) => {
+      const r = s.records?.find((x: any) => x.student_id === student.id);
+      return r ? { date: s.session_date as string, present: !!r.present, reason: r.absence_reason as string | null } : null;
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => (a.date < b.date ? 1 : -1)) as { date: string; present: boolean; reason: string | null }[];
+  const rPresent = realHistory.filter(h => h.present).length;
+  const rAbsent = realHistory.length - rPresent;
+  const rPct = realHistory.length ? Math.round((rPresent / realHistory.length) * 100) : null;
+  const hasReal = realHistory.length > 0;
+  const fmtDate = (s: string) => { const p = s.split('-'); return `${p[2]}/${p[1]}`; };
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
   const teacher = useAuthStore(s => s.teacher);
@@ -183,11 +198,11 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
 
             {/* Stat row trong hero */}
             <View style={[pp.statsRow, { backgroundColor: hero.statBg }]}>
-              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Đã học" value={isDemo ? '6' : '–'} />
+              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Đã học" value={isDemo ? '6' : (hasReal ? String(rPresent) : '–')} />
               <View style={[pp.statSep, { backgroundColor: hero.fgDim }]} />
-              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Vắng" value={isDemo ? '2' : '–'} />
+              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Vắng" value={isDemo ? '2' : (hasReal ? String(rAbsent) : '–')} />
               <View style={[pp.statSep, { backgroundColor: hero.fgDim }]} />
-              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Chuyên cần" value={isDemo ? `${student.attend}%` : '–'} />
+              <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Chuyên cần" value={isDemo ? `${student.attend}%` : (rPct !== null ? `${rPct}%` : '–')} />
               <View style={[pp.statSep, { backgroundColor: hero.fgDim }]} />
               <HeroStat fg={hero.fg} fgDim={hero.fgDim} label="Còn nợ" value={isDemo ? (student.debt > 0 ? VND(student.debt) : '0đ') : '–'} />
             </View>
@@ -274,10 +289,25 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
         {tab === 'attend' && (
           <View style={pp.content}>
             {!isDemo ? (
-              <View style={pp.emptyTab}>
-                <Text style={pp.emptyTabTitle}>Chưa có dữ liệu điểm danh</Text>
-                <Text style={pp.emptyTabSub}>Điểm danh các buổi học để xem lịch sử ở đây.</Text>
-              </View>
+              hasReal ? realHistory.map((r, i) => (
+                <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <View style={[pp.histIcon, r.present ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
+                    {r.present ? <IconCheck size={16} color={colors.green700} /> : <IconX size={16} color={colors.coral700} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Buổi {fmtDate(r.date)}</Text>
+                    {r.reason ? <Text style={{ fontSize: 12, color: colors.textSecondary }}>{r.reason}</Text> : null}
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: r.present ? colors.green700 : colors.coral700 }}>
+                    {r.present ? 'Có mặt' : 'Vắng'}
+                  </Text>
+                </View>
+              )) : (
+                <View style={pp.emptyTab}>
+                  <Text style={pp.emptyTabTitle}>Chưa có dữ liệu điểm danh</Text>
+                  <Text style={pp.emptyTabSub}>Điểm danh các buổi học để xem lịch sử ở đây.</Text>
+                </View>
+              )
             ) : DEMO_ATTEND.map((r, i) => (
               <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={[pp.histIcon, r.ok ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
@@ -499,6 +529,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   };
 
   const [profileStu, setProfileStu] = useState<StuItem | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
   const [addParentName, setAddParentName] = useState('');
@@ -514,6 +545,12 @@ export function ClassStudentsScreen({ route, navigation }: any) {
     setLoading(true);
     Promise.resolve(fetchStudents(classId)).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
+  }, [classId, isDemo]);
+
+  // Lịch sử điểm danh thật của lớp → hiển thị trong hồ sơ từng học sinh.
+  useEffect(() => {
+    if (isDemo) return;
+    listSessions(classId).then(setSessions).catch(() => {});
   }, [classId, isDemo]);
 
   // Mở thẳng hồ sơ 1 em khi điều hướng kèm openStudentId (từ Chi tiết lớp).
@@ -551,7 +588,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   };
 
   if (profileStu) {
-    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => setProfileStu(null)} onSetFee={handleSetFee} className={className} subject={klass?.subject} />;
+    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => setProfileStu(null)} onSetFee={handleSetFee} className={className} subject={klass?.subject} sessions={sessions} />;
   }
 
   if (loading) {
