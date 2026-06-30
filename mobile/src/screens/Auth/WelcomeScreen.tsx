@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/auth';
@@ -10,6 +11,7 @@ import { useAuthStore } from '../../store/auth';
 type Phase = 'welcome' | 'phone';
 
 export function WelcomeScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<Phase>('welcome');
   const [phone, setPhone] = useState('');
   const [socialLoading, setSocialLoading] = useState<'google' | 'facebook' | null>(null);
@@ -43,7 +45,7 @@ export function WelcomeScreen({ navigation }: any) {
         <View style={s.phoneContent}>
           <Text style={s.phoneTitle}>Số điện thoại của bạn</Text>
           <Text style={s.phoneSub}>
-            Chúng tôi sẽ gửi mã xác thực qua tin nhắn.
+            Nhập số để đăng nhập, hoặc tạo tài khoản mới nếu chưa có.
           </Text>
 
           <View style={s.phoneRow}>
@@ -69,7 +71,7 @@ export function WelcomeScreen({ navigation }: any) {
           )}
         </View>
 
-        <View style={s.phoneFooter}>
+        <View style={[s.phoneFooter, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
           <TouchableOpacity
             style={[s.btnPrimary, s.btnRow, !phoneValid && s.btnDisabled]}
             onPress={handlePhoneNext}
@@ -88,10 +90,7 @@ export function WelcomeScreen({ navigation }: any) {
     <View style={s.container}>
       {/* Brand */}
       <View style={s.brand}>
-        <View style={s.brandMark}>
-          <Text style={s.brandLeaf}>✦</Text>
-        </View>
-        <Text style={s.brandName}>DayThem</Text>
+        <Image source={require('../../../assets/wordmark.png')} style={s.wordmark} resizeMode="contain" />
       </View>
 
       {/* Hero */}
@@ -109,53 +108,41 @@ export function WelcomeScreen({ navigation }: any) {
 
       {/* Buttons */}
       <View style={s.buttons}>
-        {/* Google */}
+        {/* Phone — primary, honest path */}
         <TouchableOpacity
-          style={[s.btnSocial, s.btnRow]}
-          onPress={() => handleSocialLogin('google')}
-          disabled={loading}
-        >
-          {socialLoading === 'google'
-            ? <ActivityIndicator color={colors.textPrimary} size="small" />
-            : <>
-                <GoogleIcon />
-                <Text style={s.btnSocialText}>Tiếp tục với Google</Text>
-              </>}
-        </TouchableOpacity>
-
-        {/* Facebook */}
-        <TouchableOpacity
-          style={[s.btnFacebook, s.btnRow]}
-          onPress={() => handleSocialLogin('facebook')}
-          disabled={loading}
-        >
-          {socialLoading === 'facebook'
-            ? <ActivityIndicator color="white" size="small" />
-            : <>
-                <Ionicons name="logo-facebook" size={20} color="white" />
-                <Text style={s.btnFacebookText}>Tiếp tục với Facebook</Text>
-              </>}
-        </TouchableOpacity>
-
-        {/* Divider */}
-        <View style={s.divider}>
-          <View style={s.dividerLine} />
-          <Text style={s.dividerText}>hoặc</Text>
-          <View style={s.dividerLine} />
-        </View>
-
-        {/* Phone */}
-        <TouchableOpacity
-          style={[s.btnOutline, s.btnRow]}
+          style={[s.btnPrimaryWelcome, s.btnRow]}
           onPress={() => setPhase('phone')}
           disabled={loading}
         >
-          <Ionicons name="call-outline" size={20} color={colors.textSecondary} />
-          <Text style={s.btnOutlineText}>Tiếp tục với số điện thoại</Text>
+          <Ionicons name="call-outline" size={20} color="white" />
+          <Text style={s.btnPrimaryWelcomeText}>Tiếp tục với số điện thoại</Text>
         </TouchableOpacity>
+
+        {/* Social login is demo-only (mock account) until real OAuth is wired */}
+        {__DEV__ && (
+          <>
+            <View style={s.divider}>
+              <View style={s.dividerLine} />
+              <Text style={s.dividerText}>dùng thử nhanh (demo)</Text>
+              <View style={s.dividerLine} />
+            </View>
+            <TouchableOpacity
+              style={[s.btnSocial, s.btnRow]}
+              onPress={() => handleSocialLogin('google')}
+              disabled={loading}
+            >
+              {socialLoading === 'google'
+                ? <ActivityIndicator color={colors.textPrimary} size="small" />
+                : <>
+                    <GoogleIcon />
+                    <Text style={s.btnSocialText}>Dùng thử với tài khoản demo</Text>
+                  </>}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
-      <Text style={s.terms}>
+      <Text style={[s.terms, { marginBottom: Math.max(insets.bottom + 8, 24) }]}>
         Tiếp tục đồng nghĩa với việc bạn đồng ý{'\n'}
         <Text style={s.termsLink}>Điều khoản</Text>{'  ·  '}
         <Text style={s.termsLink}>Chính sách bảo mật</Text>
@@ -169,10 +156,8 @@ export function WelcomeScreen({ navigation }: any) {
               ? <GoogleIcon size={28} />
               : <Ionicons name="logo-facebook" size={28} color="white" />}
           </View>
-          <Text style={s.overlayTitle}>
-            Đang đăng nhập {socialLoading === 'google' ? 'Google' : 'Facebook'}...
-          </Text>
-          <Text style={s.overlaySub}>Lấy tên & ảnh đại diện</Text>
+          <Text style={s.overlayTitle}>Đang mở tài khoản demo...</Text>
+          <Text style={s.overlaySub}>Dùng để trải nghiệm thử</Text>
         </View>
       )}
     </View>
@@ -242,6 +227,8 @@ const s = StyleSheet.create({
   brandMark: { width: 32, height: 32, borderRadius: 10, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   brandLeaf: { color: 'white', fontSize: 14, fontWeight: '700' },
   brandName: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3 },
+  brandTagline: { fontSize: 11, color: colors.green700, fontWeight: '600', marginTop: 1 },
+  wordmark: { width: 220, height: 58 },
 
   heroWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 180, maxHeight: 240 },
 
@@ -267,13 +254,15 @@ const s = StyleSheet.create({
     height: 52, borderRadius: radius.lg, backgroundColor: 'transparent',
   },
   btnOutlineText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
+  btnPrimaryWelcome: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500 },
+  btnPrimaryWelcomeText: { fontSize: 15, fontWeight: '600', color: 'white' },
   btnDisabled: { opacity: 0.5 },
 
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
   dividerText: { fontSize: 13, color: colors.textMuted, fontWeight: '500' },
 
-  terms: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 14, marginBottom: 24, lineHeight: 18 },
+  terms: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 14, lineHeight: 18 },
   termsLink: { color: colors.green600, fontWeight: '600' },
 
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(250,248,242,0.95)', alignItems: 'center', justifyContent: 'center' } as any,

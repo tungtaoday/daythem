@@ -1,19 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
-const PALETTES = [
-  ['#7cc28a', '#4f9e6a'],  // green
-  ['#f4a76b', '#d97742'],  // coral
-  ['#f0c862', '#d9a23b'],  // honey
-  ['#9bbed6', '#5d8aa8'],  // blue
-  ['#c9a4d6', '#9b7bb0'],  // purple
-  ['#d68d8d', '#a85e5e'],  // rose
+// Solid colors (no gradients — backgroundImage is ignored on native).
+// Tone matches the app theme: greens / coral / honey-amber / soft blue-purple-rose.
+const PALETTE = [
+  '#4f9e6a',  // green
+  '#d97742',  // coral
+  '#d9a23b',  // honey amber
+  '#5d8aa8',  // blue
+  '#9b7bb0',  // purple
+  '#a85e5e',  // rose
 ];
 
-function avatarPalette(name: string) {
+function avatarColor(name: string) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = ((h * 31) + name.charCodeAt(i)) >>> 0;
-  return PALETTES[h % PALETTES.length];
+  return PALETTE[h % PALETTE.length];
 }
 
 function initials(name: string) {
@@ -25,13 +27,12 @@ function initials(name: string) {
 type Props = { name: string; size?: number; ring?: string };
 
 export function Avatar({ name, size = 40, ring }: Props) {
-  const [a, b] = avatarPalette(name);
+  const bg = avatarColor(name);
   return (
     <View style={[
       styles.avatar,
-      { width: size, height: size, borderRadius: size / 2 },
+      { width: size, height: size, borderRadius: size / 2, backgroundColor: bg },
       ring ? { borderWidth: 2, borderColor: ring } : null,
-      { backgroundImage: `linear-gradient(135deg, ${a}, ${b})` } as any,
     ]}>
       <Text style={[styles.text, { fontSize: size * 0.4 }]}>{initials(name)}</Text>
     </View>

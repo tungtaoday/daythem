@@ -8,3 +8,14 @@ export const getMe = () =>
 
 export const updateProfile = (name: string, avatar_url?: string) =>
   api.put('/auth/profile', { name, avatar_url }).then(r => r.data);
+
+export type TaxProfileFields = {
+  tax_id?: string;
+  full_legal_name?: string;
+  id_number?: string;
+  date_of_birth?: string;
+  address?: string;
+};
+
+export const updateTaxProfile = (fields: TaxProfileFields) =>
+  api.put('/auth/profile', fields).then(r => r.data);

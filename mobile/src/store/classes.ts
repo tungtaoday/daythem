@@ -35,6 +35,8 @@ export const useClassesStore = create<ClassesState>((set, get) => ({
     try {
       const classes = await classApi.listClasses();
       set({ classes });
+    } catch {
+      // API lỗi → giữ danh sách hiện tại, screen tự fallback demo data
     } finally {
       set({ isLoading: false });
     }
@@ -52,8 +54,12 @@ export const useClassesStore = create<ClassesState>((set, get) => ({
   },
 
   fetchStudents: async (classId) => {
-    const students = await studentApi.listStudents(classId);
-    set(s => ({ students: { ...s.students, [classId]: students } }));
+    try {
+      const students = await studentApi.listStudents(classId);
+      set(s => ({ students: { ...s.students, [classId]: students } }));
+    } catch {
+      // API lỗi → không set, screen tự fallback demo data
+    }
   },
 
   addStudent: async (classId, body) => {

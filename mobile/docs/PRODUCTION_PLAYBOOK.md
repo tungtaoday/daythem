@@ -323,3 +323,6 @@ Tuần 2: Cài lên iPhone qua TestFlight, test end-to-end
 Tuần 3: Fix bug từ test thật + eas update
 Sau đó: Submit App Store nếu muốn publish rộng
 ```
+
+
+  

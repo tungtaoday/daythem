@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator,
 } from 'react-native';
-import { colors, radius } from '../../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { cancelClass, proposeMakeup } from '../../api/announcements';
+import { useAuthStore } from '../../store/auth';
+import { useClassesStore } from '../../store/classes';
+import { openZalo } from '../../utils/zalo';
 
-const REASONS = ['Cô bận việc đột xuất', 'Sức khoẻ', 'Thời tiết xấu', 'Học sinh bận thi', 'Khác'];
+const WEEKDAYS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
 function Toggle({ on }: { on: boolean }) {
   return (
@@ -24,8 +28,9 @@ const tog = StyleSheet.create({
   thumbOn: { transform: [{ translateX: 18 }] },
 });
 
-function ZaloGroupPreview({ groupName, reason, note, makeup }: any) {
-  const msg = `Cô gửi thông báo: Buổi học sẽ tạm nghỉ vì ${reason.toLowerCase()}.${note ? '\n' + note : ''}${makeup ? '\n\nCô sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿' : '\n\nCảm ơn anh/chị!'}`;
+function ZaloGroupPreview({ groupName, reason, note, makeup, senderName, titlePrefix }: any) {
+  const opener = senderName ? `${senderName} gửi thông báo` : 'Cô/Thầy gửi thông báo';
+  const msg = `${opener}: Buổi học sẽ tạm nghỉ vì ${reason.toLowerCase()}.${note ? '\n' + note : ''}${makeup ? `\n\n${titlePrefix} sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿` : '\n\nCảm ơn anh/chị!'}`;
   return (
     <View style={gp.box}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
@@ -33,9 +38,9 @@ function ZaloGroupPreview({ groupName, reason, note, makeup }: any) {
         <Text style={gp.groupLabel}>NHÓM ZALO · {groupName.toUpperCase()}</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-        <Avatar name="Cô Mai" size={28} />
+        <Avatar name={senderName || 'Giáo viên'} size={28} />
         <View style={{ flex: 1 }}>
-          <Text style={gp.senderName}>Cô Mai</Text>
+          <Text style={gp.senderName}>{senderName || 'Giáo viên'}</Text>
           <View style={gp.bubble}>
             <Text style={{ fontSize: 13.5, lineHeight: 22, color: colors.textPrimary }}>{msg}</Text>
           </View>
@@ -53,7 +58,21 @@ const gp = StyleSheet.create({
 
 export function CancelClassScreen({ route, navigation }: any) {
   const { classId, className } = route.params;
-  const [reason, setReason] = useState(REASONS[0]);
+  const insets = useSafeAreaInsets();
+  const teacher = useAuthStore(st => st.teacher);
+  const classes = useClassesStore(st => st.classes);
+  const titlePrefix = teacher?.gender === 'thay' ? 'Thầy' : 'Cô';
+  // Real teacher display name, e.g. "Cô Mai" — omit the name if not set yet.
+  const senderName = teacher?.name ? `${titlePrefix} ${teacher.name}` : titlePrefix;
+  // Real class from the store; subject from route params or the class (no faking).
+  const klass = classes.find(c => c.id === classId);
+  const subject: string | undefined = route.params?.subject ?? klass?.subject ?? undefined;
+  const startTime: string | undefined = klass?.schedule?.start_time;
+  const studentCount: number | undefined = klass?.student_count;
+
+  // Reason chips — first one is gender-aware (Thầy/Cô bận việc đột xuất).
+  const REASONS = [`${titlePrefix} bận việc đột xuất`, 'Sức khoẻ', 'Thời tiết xấu', 'Học sinh bận thi', 'Khác'];
+  const [reason, setReason] = useState(`${titlePrefix} bận việc đột xuất`);
   const [note, setNote] = useState('');
   const [makeup, setMakeup] = useState(true);
   const [toGroup, setToGroup] = useState(true);
@@ -64,6 +83,17 @@ export function CancelClassScreen({ route, navigation }: any) {
   const [showZalo, setShowZalo] = useState(false);
   const today = new Date().toISOString().slice(0, 10);
 
+  // When "Khác" is selected, the free-text note becomes the reason itself.
+  const effectiveReason = reason === 'Khác' ? (note.trim() || 'lý do khác') : reason;
+  const extraNote = reason === 'Khác' ? '' : note.trim();
+
+  const now = new Date();
+  const dateLine = `${WEEKDAYS[now.getDay()]}, ${now.getDate()}/${now.getMonth() + 1}`;
+  const heroLine = [dateLine, startTime, studentCount != null ? `${studentCount} con` : null]
+    .filter(Boolean).join(' · ');
+  const heroTitle = subject ? `${className || 'Lớp học'} · ${subject}` : `${className || 'Lớp học'}`;
+  const groupName = heroTitle;
+
   const send = () => setShowZalo(true);
 
   const confirmSent = async () => {
@@ -72,7 +102,7 @@ export function CancelClassScreen({ route, navigation }: any) {
     try {
       const ann = await cancelClass(classId, {
         session_date: today,
-        content: `Cô thông báo nghỉ vì ${reason.toLowerCase()}.${note ? ' ' + note : ''}`,
+        content: `${titlePrefix} thông báo nghỉ vì ${effectiveReason.toLowerCase()}.${extraNote ? ' ' + extraNote : ''}`,
         propose_makeup: makeup,
       });
       setAnnId(ann.id);
@@ -101,16 +131,20 @@ export function CancelClassScreen({ route, navigation }: any) {
         <View style={s.successCircle}>
           <Text style={{ fontSize: 40, color: colors.green600 }}>✓</Text>
         </View>
-        <Text style={s.successTitle}>Đã báo nghỉ</Text>
+        <Text style={s.successTitle}>Đã đánh dấu báo nghỉ</Text>
         <Text style={s.successSub}>
           {toGroup && toIndividual
-            ? 'Đã đăng lên nhóm Zalo và gửi riêng từng phụ huynh.'
+            ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo và nhắn riêng từng phụ huynh nhé.'
             : toGroup
-            ? 'Đã đăng lên nhóm Zalo.'
+            ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo nhé.'
             : toIndividual
-            ? 'Đã gửi riêng từng phụ huynh.'
-            : 'Thông báo đã được ghi nhận.'}
+            ? 'Tin đã được copy. Nhớ dán & gửi riêng cho từng phụ huynh nhé.'
+            : 'Tin đã được copy. Nhớ dán & gửi trong Zalo nhé.'}
         </Text>
+        <TouchableOpacity style={s.openZaloBtn} onPress={() => { openZalo(); }} activeOpacity={0.85}>
+          <IconZalo size={18} color="white" />
+          <Text style={s.openZaloBtnText}>Mở Zalo</Text>
+        </TouchableOpacity>
         {makeup && (
           <View style={s.nextStep}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -131,116 +165,118 @@ export function CancelClassScreen({ route, navigation }: any) {
     );
   }
 
-  const groupName = `${className || 'Lớp học'} · Toán`;
-
   return (
     <View style={s.container}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: sending ? 24 : 110 }}>
-        {/* Class chip */}
-        <View style={s.classChip}>
-          <View style={s.accentBar} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>
-              {className || 'Lớp học'} · {today.split('-').reverse().join('/')}
-            </Text>
-            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>Buổi học sắp tới</Text>
-          </View>
-          <View style={s.nghiBadge}>
-            <Text style={s.nghiBadgeText}>Sẽ nghỉ</Text>
-          </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: (sending ? 24 : 110) + insets.bottom }}>
+        {/* Coral hero */}
+        <View style={[s.hero, { paddingTop: insets.top + 18 }]}>
+          <Text style={s.heroEyebrow}>BÁO NGHỈ BUỔI HỌC</Text>
+          <Text style={s.heroTitle}>{heroTitle}</Text>
+          {!!heroLine && <Text style={s.heroLine}>{heroLine}</Text>}
         </View>
 
-        {/* Reasons */}
-        <Text style={s.sectionLabel}>LÝ DO</Text>
-        <View style={s.chipRow}>
-          {REASONS.map(r => (
+        <View style={{ padding: 16 }}>
+          {/* Reasons */}
+          <Text style={s.sectionLabel}>LÝ DO</Text>
+          <View style={s.chipRow}>
+            {REASONS.map(r => (
+              <TouchableOpacity
+                key={r}
+                style={[s.reasonChip, reason === r && s.reasonChipActive]}
+                onPress={() => setReason(r)}
+              >
+                <Text style={[s.reasonChipText, reason === r && s.reasonChipTextActive]}>{r}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Note — doubles as the reason when "Khác" is selected */}
+          <TextInput
+            style={s.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder={reason === 'Khác'
+              ? 'Nhập lý do nghỉ (sẽ hiển thị cho phụ huynh)'
+              : 'Ghi chú thêm cho phụ huynh (tuỳ chọn)'}
+            placeholderTextColor={colors.textMuted}
+            multiline
+          />
+
+          {/* Makeup toggle */}
+          <TouchableOpacity
+            style={[s.makeupCard, makeup && s.makeupCardActive]}
+            onPress={() => setMakeup(!makeup)}
+            activeOpacity={0.85}
+          >
+            <View style={[s.makeupIcon, makeup && { backgroundColor: colors.green500 }]}>
+              <IconCalendar size={18} color="white" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Đặt buổi học bù</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary }}>Đề xuất lịch để phụ huynh chốt</Text>
+            </View>
+            <Toggle on={makeup} />
+          </TouchableOpacity>
+
+          {/* Channel selector */}
+          <Text style={s.sectionLabel}>GỬI QUA</Text>
+          <View style={s.channelCard}>
             <TouchableOpacity
-              key={r}
-              style={[s.reasonChip, reason === r && s.reasonChipActive]}
-              onPress={() => setReason(r)}
+              style={s.channelRow}
+              onPress={() => setToGroup(!toGroup)}
+              activeOpacity={0.8}
             >
-              <Text style={[s.reasonChipText, reason === r && s.reasonChipTextActive]}>{r}</Text>
+              <View style={s.channelIconGreen}>
+                <IconZalo size={18} color={colors.green700} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhóm Zalo · {groupName}</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary }}>{titlePrefix} + phụ huynh</Text>
+              </View>
+              <Toggle on={toGroup} />
             </TouchableOpacity>
-          ))}
-        </View>
 
-        {/* Note */}
-        <TextInput
-          style={s.noteInput}
-          value={note}
-          onChangeText={setNote}
-          placeholder="Ghi chú thêm cho phụ huynh (tuỳ chọn)"
-          placeholderTextColor={colors.textMuted}
-          multiline
-        />
+            <View style={s.divider} />
 
-        {/* Makeup toggle */}
-        <TouchableOpacity
-          style={[s.makeupCard, makeup && s.makeupCardActive]}
-          onPress={() => setMakeup(!makeup)}
-          activeOpacity={0.85}
-        >
-          <View style={[s.makeupIcon, makeup && { backgroundColor: colors.green500 }]}>
-            <IconCalendar size={18} color="white" />
+            <TouchableOpacity
+              style={s.channelRow}
+              onPress={() => setToIndividual(!toIndividual)}
+              activeOpacity={0.8}
+            >
+              <View style={s.channelIconHoney}>
+                <IconBell size={18} color="#8a6d30" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhắn riêng từng phụ huynh</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary }}>Phòng khi nhóm bị im tiếng</Text>
+              </View>
+              <Toggle on={toIndividual} />
+            </TouchableOpacity>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Đặt buổi học bù</Text>
-            <Text style={{ fontSize: 12, color: colors.textSecondary }}>Đề xuất lịch để phụ huynh chốt</Text>
-          </View>
-          <Toggle on={makeup} />
-        </TouchableOpacity>
 
-        {/* Channel selector */}
-        <Text style={s.sectionLabel}>GỬI QUA</Text>
-        <View style={s.channelCard}>
-          <TouchableOpacity
-            style={s.channelRow}
-            onPress={() => setToGroup(!toGroup)}
-            activeOpacity={0.8}
-          >
-            <View style={s.channelIconGreen}>
-              <IconZalo size={18} color={colors.green700} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhóm Zalo · {groupName}</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary }}>cô + phụ huynh</Text>
-            </View>
-            <Toggle on={toGroup} />
-          </TouchableOpacity>
-
-          <View style={s.divider} />
-
-          <TouchableOpacity
-            style={s.channelRow}
-            onPress={() => setToIndividual(!toIndividual)}
-            activeOpacity={0.8}
-          >
-            <View style={s.channelIconHoney}>
-              <IconBell size={18} color="#8a6d30" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhắn riêng từng phụ huynh</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary }}>Phòng khi nhóm bị im tiếng</Text>
-            </View>
-            <Toggle on={toIndividual} />
-          </TouchableOpacity>
+          {/* Preview */}
+          <Text style={s.sectionLabel}>XEM TRƯỚC TIN NHÓM</Text>
+          <ZaloGroupPreview
+            groupName={groupName}
+            reason={effectiveReason}
+            note={extraNote}
+            makeup={makeup}
+            senderName={senderName}
+            titlePrefix={titlePrefix}
+          />
         </View>
-
-        {/* Preview */}
-        <Text style={s.sectionLabel}>XEM TRƯỚC TIN</Text>
-        <ZaloGroupPreview groupName={groupName} reason={reason} note={note} makeup={makeup} />
       </ScrollView>
 
       {/* Bottom bar */}
       {!sending ? (
-        <View style={s.bottomBar}>
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
           <TouchableOpacity style={s.btnPrimary} onPress={send}>
             <IconZalo size={20} color="white" />
-            <Text style={s.btnPrimaryText}>Soạn tin nhắn Zalo</Text>
+            <Text style={s.btnPrimaryText}>Soạn tin báo nghỉ</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={s.sendingBar}>
+        <View style={[s.sendingBar, { paddingBottom: Math.max(insets.bottom + 16, 36) }]}>
           <ActivityIndicator color={colors.green500} size="small" />
           <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginLeft: 12 }}>
             Đang lưu thông báo...
@@ -252,7 +288,7 @@ export function CancelClassScreen({ route, navigation }: any) {
         <ZaloCopySheet
           title="Báo nghỉ · Thông báo phụ huynh"
           recipient={`Nhóm Zalo ${groupName}`}
-          message={`Cô gửi thông báo: Buổi học ${today.split('-').reverse().join('/')} sẽ tạm nghỉ vì ${reason.toLowerCase()}.${note ? '\n' + note : ''}${makeup ? '\n\nCô sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿' : '\n\nCảm ơn anh/chị!'}`}
+          message={`${senderName} gửi thông báo: Buổi học ${today.split('-').reverse().join('/')} sẽ tạm nghỉ vì ${effectiveReason.toLowerCase()}.${extraNote ? '\n' + extraNote : ''}${makeup ? `\n\n${titlePrefix} sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿` : '\n\nCảm ơn anh/chị!'}`}
           hint={groupName}
           onConfirm={confirmSent}
           onClose={() => setShowZalo(false)}
@@ -264,13 +300,25 @@ export function CancelClassScreen({ route, navigation }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  classChip: {
-    backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: colors.border,
-    padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16,
+  hero: {
+    backgroundColor: colors.coral50,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderBottomWidth: 1, borderColor: colors.coral100,
+    paddingHorizontal: 24, paddingBottom: 22,
+    alignItems: 'center',
   },
-  accentBar: { width: 4, height: 36, borderRadius: 2, backgroundColor: colors.coral500 },
-  nghiBadge: { backgroundColor: '#ffeae3', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  nghiBadgeText: { fontSize: 12, fontWeight: '600', color: colors.coral700 },
+  heroEyebrow: {
+    fontSize: 12, fontWeight: '700', letterSpacing: 0.6,
+    color: colors.coral700, textAlign: 'center',
+  },
+  heroTitle: {
+    fontSize: 22, fontWeight: '800', letterSpacing: -0.3,
+    color: colors.coral700, textAlign: 'center', marginTop: 6,
+  },
+  heroLine: {
+    fontSize: 13, fontWeight: '600', color: colors.coral500,
+    marginTop: 6, textAlign: 'center',
+  },
   sectionLabel: {
     fontSize: 12, color: colors.textSecondary, fontWeight: '700',
     letterSpacing: 0.4, marginBottom: 10, marginTop: 4,
@@ -280,9 +328,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999,
     borderWidth: 1, borderColor: colors.border, backgroundColor: 'white',
   },
-  reasonChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  reasonChipActive: { borderColor: colors.coral500, backgroundColor: colors.coral50 },
   reasonChipText: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  reasonChipTextActive: { color: colors.green700 },
+  reasonChipTextActive: { color: colors.coral700 },
   noteInput: {
     borderWidth: 1, borderColor: colors.border, borderRadius: 14,
     padding: 14, fontSize: 14, color: colors.textPrimary,
@@ -313,11 +361,11 @@ const s = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.border, marginVertical: 4 },
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    padding: 16, paddingBottom: 32,
+    padding: 16,
   },
   sendingBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    padding: 20, paddingBottom: 36,
+    padding: 20,
     backgroundColor: 'white', borderTopWidth: 1, borderTopColor: colors.border,
     flexDirection: 'row', alignItems: 'center',
   },
@@ -336,6 +384,12 @@ const s = StyleSheet.create({
     backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100,
     borderRadius: 18, padding: 18, marginBottom: 14, width: '100%',
   },
+  openZaloBtn: {
+    height: 50, borderRadius: 14, backgroundColor: '#3a7dd3',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    paddingHorizontal: 28, marginBottom: 16,
+  },
+  openZaloBtnText: { color: 'white', fontSize: 15, fontWeight: '700' },
   ghostBtn: { padding: 12 },
   ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
 });

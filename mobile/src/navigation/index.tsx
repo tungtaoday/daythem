@@ -3,8 +3,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/auth';
-import { IconHome, IconCalendar, IconUsers, IconWallet, IconChart } from '../components/icons';
+import { IconHome, IconBook, IconUsers, IconWallet, IconChart } from '../components/icons';
 
 // Auth screens
 import { WelcomeScreen } from '../screens/Auth/WelcomeScreen';
@@ -26,6 +27,8 @@ import { CancelClassScreen } from '../screens/Announce/CancelClassScreen';
 import { MakeupPollScreen } from '../screens/Announce/MakeupPollScreen';
 import { ProfileScreen } from '../screens/Profile/ProfileScreen';
 import { CalendarScreen } from '../screens/Calendar/CalendarScreen';
+import { TaxScreen } from '../screens/Tax/TaxScreen';
+import { NotificationSettings } from '../screens/Settings/NotificationSettings';
 import { ClassSettingsScreen } from '../screens/Class/ClassSettingsScreen';
 import { ClassTuitionScreen } from '../screens/Class/ClassTuitionScreen';
 import { ClassReportScreen } from '../screens/Class/ClassReportScreen';
@@ -53,17 +56,21 @@ const tb = StyleSheet.create({
 
 // ── Main Tab Navigator ──
 function MainTabs() {
+  const insets = useSafeAreaInsets();
+  // Reserve room for the device's bottom inset (Samsung/Android nav bar, iOS home indicator)
+  // so the tab bar isn't covered by the system navigation buttons.
+  const bottomPad = Math.max(insets.bottom, 10);
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          height: 78,
+          height: 60 + bottomPad,
           backgroundColor: 'rgba(255,255,255,0.92)',
           borderTopWidth: 1,
           borderTopColor: '#e8e4da',
-          paddingBottom: 16,
-          paddingTop: 0,
+          paddingBottom: bottomPad,
+          paddingTop: 6,
         },
         tabBarActiveTintColor: '#3d8760',
         tabBarInactiveTintColor: '#9e9e9e',
@@ -78,7 +85,7 @@ function MainTabs() {
       <Tab.Screen
         name="Classes"
         component={ClassesScreen}
-        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Lớp học" Icon={IconCalendar} focused={focused} /> }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon label="Lớp học" Icon={IconBook} focused={focused} /> }}
       />
       <Tab.Screen
         name="Students"
@@ -164,6 +171,16 @@ export function AppNavigator() {
             />
             <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Calendar" component={CalendarScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+              name="Tax"
+              component={TaxScreen}
+              options={{ headerShown: true, title: 'Thuế TNCN', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
+            />
+            <Stack.Screen
+              name="NotificationSettings"
+              component={NotificationSettings}
+              options={{ headerShown: true, title: 'Cài đặt thông báo', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
+            />
             <Stack.Screen
               name="ClassSettings"
               component={ClassSettingsScreen}

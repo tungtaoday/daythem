@@ -11,6 +11,15 @@ def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _vn_now() -> datetime:
+    """Current time in Vietnam local time (UTC+TZ_OFFSET_HOURS), naive."""
+    return (datetime.now(timezone.utc) + timedelta(hours=settings.TZ_OFFSET_HOURS)).replace(tzinfo=None)
+
+
+def _vn_month() -> str:
+    return _vn_now().strftime("%Y-%m")
+
+
 def _hash_password(password: str) -> str:
     salt = secrets.token_hex(16)
     key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100_000)
@@ -30,6 +39,7 @@ from daythem.adapters.orm import (
     TuitionORM, AnnouncementORM, MakeupORM, MakeupVoteORM,
     ReportORM, OTPORM,
 )
+from daythem.config import settings
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 
 
@@ -48,8 +58,27 @@ class LoginWithPasswordCommand(BaseModel):
 
 class UpdateProfileCommand(BaseModel):
     teacher_id: str
-    name: str
+    name: Optional[str] = None
     avatar_url: Optional[str] = None
+    push_token: Optional[str] = None
+    notif_attendance: Optional[bool] = None
+    notif_tuition: Optional[bool] = None
+    notif_report: Optional[bool] = None
+    dnd_start: Optional[str] = None
+    dnd_end: Optional[str] = None
+    tax_id: Optional[str] = None
+    full_legal_name: Optional[str] = None
+    id_number: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    address: Optional[str] = None
+
+class GetTaxSummaryCommand(BaseModel):
+    teacher_id: str
+    year: int
+
+class GetTaxDeclarationCommand(BaseModel):
+    teacher_id: str
+    year: int
 
 class CreateClassCommand(BaseModel):
     teacher_id: str
@@ -132,7 +161,7 @@ class GenerateReportCommand(BaseModel):
 # ── Handlers ─────────────────────────────────────────────────────────────────
 
 def handle_request_otp(cmd: RequestOTPCommand, uow: SqlAlchemyUnitOfWork) -> str:
-    code = "123456" if True else str(random.randint(100000, 999999))
+    code = "123456" if settings.OTP_DEV_MODE else str(random.randint(100000, 999999))
     otp = OTPORM(
         id=str(uuid.uuid4()),
         phone=cmd.phone,
@@ -163,9 +192,12 @@ def handle_verify_otp(cmd: VerifyOTPCommand, uow: SqlAlchemyUnitOfWork) -> Teach
 
 
 def handle_login_with_password(cmd: LoginWithPasswordCommand, uow: SqlAlchemyUnitOfWork) -> TeacherORM:
+    if len(cmd.password) < 6:
+        raise ValueError("Mật khẩu phải có ít nhất 6 ký tự")
     with uow:
         teacher = uow.teachers.get_by_phone(cmd.phone)
         if not teacher:
+            # New phone → register a new account with this password.
             teacher = TeacherORM(
                 id=str(uuid.uuid4()),
                 phone=cmd.phone,
@@ -173,7 +205,10 @@ def handle_login_with_password(cmd: LoginWithPasswordCommand, uow: SqlAlchemyUni
             )
             uow.teachers.add(teacher)
         elif teacher.password_hash is None:
-            teacher.password_hash = _hash_password(cmd.password)
+            # Existing account created via OTP and has no password yet.
+            # Do NOT silently claim it with an arbitrary password (account-takeover
+            # vector). Require OTP verification to prove phone ownership instead.
+            raise ValueError("Tài khoản này cần đăng nhập bằng mã OTP gửi qua điện thoại")
         else:
             if not _verify_password(cmd.password, teacher.password_hash):
                 raise ValueError("Mật khẩu không đúng")
@@ -187,12 +222,133 @@ def handle_update_profile(cmd: UpdateProfileCommand, uow: SqlAlchemyUnitOfWork) 
         teacher = uow.teachers.get(cmd.teacher_id)
         if not teacher:
             raise ValueError("Teacher not found")
-        teacher.name = cmd.name
-        if cmd.avatar_url:
-            teacher.avatar_url = cmd.avatar_url
+        if cmd.name is not None: teacher.name = cmd.name
+        if cmd.avatar_url is not None: teacher.avatar_url = cmd.avatar_url
+        if cmd.push_token is not None: teacher.push_token = cmd.push_token
+        if cmd.notif_attendance is not None: teacher.notif_attendance = cmd.notif_attendance
+        if cmd.notif_tuition is not None: teacher.notif_tuition = cmd.notif_tuition
+        if cmd.notif_report is not None: teacher.notif_report = cmd.notif_report
+        if cmd.dnd_start is not None: teacher.dnd_start = cmd.dnd_start
+        if cmd.dnd_end is not None: teacher.dnd_end = cmd.dnd_end
+        if cmd.tax_id is not None: teacher.tax_id = cmd.tax_id
+        if cmd.full_legal_name is not None: teacher.full_legal_name = cmd.full_legal_name
+        if cmd.id_number is not None: teacher.id_number = cmd.id_number
+        if cmd.date_of_birth is not None: teacher.date_of_birth = cmd.date_of_birth
+        if cmd.address is not None: teacher.address = cmd.address
         uow.commit()
         uow._session.refresh(teacher)
         return teacher
+
+
+_TAX_RATE = settings.TAX_RATE  # 2% thuế TNCN cá nhân kinh doanh
+
+
+def _tax_threshold(year: int) -> float:
+    if year == 2025:
+        return settings.TAX_THRESHOLD_2025
+    return settings.TAX_THRESHOLD_DEFAULT
+
+
+def _compute_tax(total: float, threshold: float) -> tuple[float, float, str]:
+    """VN cá nhân kinh doanh: doanh thu ≤ ngưỡng → miễn; TRÊN ngưỡng → tính thuế trên
+    TOÀN BỘ doanh thu (ngưỡng là mốc miễn, không phải khoản được trừ).
+    Returns (taxable_amount, tax_owed, status)."""
+    if total > threshold:
+        return total, total * _TAX_RATE, "taxable"
+    return 0.0, 0.0, "exempt"
+
+
+def handle_get_tax_summary(cmd: GetTaxSummaryCommand, uow: SqlAlchemyUnitOfWork) -> dict:
+    with uow:
+        tuitions = uow.tuitions.list_paid_by_teacher_year(cmd.teacher_id, cmd.year)
+        threshold = _tax_threshold(cmd.year)
+
+        by_month: dict[str, float] = {}
+        by_class: dict[str, dict] = {}
+        for t in tuitions:
+            by_month[t.month] = by_month.get(t.month, 0) + t.amount
+            if t.class_id not in by_class:
+                by_class[t.class_id] = {"class_name": t.class_.name, "amount": 0.0}
+            by_class[t.class_id]["amount"] += t.amount
+
+        total = sum(by_month.values())
+        taxable, tax_owed, status = _compute_tax(total, threshold)
+
+        by_month_list = [{"month": m, "amount": a} for m, a in sorted(by_month.items())]
+        by_class_list = sorted(by_class.values(), key=lambda x: x["amount"], reverse=True)
+
+        if status == "exempt":
+            summary_text = (
+                f"Tổng thu {total:,.0f}đ — chưa cần nộp thuế TNCN"
+                f" (ngưỡng {threshold:,.0f}đ/năm)"
+            )
+        else:
+            summary_text = (
+                f"Thuế TNCN cần nộp: {tax_owed:,.0f}đ"
+                f" (2% × toàn bộ doanh thu {total:,.0f}đ do vượt ngưỡng {threshold:,.0f}đ)"
+            )
+
+        return {
+            "year": cmd.year,
+            "total_collected": total,
+            "threshold": threshold,
+            "taxable_amount": taxable,
+            "tax_owed": tax_owed,
+            "status": status,
+            "by_month": by_month_list,
+            "by_class": by_class_list,
+            "summary_text": summary_text,
+        }
+
+
+def handle_get_tax_declaration(cmd: GetTaxDeclarationCommand, uow: SqlAlchemyUnitOfWork) -> dict:
+    with uow:
+        teacher = uow.teachers.get(cmd.teacher_id)
+        if not teacher or not teacher.tax_id:
+            raise ValueError("Cần nhập MST (Mã số thuế) trước khi tạo tờ khai")
+
+        tuitions = uow.tuitions.list_paid_by_teacher_year(cmd.teacher_id, cmd.year)
+        threshold = _tax_threshold(cmd.year)
+        total = sum(t.amount for t in tuitions)
+        taxable, tax_owed, _status = _compute_tax(total, threshold)
+
+        fields = {
+            "mst": teacher.tax_id,
+            "full_name": teacher.full_legal_name or teacher.name or "",
+            "id_number": teacher.id_number or "",
+            "date_of_birth": teacher.date_of_birth or "",
+            "address": teacher.address or "",
+            "year": cmd.year,
+            "tong_thu_nhap": total,
+            "nguong_mien_thue": threshold,
+            "thu_nhap_chiu_thue": taxable,
+            "thue_suat": _TAX_RATE,
+            "so_thue_phai_nop": tax_owed,
+        }
+
+        status_text = (
+            "Không phát sinh nghĩa vụ thuế" if tax_owed == 0
+            else f"Cần nộp thuế: {tax_owed:,.0f}đ"
+        )
+
+        declaration_text = (
+            f"TỜ KHAI THUẾ THU NHẬP CÁ NHÂN\n"
+            f"Mẫu 09/KK-TNCN (Dành cho cá nhân có thu nhập từ kinh doanh)\n\n"
+            f"Kỳ tính thuế: Năm {cmd.year}\n"
+            f"Họ và tên: {fields['full_name']}\n"
+            f"MST: {teacher.tax_id}\n"
+            f"CMND/CCCD: {fields['id_number'] or '...'}\n"
+            f"Ngày sinh: {fields['date_of_birth'] or '...'}\n"
+            f"Địa chỉ: {fields['address'] or '...'}\n\n"
+            f"Tổng doanh thu: {total:,.0f}đ\n"
+            f"Ngưỡng miễn thuế: {threshold:,.0f}đ\n"
+            f"Thu nhập chịu thuế: {taxable:,.0f}đ\n"
+            f"Thuế suất: {_TAX_RATE*100:.0f}%\n"
+            f"Số thuế phải nộp: {tax_owed:,.0f}đ\n\n"
+            f"{status_text}"
+        )
+
+        return {"year": cmd.year, "fields": fields, "declaration_text": declaration_text}
 
 
 def handle_create_class(cmd: CreateClassCommand, uow: SqlAlchemyUnitOfWork) -> ClassORM:
@@ -293,6 +449,8 @@ def handle_record_payment(cmd: RecordPaymentCommand, uow: SqlAlchemyUnitOfWork) 
         tuition = uow.tuitions.get_by_student_month(cmd.student_id, cmd.month)
         if not tuition:
             student = uow.students.get(cmd.student_id)
+            if not student:
+                raise ValueError("Không tìm thấy học sinh")
             fee = student.fee_setting
             amount = cmd.amount
             if amount is None:
@@ -302,6 +460,8 @@ def handle_record_payment(cmd: RecordPaymentCommand, uow: SqlAlchemyUnitOfWork) 
                     amount = fee.amount
                 else:
                     klass = uow.classes.get(cmd.class_id)
+                    if not klass:
+                        raise ValueError("Không tìm thấy lớp")
                     amount = klass.default_fee
             tuition = TuitionORM(
                 id=str(uuid.uuid4()),
@@ -313,7 +473,7 @@ def handle_record_payment(cmd: RecordPaymentCommand, uow: SqlAlchemyUnitOfWork) 
             uow.tuitions.add(tuition)
 
         tuition.paid = cmd.paid
-        tuition.paid_date = _now().date().isoformat() if cmd.paid else None
+        tuition.paid_date = _vn_now().date().isoformat() if cmd.paid else None
         uow.commit()
         return uow.tuitions.get_by_student_month(cmd.student_id, tuition.month)
 
@@ -368,6 +528,8 @@ def handle_vote_makeup(cmd: VoteMakeupCommand, uow: SqlAlchemyUnitOfWork) -> Mak
         makeup = uow.makeups.get(cmd.makeup_id)
         if not makeup:
             raise ValueError("Makeup not found")
+        if not (0 <= cmd.option_index < len(makeup.options)):
+            raise ValueError("Lựa chọn không hợp lệ")
         vote = MakeupVoteORM(
             id=str(uuid.uuid4()),
             makeup_id=cmd.makeup_id,
@@ -384,6 +546,8 @@ def handle_confirm_makeup(cmd: ConfirmMakeupCommand, uow: SqlAlchemyUnitOfWork) 
         makeup = uow.makeups.get(cmd.makeup_id)
         if not makeup:
             raise ValueError("Makeup not found")
+        if not (0 <= cmd.option_index < len(makeup.options)):
+            raise ValueError("Lựa chọn không hợp lệ")
         makeup.confirmed_option = cmd.option_index
         ann = uow.announcements.get(makeup.announcement_id)
         if ann:
@@ -392,11 +556,36 @@ def handle_confirm_makeup(cmd: ConfirmMakeupCommand, uow: SqlAlchemyUnitOfWork) 
         return uow.makeups.get(cmd.makeup_id)
 
 
+def _expected_fee(student: StudentORM, klass: ClassORM) -> float:
+    """Resolve a student's monthly fee from their per-student override, else class default."""
+    fee = student.fee_setting
+    if fee and fee.fee_type == "free":
+        return 0
+    if fee and fee.fee_type in ("discount", "custom") and fee.amount is not None:
+        return fee.amount
+    return klass.default_fee
+
+
+def _report_month(week_start: str) -> str:
+    """The month most of the report week falls in (handles weeks spanning two months)."""
+    try:
+        start = datetime.fromisoformat(week_start).date()
+    except ValueError:
+        raise ValueError("week_start không hợp lệ (định dạng YYYY-MM-DD)")
+    days = [start + timedelta(days=i) for i in range(7)]
+    months = [d.strftime("%Y-%m") for d in days]
+    # pick the month that owns the majority of the 7 days
+    return max(set(months), key=months.count)
+
+
 def handle_generate_report(cmd: GenerateReportCommand, uow: SqlAlchemyUnitOfWork) -> ReportORM:
     with uow:
         klass = uow.classes.get(cmd.class_id)
+        if not klass:
+            raise ValueError("Không tìm thấy lớp")
         students = uow.students.list_by_class(cmd.class_id)
 
+        report_month = _report_month(cmd.week_start)
         week_end = (datetime.fromisoformat(cmd.week_start) + timedelta(days=6)).date().isoformat()
         sessions = [
             s for s in uow.attendance.list_sessions(cmd.class_id)
@@ -410,7 +599,7 @@ def handle_generate_report(cmd: GenerateReportCommand, uow: SqlAlchemyUnitOfWork
                 for r in s.records
                 if r.student_id == student.id and r.present
             )
-            tuition = uow.tuitions.get_by_student_month(student.id, cmd.week_start[:7])
+            tuition = uow.tuitions.get_by_student_month(student.id, report_month)
             student_data.append({
                 "student_id": student.id,
                 "name": student.name,
@@ -419,7 +608,7 @@ def handle_generate_report(cmd: GenerateReportCommand, uow: SqlAlchemyUnitOfWork
                 "sessions_attended": attended,
                 "sessions_total": len(sessions),
                 "tuition_paid": tuition.paid if tuition else False,
-                "tuition_amount": tuition.amount if tuition else klass.default_fee,
+                "tuition_amount": tuition.amount if tuition else _expected_fee(student, klass),
             })
 
         report = ReportORM(

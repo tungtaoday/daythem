@@ -6,12 +6,22 @@ import { useClassesStore } from '../../store/classes';
 
 const SUBJECTS = ['Toán', 'Văn', 'Anh', 'Lý', 'Hóa', 'Sinh', 'Sử', 'Địa'];
 const GRADES = ['1','2','3','4','5','6','7','8','9','10','11','12'];
+const DAYS = [
+  { label: 'T2', value: 1 }, { label: 'T3', value: 2 }, { label: 'T4', value: 3 },
+  { label: 'T5', value: 4 }, { label: 'T6', value: 5 }, { label: 'T7', value: 6 },
+  { label: 'CN', value: 7 },
+];
+const TIME_PRESETS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
+const PLACES = ['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'];
 
 export function CreateClassScreen({ navigation }: any) {
   const [subject, setSubject] = useState('Toán');
   const [grade, setGrade] = useState('9');
   const [name, setName] = useState('');
   const [fee, setFee] = useState('800000');
+  const [day, setDay] = useState(3);
+  const [time, setTime] = useState('18:30');
+  const [place, setPlace] = useState('Tại nhà');
   const { createClass } = useClassesStore();
   const [loading, setLoading] = useState(false);
 
@@ -26,6 +36,7 @@ export function CreateClassScreen({ navigation }: any) {
         grade,
         default_fee: parseFloat(fee) || 0,
         fee_type: 'monthly',
+        schedule: { day, start_time: time, duration: 90, location: place },
       });
       navigation.goBack();
     } catch {
@@ -75,6 +86,36 @@ export function CreateClassScreen({ navigation }: any) {
         value={fee}
         onChangeText={setFee}
       />
+
+      <Text style={styles.label}>Ngày học trong tuần</Text>
+      <View style={styles.chips}>
+        {DAYS.map(d => (
+          <Button key={d.value} label={d.label} onPress={() => setDay(d.value)}
+            variant={day === d.value ? 'primary' : 'secondary'}
+            style={styles.chip}
+          />
+        ))}
+      </View>
+
+      <Text style={styles.label}>Giờ học</Text>
+      <View style={styles.chips}>
+        {TIME_PRESETS.map(t => (
+          <Button key={t} label={t} onPress={() => setTime(t)}
+            variant={time === t ? 'primary' : 'secondary'}
+            style={styles.chip}
+          />
+        ))}
+      </View>
+
+      <Text style={styles.label}>Địa điểm</Text>
+      <View style={styles.chips}>
+        {PLACES.map(p => (
+          <Button key={p} label={p} onPress={() => setPlace(p)}
+            variant={place === p ? 'primary' : 'secondary'}
+            style={styles.chip}
+          />
+        ))}
+      </View>
 
       <Button label="Tạo lớp" onPress={handleCreate} loading={loading} style={styles.btn} />
     </ScrollView>

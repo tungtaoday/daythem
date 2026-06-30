@@ -1,0 +1,35 @@
+DayThem — Database Migrations (Alembic)
+=======================================
+
+Schema changes are managed with Alembic. The DB URL is read from
+daythem.config.settings.DATABASE_URL (env var DATABASE_URL / .env), NOT from
+alembic.ini, so the same commands work for sqlite (dev/tests) and PostgreSQL
+(prod).
+
+Run all commands from C:\DayThem\backend.
+
+Apply all pending migrations (create/upgrade schema to latest):
+    alembic upgrade head
+
+Roll back the most recent migration:
+    alembic downgrade -1
+
+Show current DB revision / history:
+    alembic current
+    alembic history --verbose
+
+Create a new migration after changing ORM models in
+src/daythem/adapters/orm.py (review the generated file before committing):
+    alembic revision --autogenerate -m "describe the change"
+
+Generate SQL without touching a DB (offline mode):
+    alembic upgrade head --sql
+
+Notes
+-----
+- Tests and local dev still use create_tables() (Base.metadata.create_all) in
+  src/daythem/adapters/database.py — that path is intentionally kept.
+- For production, prefer `alembic upgrade head` over create_all so schema
+  changes are versioned and reversible.
+- Override the DB for a one-off run with an env var, e.g.:
+      DATABASE_URL=sqlite:///./scratch.db alembic upgrade head

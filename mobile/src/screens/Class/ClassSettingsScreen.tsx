@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
+import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -32,6 +34,14 @@ const DEMO_STUS: StuFee[] = [
 
 function SectionHeader({ children }: { children: string }) {
   return <Text style={s.sectionHeader}>{children}</Text>;
+}
+
+function SoonBadge() {
+  return (
+    <View style={s.soonBadge}>
+      <Text style={s.soonBadgeText}>Sắp có</Text>
+    </View>
+  );
 }
 
 function FeeTag({ override, base, note }: { override: number | null; base: number; note: string | null }) {
@@ -122,22 +132,67 @@ function FeeModal({ stu, base, onSave, onClose }: any) {
 
 export function ClassSettingsScreen({ route, navigation }: any) {
   const { classId } = route.params;
+  const insets = useSafeAreaInsets();
   const { classes, students, fetchStudents, updateClass, setStudentFee } = useClassesStore();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
 
   const klass = classes.find(c => c.id === classId);
   const classStudents = students[classId] || [];
-  const isDemo = classes.length === 0;
+  const [loadingStus, setLoadingStus] = useState(!isDemo);
+
+  const sched = (klass as any)?.schedule ?? null;
+  const DAY_LABELS = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+  const scheduleDay = sched?.day
+    ? `${DAY_LABELS[sched.day] ?? ''}${sched.start_time ? ` · ${sched.start_time}` : ''}`
+    : 'Chưa đặt lịch';
+  const scheduleSub = sched
+    ? `${sched.duration ? `${Math.floor(sched.duration / 60)}h${sched.duration % 60 ? ` ${sched.duration % 60}p` : ''}` : ''}${sched.location ? ` · ${sched.location}` : ''}`.replace(/^ · /, '')
+    : 'Thêm ngày, giờ, địa điểm';
 
   const [className, setClassName] = useState(klass?.name ?? 'Lớp 9');
   const [subject, setSubject] = useState(klass?.subject ?? 'Toán');
   const [defaultFee, setDefaultFee] = useState(klass?.default_fee ?? 500000);
   const [feeInput, setFeeInput] = useState(String(Math.round((klass?.default_fee ?? 500000) / 1000)));
   const [feeMode, setFeeMode] = useState<FeeMode>((klass?.fee_type as FeeMode) ?? 'month');
-  const [stus, setStus] = useState<StuFee[]>(DEMO_STUS);
+  const [stus, setStus] = useState<StuFee[]>(isDemo ? DEMO_STUS : []);
   const [editingStu, setEditingStu] = useState<StuFee | null>(null);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => { fetchStudents(classId); }, [classId]);
+  // ── Sửa lịch học ──
+  const [showSched, setShowSched] = useState(false);
+  const [edDay, setEdDay] = useState<number>(sched?.day ?? 3);
+  const [edTime, setEdTime] = useState<string>(sched?.start_time ?? '18:30');
+  const [edDur, setEdDur] = useState<number>(sched?.duration ?? 90);
+  const [edPlace, setEdPlace] = useState<string>(sched?.location ?? 'Tại nhà');
+  const [savingSched, setSavingSched] = useState(false);
+
+  const openSchedEdit = () => {
+    setEdDay(sched?.day ?? 3);
+    setEdTime(sched?.start_time ?? '18:30');
+    setEdDur(sched?.duration ?? 90);
+    setEdPlace(sched?.location ?? 'Tại nhà');
+    setShowSched(true);
+  };
+
+  const saveSchedule = async () => {
+    setSavingSched(true);
+    try {
+      await updateClass(classId, { schedule: { day: edDay, start_time: edTime, duration: edDur, location: edPlace } });
+      setShowSched(false);
+    } catch {
+      Alert.alert('Chưa lưu được', 'Kiểm tra mạng và thử lại.');
+    } finally {
+      setSavingSched(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isDemo) return;
+    let alive = true;
+    setLoadingStus(true);
+    Promise.resolve(fetchStudents(classId)).finally(() => { if (alive) setLoadingStus(false); });
+    return () => { alive = false; };
+  }, [classId, isDemo]);
 
   useEffect(() => {
     if (klass) {
@@ -207,19 +262,20 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   };
 
   const handleArchive = () => {
-    Alert.alert(
-      'Lưu trữ lớp học?',
-      'Lớp sẽ bị ẩn khỏi danh sách chính. Dữ liệu điểm danh và học phí vẫn được giữ nguyên.',
-      [
-        { text: 'Huỷ', style: 'cancel' },
-        { text: 'Lưu trữ', style: 'destructive', onPress: () => navigation.goBack() },
-      ]
-    );
+    Alert.alert('Lưu trữ lớp', 'Tính năng đang được hoàn thiện, sắp có nhé!');
   };
+
+  if (loadingStus) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.green500} size="large" />
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + 16, 48) }}>
 
         {/* ── THÔNG TIN LỚP ── */}
         <SectionHeader>THÔNG TIN LỚP</SectionHeader>
@@ -249,12 +305,13 @@ export function ClassSettingsScreen({ route, navigation }: any) {
             />
           </View>
           <View style={s.row}>
-            <Text style={s.rowLabel}>Màu sắc</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
+              <Text style={[s.rowLabel, { flex: 0 }]}>Màu sắc</Text>
+              <SoonBadge />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, opacity: 0.5 }}>
               {['#4a9e72', '#e07a5f', '#6b7fd7', '#e8a838', '#9b6bb5'].map(col => (
-                <TouchableOpacity key={col} style={[s.colorDot, { backgroundColor: col }]}>
-                  <View style={[s.colorDotInner, { backgroundColor: col === '#4a9e72' ? 'white' : 'transparent' }]} />
-                </TouchableOpacity>
+                <View key={col} style={[s.colorDot, { backgroundColor: col }]} />
               ))}
             </View>
           </View>
@@ -263,21 +320,18 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         {/* ── LỊCH HỌC ĐỊNH KỲ ── */}
         <SectionHeader>LỊCH HỌC ĐỊNH KỲ</SectionHeader>
         <View style={s.card}>
-          <View style={[s.scheduleRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+          <TouchableOpacity
+            style={s.scheduleRow}
+            onPress={isDemo ? undefined : openSchedEdit}
+            disabled={isDemo}
+            activeOpacity={0.7}
+          >
             <View style={s.scheduleDot} />
             <View style={{ flex: 1 }}>
-              <Text style={s.scheduleDay}>Thứ 4 · 18:30</Text>
-              <Text style={s.scheduleSub}>1h 30p · Tại nhà</Text>
+              <Text style={s.scheduleDay}>{scheduleDay}</Text>
+              <Text style={s.scheduleSub}>{scheduleSub}</Text>
             </View>
-            <TouchableOpacity onPress={() => Alert.alert('Sửa lịch', 'Tính năng đang phát triển.')}>
-              <IconChevron size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            style={s.addScheduleBtn}
-            onPress={() => Alert.alert('Thêm buổi', 'Tính năng đang phát triển.')}
-          >
-            <Text style={s.addScheduleBtnText}>+ Thêm buổi định kỳ</Text>
+            {!isDemo && <Text style={{ fontSize: 13, fontWeight: '700', color: colors.green700 }}>Sửa</Text>}
           </TouchableOpacity>
         </View>
 
@@ -351,18 +405,25 @@ export function ClassSettingsScreen({ route, navigation }: any) {
             : `Mặc định kế thừa ${(defaultFee / 1000).toFixed(0)}k. Chạm để đặt mức riêng.`}
         </Text>
         <View style={s.card}>
-          {stus.map((stu, i) => (
-            <TouchableOpacity
-              key={stu.id}
-              style={[s.stuRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
-              onPress={() => setEditingStu(stu)}
-              activeOpacity={0.8}
-            >
-              <Avatar name={stu.name} size={34} />
-              <Text style={s.stuName} numberOfLines={1}>{stu.name}</Text>
-              <FeeTag override={stu.override} base={defaultFee} note={stu.overrideNote} />
-            </TouchableOpacity>
-          ))}
+          {stus.length > 0 ? (
+            stus.map((stu, i) => (
+              <TouchableOpacity
+                key={stu.id}
+                style={[s.stuRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+                onPress={() => setEditingStu(stu)}
+                activeOpacity={0.8}
+              >
+                <Avatar name={stu.name} size={34} />
+                <Text style={s.stuName} numberOfLines={1}>{stu.name}</Text>
+                <FeeTag override={stu.override} base={defaultFee} note={stu.overrideNote} />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={{ padding: 18, alignItems: 'center' }}>
+              <Text style={s.emptyTitle}>Chưa có học sinh</Text>
+              <Text style={s.emptySub}>Thêm học sinh vào lớp để đặt học phí riêng cho từng em.</Text>
+            </View>
+          )}
         </View>
 
         {/* ── NHÓM ZALO ── */}
@@ -382,13 +443,16 @@ export function ClassSettingsScreen({ route, navigation }: any) {
           ) : (
             <TouchableOpacity
               style={s.zaloRow}
-              onPress={() => Alert.alert('Liên kết Zalo', 'Tính năng đang phát triển.')}
+              onPress={() => Alert.alert('Liên kết Zalo', 'Tính năng đang được hoàn thiện, sắp có nhé!')}
             >
               <View style={[s.zaloIcon, { backgroundColor: colors.surfaceAlt }]}>
                 <IconZalo size={20} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.zaloName}>Chưa liên kết nhóm Zalo</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={s.zaloName}>Chưa liên kết nhóm Zalo</Text>
+                  <SoonBadge />
+                </View>
                 <Text style={s.zaloBadgeText}>Nhấn để kết nối nhóm phụ huynh</Text>
               </View>
               <IconChevron size={16} color={colors.textMuted} />
@@ -407,8 +471,9 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
         {/* ── Danger zone ── */}
         <View style={[s.card, { marginTop: 8 }]}>
-          <TouchableOpacity style={[s.row, { justifyContent: 'center' }]} onPress={handleArchive}>
+          <TouchableOpacity style={[s.row, { justifyContent: 'center', gap: 8 }]} onPress={handleArchive}>
             <Text style={[s.rowLabel, { color: colors.coral700, textAlign: 'center', flex: 0 }]}>Lưu trữ lớp này</Text>
+            <SoonBadge />
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -422,9 +487,68 @@ export function ClassSettingsScreen({ route, navigation }: any) {
           onClose={() => setEditingStu(null)}
         />
       )}
+
+      {/* Schedule edit modal */}
+      {showSched && (
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setShowSched(false)}>
+          <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
+            <View style={s.handle} />
+            <Text style={s.sheetTitle}>Lịch học định kỳ</Text>
+
+            <Text style={sc.label}>Thứ trong tuần</Text>
+            <View style={sc.chipWrap}>
+              {[{ l: 'T2', v: 1 }, { l: 'T3', v: 2 }, { l: 'T4', v: 3 }, { l: 'T5', v: 4 }, { l: 'T6', v: 5 }, { l: 'T7', v: 6 }, { l: 'CN', v: 7 }].map(d => (
+                <TouchableOpacity key={d.v} style={[sc.chip, edDay === d.v && sc.chipActive]} onPress={() => setEdDay(d.v)}>
+                  <Text style={[sc.chipText, edDay === d.v && sc.chipTextActive]}>{d.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={sc.label}>Giờ học</Text>
+            <View style={sc.chipWrap}>
+              {['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'].map(t => (
+                <TouchableOpacity key={t} style={[sc.chip, edTime === t && sc.chipActive]} onPress={() => setEdTime(t)}>
+                  <Text style={[sc.chipText, edTime === t && sc.chipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={sc.label}>Thời lượng</Text>
+            <View style={sc.chipWrap}>
+              {[{ l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }, { l: '2h30', v: 150 }].map(d => (
+                <TouchableOpacity key={d.v} style={[sc.chip, edDur === d.v && sc.chipActive]} onPress={() => setEdDur(d.v)}>
+                  <Text style={[sc.chipText, edDur === d.v && sc.chipTextActive]}>{d.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={sc.label}>Địa điểm</Text>
+            <View style={sc.chipWrap}>
+              {['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'].map(p => (
+                <TouchableOpacity key={p} style={[sc.chip, edPlace === p && sc.chipActive]} onPress={() => setEdPlace(p)}>
+                  <Text style={[sc.chipText, edPlace === p && sc.chipTextActive]}>{p}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={[s.btnPrimary, savingSched && { opacity: 0.6 }]} onPress={saveSchedule} disabled={savingSched}>
+              {savingSched ? <ActivityIndicator color="white" /> : <Text style={s.btnPrimaryText}>Lưu lịch học</Text>}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
+
+const sc = StyleSheet.create({
+  label: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 8, marginTop: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5, borderColor: colors.border, backgroundColor: 'white' },
+  chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
+  chipTextActive: { color: colors.green700 },
+});
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
@@ -461,6 +585,10 @@ const s = StyleSheet.create({
 
   customBadge: { backgroundColor: colors.coral100, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   customBadgeText: { fontSize: 11, fontWeight: '700', color: colors.coral700 },
+  soonBadge: { backgroundColor: colors.honey100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
+  soonBadgeText: { fontSize: 10, fontWeight: '700', color: '#8a6d30' },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   stuFeeHint: { fontSize: 12, color: colors.textSecondary, marginHorizontal: 16, marginBottom: 8 },
   stuRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 12 },
   stuName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },

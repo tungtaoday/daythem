@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { useAuthStore, Gender } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
@@ -56,7 +57,7 @@ export function SetupScreen() {
         subject: subjects[0] || 'Toán',
         grade: String(grades[0] || 9),
         default_fee: fee,
-        schedule: { day, time, duration, place },
+        schedule: { day, start_time: time, duration, location: place },
       }).catch(() => {});
     }
     await updateProfile(name.trim(), gender);
@@ -107,6 +108,7 @@ export function SetupScreen() {
 
 // ─── Profile Step ─────────────────────────────────────────────────────────────
 function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, grades, setGrades, onNext }: any) {
+  const insets = useSafeAreaInsets();
   const genderWord = gender === 'co' ? 'Cô' : 'Thầy';
   const placeholder = gender === 'co' ? 'Ví dụ: Lan, Hương, Mai...' : 'Ví dụ: Minh, Hùng, Tuấn...';
   const valid = name.trim().length > 0 && subjects.length > 0 && grades.length > 0;
@@ -130,7 +132,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
         keyboardShouldPersistTaps="handled"
       >
         <Text style={s.emoji}>👋</Text>
-        <Text style={s.title}>Chào mừng đến DayThem!</Text>
+        <Text style={s.title}>Chào mừng đến GieoChữ!</Text>
         <Text style={s.sub}>Cho chúng tôi biết thêm về bạn.</Text>
 
         <Text style={s.sectionLabel}>BẠN LÀ</Text>
@@ -192,7 +194,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
         </View>
       </ScrollView>
 
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
         <TouchableOpacity style={[s.btn, !valid && s.btnDisabled]} onPress={onNext} disabled={!valid}>
           <Text style={s.btnText}>Tiếp tục</Text>
         </TouchableOpacity>
@@ -203,6 +205,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
 
 // ─── First Class Step ─────────────────────────────────────────────────────────
 function FirstClassStep({ gender, className, setClassName, fee, setFee, day, setDay, time, setTime, duration, setDuration, place, setPlace, onBack, onNext }: any) {
+  const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
 
   return (
@@ -294,7 +297,7 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
         </View>
       </ScrollView>
 
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
         <TouchableOpacity
           style={[s.btn, !className.trim() && s.btnDisabled]}
           onPress={onNext}
@@ -309,18 +312,19 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
 
 // ─── Done Step ────────────────────────────────────────────────────────────────
 function DoneStep({ name, gender, className, fee, day, time, place, isLoading, onEnter }: any) {
+  const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
   const firstName = name.trim().split(' ').slice(-1)[0];
   const dayLabel = DAYS[day - 1] ?? '';
 
   return (
-    <View style={s.doneWrap}>
+    <View style={[s.doneWrap, { paddingBottom: spacing.lg + insets.bottom }]}>
       <View style={s.doneIcon}>
         <Text style={{ fontSize: 44 }}>🌿</Text>
       </View>
       <Text style={s.doneTitle}>Sẵn sàng rồi!</Text>
       <Text style={s.doneSub}>
-        Chào mừng {pronoun} {firstName} đến với DayThem
+        Chào mừng {pronoun} {firstName} đến với GieoChữ
       </Text>
 
       <View style={s.summaryCard}>

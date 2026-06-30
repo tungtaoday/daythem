@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
@@ -8,15 +8,19 @@ import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconZalo, IconSend, IconCheck, IconWallet } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { getTuition, recordPayment } from '../../api/tuition';
+import { useAuthStore, isDemoToken } from '../../store/auth';
+import { EmptyState } from '../../components/ui/EmptyState';
 
-const VND = (n: number) => n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : (n / 1000).toFixed(0) + 'k';
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
-const ZALO_TEMPLATES = [
-  { tone: 'Nhẹ nhàng', body: 'Chào anh/chị! Cô nhắc nhẹ là tháng này con vẫn còn thiếu học phí. Anh/chị tiện thì gửi cô trong tuần này nhé 🌿' },
-  { tone: 'Trực tiếp', body: 'Anh/chị ơi, con đang nợ học phí tháng này. Tuần này nhớ gửi cho cô nhé. Cảm ơn anh/chị.' },
-  { tone: 'Có chuyển khoản', body: 'Chào anh/chị, học phí con tháng này. Anh/chị có thể chuyển khoản: Vietcombank · 0123 456 789 · Ng. T. Mai. Cảm ơn!' },
-];
+const buildZaloTemplates = (gw: string) => {
+  const Gw = gw.charAt(0).toUpperCase() + gw.slice(1);
+  return [
+    { tone: 'Nhẹ nhàng', body: `Chào anh/chị! ${Gw} nhắc nhẹ là tháng này con vẫn còn thiếu học phí. Anh/chị tiện thì gửi ${gw} trong tuần này nhé 🌿` },
+    { tone: 'Trực tiếp', body: `Anh/chị ơi, con đang nợ học phí tháng này. Tuần này nhớ gửi cho ${gw} nhé. Cảm ơn anh/chị.` },
+    { tone: 'Có chuyển khoản', body: 'Chào anh/chị, học phí con tháng này. Anh/chị có thể chuyển khoản: Vietcombank · 0123 456 789 · Ng. T. Mai. Cảm ơn!' },
+  ];
+};
 
 // ── Demo data ─────────────────────────────────────────────────
 
@@ -98,7 +102,7 @@ function ClassBreakdown({ cls, paidCount, totalCount, paidAmt, targetAmt }: any)
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
           <Text style={cb.clsName}>{cls}</Text>
-          <Text style={cb.paidLabel}>{VND(paidAmt)} / {VND(targetAmt)}</Text>
+          <Text style={cb.paidLabel}>{VND_FULL(paidAmt)} / {VND_FULL(targetAmt)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <Text style={cb.paidRatio}>{paidCount}/{totalCount} đã nộp</Text>
@@ -125,29 +129,39 @@ const cb = StyleSheet.create({
 
 export function TuitionTabScreen({ navigation, route }: any) {
   const { classes, fetchClasses } = useClassesStore();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
+  const teacher = useAuthStore(st => st.teacher);
+  const pronoun = teacher?.gender === 'thay' ? 'thầy' : 'cô';
+  const zaloTemplates = buildZaloTemplates(pronoun);
   const originClassId: string | undefined = route?.params?.filterClassId;
   const originClass = originClassId ? classes.find(c => c.id === originClassId) : undefined;
   const [allData, setAllData] = useState<Item[]>([]);
   const [demoData, setDemoData] = useState<Item[]>(DEMO_TUITION);
+  const [loading, setLoading] = useState(!isDemo);
   const [showZaloModal, setShowZaloModal] = useState(false);
   const [sent, setSent] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
   const month = new Date().toISOString().slice(0, 7);
   const monthLabel = `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
 
-  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => { if (!isDemo) fetchClasses(); }, [isDemo]);
   useEffect(() => {
-    if (classes.length === 0) return;
+    if (isDemo) return;
+    if (classes.length === 0) { setLoading(false); return; }
+    let alive = true;
+    setLoading(true);
     Promise.all(
       classes.map(cls =>
         getTuition(cls.id, month)
           .then((rows: any[]) => rows.map(r => ({ ...r, classId: cls.id, className: cls.name })))
           .catch(() => [] as Item[])
       )
-    ).then(res => setAllData(res.flat()));
-  }, [classes]);
+    )
+      .then(res => { if (alive) setAllData(res.flat()); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [classes, isDemo]);
 
-  const isDemo = allData.length === 0;
   const rawData = isDemo ? demoData : allData;
   const allClassIds = [...new Set(rawData.map(d => d.classId))];
   const allClassChips = allClassIds.map(cid => ({ id: cid, name: rawData.find(d => d.classId === cid)!.className }));
@@ -160,6 +174,8 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const totalUnpaid = unpaidList.reduce((a, d) => a + (d.amount || 0), 0);
   const totalTarget = displayData.reduce((a, d) => a + (d.amount || 0), 0);
   const pctGoal = totalTarget > 0 ? totalPaid / totalTarget : 0;
+  const studentCount = displayData.length;
+  const nothingYet = totalPaid === 0 && studentCount > 0;
 
   // Per-class breakdown
   const classIds = [...new Set(displayData.map(d => d.classId))];
@@ -176,14 +192,56 @@ export function TuitionTabScreen({ navigation, route }: any) {
     };
   });
 
-  const markPaid = async (item: Item) => {
+  const markPaid = (item: Item) => {
     if (isDemo) {
       setDemoData(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: true } : x));
       return;
     }
-    await recordPayment(item.classId, { student_id: item.student_id, paid: true, amount: item.amount }).catch(() => {});
+    // Optimistic tick
     setAllData(d => d.map(x => x.student_id === item.student_id && x.classId === item.classId ? { ...x, paid: true } : x));
+    recordPayment(item.classId, { student_id: item.student_id, paid: true, amount: item.amount, month }).catch(() => {
+      // Roll back and tell the teacher it didn't save
+      setAllData(d => d.map(x => x.student_id === item.student_id && x.classId === item.classId ? { ...x, paid: false } : x));
+      Alert.alert('Chưa lưu được', 'Không ghi nhận được khoản thu. Kiểm tra mạng và thử lại.');
+    });
   };
+
+  if (loading) {
+    return (
+      <View style={[s.container, s.center]}>
+        <ActivityIndicator color={colors.green500} size="large" />
+      </View>
+    );
+  }
+
+  if (!isDemo && rawData.length === 0) {
+    const hasClass = classes.length > 0;
+    return (
+      <View style={s.container}>
+        <View style={s.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.title}>Học phí</Text>
+            <Text style={s.subtitle}>{monthLabel}</Text>
+          </View>
+          <TouchableOpacity style={s.taxBtn} onPress={() => navigation.navigate('Tax')}>
+            <IconWallet size={15} color={colors.green700} />
+            <Text style={s.taxBtnText}>Thuế TNCN</Text>
+          </TouchableOpacity>
+        </View>
+        <EmptyState
+          icon="💰"
+          title={hasClass ? 'Chưa có học sinh để thu học phí' : 'Chưa có lớp nào'}
+          subtitle={hasClass
+            ? 'Thêm học sinh vào lớp, rồi tick "đã thu" mỗi khi phụ huynh nộp — app tự tổng hợp & nhắc giúp.'
+            : 'Tạo lớp đầu tiên để bắt đầu theo dõi học phí từng tháng.'}
+          ctaLabel={hasClass ? '+ Thêm học sinh' : '+ Tạo lớp học'}
+          onCta={() => hasClass
+            ? navigation.navigate('ClassStudents', { classId: classes[0].id, className: classes[0].name })
+            : navigation.navigate('CreateClass')}
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={s.container}>
@@ -193,6 +251,10 @@ export function TuitionTabScreen({ navigation, route }: any) {
           <Text style={s.title}>Học phí</Text>
           <Text style={s.subtitle}>{monthLabel}</Text>
         </View>
+        <TouchableOpacity style={s.taxBtn} onPress={() => navigation.navigate('Tax')}>
+          <IconWallet size={15} color={colors.green700} />
+          <Text style={s.taxBtnText}>Thuế TNCN</Text>
+        </TouchableOpacity>
       </View>
       {/* Breadcrumb — shown when navigated from ClassDetail */}
       {originClass && (
@@ -220,24 +282,44 @@ export function TuitionTabScreen({ navigation, route }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* ── Revenue summary hero ── */}
         <View style={s.heroCard}>
-          <Text style={s.heroLabel}>ĐÃ THU THÁNG NÀY</Text>
-          <Text style={s.heroAmt}>{VND_FULL(totalPaid)}</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 10 }}>
-            <Text style={s.heroSub}>{Math.round(pctGoal * 100)}% mục tiêu</Text>
-            <Text style={s.heroSub2}>Còn thiếu {VND_FULL(totalUnpaid)}</Text>
-          </View>
-          <View style={s.heroTrack}>
-            <View style={[s.heroFill, { width: `${pctGoal * 100}%` as any }]} />
-          </View>
-
-          {/* Monthly trend chart */}
-          <View style={{ marginTop: 20 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={s.trendLabel}>Doanh thu 5 tháng</Text>
-              <Text style={s.trendBadge}>+12% vs cùng kỳ</Text>
+          <View style={s.heroTopRow}>
+            <Text style={s.heroLabel}>ĐÃ THU THÁNG NÀY</Text>
+            <View style={s.heroBadge}>
+              <IconWallet size={15} color={colors.green700} />
             </View>
-            <MiniBarChart data={isDemo ? MONTHLY_TREND : MONTHLY_TREND} />
           </View>
+          <Text style={s.heroAmt}>{VND_FULL(totalPaid)}</Text>
+
+          {nothingYet ? (
+            <View style={s.heroEncourageRow}>
+              <Text style={s.heroEncourageEmoji}>🌿</Text>
+              <Text style={s.heroEncourage}>
+                {studentCount} học sinh · đầu tháng, chưa thu khoản nào
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6, marginBottom: 10 }}>
+                <Text style={s.heroSub}>{Math.round(pctGoal * 100)}% mục tiêu</Text>
+                <Text style={s.heroSub2}>Còn thiếu {VND_FULL(totalUnpaid)}</Text>
+              </View>
+              <View style={s.heroTrack}>
+                <View style={[s.heroFill, { width: `${pctGoal * 100}%` as any }]} />
+              </View>
+            </>
+          )}
+
+          {/* Monthly trend chart — chỉ hiện cho phiên demo. Tài khoản thật chưa đủ
+              dữ liệu lịch sử nên không dựng biểu đồ giả. */}
+          {isDemo && (
+            <View style={{ marginTop: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={s.trendLabel}>Doanh thu 5 tháng</Text>
+                <Text style={s.trendBadge}>+12% vs cùng kỳ</Text>
+              </View>
+              <MiniBarChart data={MONTHLY_TREND} />
+            </View>
+          )}
         </View>
 
         {/* ── Per-class breakdown ── */}
@@ -278,8 +360,8 @@ export function TuitionTabScreen({ navigation, route }: any) {
               <IconCheck size={18} color="white" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.zaloPromptTitle, { color: colors.green700 }]}>Đã gửi {unpaidList.length} tin Zalo</Text>
-              <Text style={[s.zaloPromptSub, { color: colors.green600 }]}>Phụ huynh sẽ nhận trong vài phút</Text>
+              <Text style={[s.zaloPromptTitle, { color: colors.green700 }]}>Đã đánh dấu nhắc {unpaidList.length} phụ huynh</Text>
+              <Text style={[s.zaloPromptSub, { color: colors.green600 }]}>Nhớ gửi trong Zalo nhé</Text>
             </View>
           </View>
         )}
@@ -287,22 +369,38 @@ export function TuitionTabScreen({ navigation, route }: any) {
         {/* ── Recent transactions ── */}
         <Text style={s.sectionLabel}>GIAO DỊCH GẦN ĐÂY</Text>
         <View style={s.card}>
-          {(isDemo ? DEMO_TRANSACTIONS : paidList.slice(0, 5).map(d => ({
-            name: d.student_name, cls: d.className, when: 'Gần đây', amt: d.amount, note: undefined,
-          }))).map((tx, i, arr) => (
-            <View key={i} style={[s.txRow, i > 0 && s.txDivider]}>
-              <Avatar name={tx.name} size={38} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={s.txName}>{tx.name}</Text>
-                <Text style={s.txSub}>{tx.cls} · {tx.when}</Text>
+          {(() => {
+            const txs = isDemo ? DEMO_TRANSACTIONS : paidList.slice(0, 5).map(d => ({
+              name: d.student_name, cls: d.className, when: 'Gần đây', amt: d.amount, note: undefined,
+            }));
+            if (txs.length === 0) {
+              return (
+                <View style={s.txEmpty}>
+                  <View style={s.txEmptyIcon}>
+                    <IconWallet size={22} color={colors.green600} />
+                  </View>
+                  <Text style={s.txEmptyTitle}>Chưa có giao dịch</Text>
+                  <Text style={s.txEmptySub}>
+                    Khi học sinh nộp tiền, {pronoun} tick “đã thu”, giao dịch sẽ hiện ở đây.
+                  </Text>
+                </View>
+              );
+            }
+            return txs.map((tx, i) => (
+              <View key={i} style={[s.txRow, i > 0 && s.txDivider]}>
+                <Avatar name={tx.name} size={38} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={s.txName}>{tx.name}</Text>
+                  <Text style={s.txSub}>{tx.cls} · {tx.when}</Text>
+                </View>
+                {tx.note ? (
+                  <Text style={s.txNote}>{tx.note}</Text>
+                ) : (
+                  <Text style={s.txAmt}>+{VND_FULL(tx.amt)}</Text>
+                )}
               </View>
-              {tx.note ? (
-                <Text style={s.txNote}>{tx.note}</Text>
-              ) : (
-                <Text style={s.txAmt}>+{VND(tx.amt)}</Text>
-              )}
-            </View>
-          ))}
+            ));
+          })()}
         </View>
 
         {/* ── Unpaid students (quick tick) ── */}
@@ -332,9 +430,9 @@ export function TuitionTabScreen({ navigation, route }: any) {
         <ZaloCopySheet
           title={`Nhắc học phí · ${unpaidList.length} phụ huynh`}
           recipient={`${unpaidList.length} phụ huynh chưa nộp`}
-          message={ZALO_TEMPLATES[0].body}
+          message={zaloTemplates[0].body}
           hint="nhóm lớp hoặc nhắn riêng từng phụ huynh"
-          templates={ZALO_TEMPLATES}
+          templates={zaloTemplates}
           onConfirm={() => { setSent(true); setShowZaloModal(false); }}
           onClose={() => setShowZaloModal(false)}
         />
@@ -345,25 +443,47 @@ export function TuitionTabScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  taxBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: colors.green50 },
+  taxBtnText: { fontSize: 13, fontWeight: '700', color: colors.green700 },
 
   heroCard: {
-    backgroundColor: 'white', marginHorizontal: 16, marginBottom: 8,
-    borderRadius: 22, borderWidth: 1, borderColor: colors.border, padding: 18,
+    backgroundColor: colors.green50, marginHorizontal: 16, marginTop: 4, marginBottom: 8,
+    borderRadius: 24, borderWidth: 1, borderColor: colors.green100, padding: 20,
+    shadowColor: colors.green900, shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
-  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 4 },
-  heroAmt: { fontSize: 32, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.8 },
-  heroSub: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  heroBadge: { width: 30, height: 30, borderRadius: 10, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.green100 },
+  heroLabel: { fontSize: 11, fontWeight: '700', color: colors.green700, letterSpacing: 0.5 },
+  heroAmt: { fontSize: 34, fontWeight: '700', color: colors.green900, letterSpacing: -0.8 },
+  heroSub: { fontSize: 12, color: colors.green700, fontWeight: '600' },
   heroSub2: { fontSize: 12, color: colors.coral700, fontWeight: '600' },
-  heroTrack: { height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' },
+  heroTrack: { height: 8, borderRadius: 4, backgroundColor: 'white', overflow: 'hidden', borderWidth: 1, borderColor: colors.green100 },
   heroFill: { height: 8, borderRadius: 4, backgroundColor: colors.green500 },
+  heroEncourageRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  heroEncourageEmoji: { fontSize: 16 },
+  heroEncourage: { flex: 1, fontSize: 13, color: colors.green700, fontWeight: '600', lineHeight: 18 },
   trendLabel: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
   trendBadge: { fontSize: 12, fontWeight: '600', color: colors.green700, backgroundColor: colors.green100, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
 
   sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 10, marginTop: 20, marginHorizontal: 16 },
-  card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, marginHorizontal: 16, overflow: 'hidden' },
+  card: {
+    backgroundColor: 'white', borderRadius: 20, borderWidth: 1, borderColor: colors.border,
+    marginHorizontal: 16, overflow: 'hidden',
+    shadowColor: '#1a3d2a', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
+  },
+
+  txEmpty: { alignItems: 'center', paddingVertical: 26, paddingHorizontal: 24 },
+  txEmptyIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.green50, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  txEmptyTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 },
+  txEmptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center', lineHeight: 19 },
 
   zaloPrompt: {
     backgroundColor: '#f0faf4', borderRadius: 18, borderWidth: 1, borderColor: colors.green100,

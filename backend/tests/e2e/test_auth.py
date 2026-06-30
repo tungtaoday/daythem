@@ -62,12 +62,15 @@ def test_login_idempotent(client):
     assert "token" in resp.json()
 
 
-def test_login_sets_password_for_otp_teacher(client):
-    # Teacher created via OTP has no password — first login with password sets it
+def test_otp_account_cannot_be_claimed_by_password_login(client):
+    # Security: an account created via OTP (no password) must NOT have its password
+    # silently set by an arbitrary password login (account-takeover prevention).
     client.post("/api/v1/auth/request-otp", json={"phone": "0901111111"})
     client.post("/api/v1/auth/verify-otp", json={"phone": "0901111111", "code": "123456"})
     resp = client.post("/api/v1/auth/login", json={"phone": "0901111111", "password": "newpass"})
-    assert resp.status_code == 200
-    # subsequent login with same password succeeds
-    resp2 = client.post("/api/v1/auth/login", json={"phone": "0901111111", "password": "newpass"})
+    assert resp.status_code == 401
+    assert "OTP" in resp.json()["detail"]
+    # The legitimate owner can still log in via a fresh OTP.
+    client.post("/api/v1/auth/request-otp", json={"phone": "0901111111"})
+    resp2 = client.post("/api/v1/auth/verify-otp", json={"phone": "0901111111", "code": "123456"})
     assert resp2.status_code == 200

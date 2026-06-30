@@ -149,10 +149,13 @@ def vote_makeup(
     body: VoteBody,
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    makeup = handle_vote_makeup(
-        VoteMakeupCommand(makeup_id=makeup_id, option_index=body.option_index, voter_name=body.voter_name),
-        uow,
-    )
+    try:
+        makeup = handle_vote_makeup(
+            VoteMakeupCommand(makeup_id=makeup_id, option_index=body.option_index, voter_name=body.voter_name),
+            uow,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     return makeup_out(makeup)
 
 
@@ -163,8 +166,20 @@ def confirm_makeup(
     teacher: TeacherORM = Depends(get_current_teacher),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
-    makeup = handle_confirm_makeup(
-        ConfirmMakeupCommand(makeup_id=makeup_id, option_index=body.option_index),
-        uow,
-    )
+    with uow:
+        makeup = uow.makeups.get(makeup_id)
+        if not makeup:
+            raise HTTPException(404, "Makeup not found")
+        ann = uow.announcements.get(makeup.announcement_id)
+        klass = uow.classes.get(ann.class_id) if ann else None
+        if not klass or klass.teacher_id != teacher.id:
+            raise HTTPException(403, "Forbidden")
+
+    try:
+        makeup = handle_confirm_makeup(
+            ConfirmMakeupCommand(makeup_id=makeup_id, option_index=body.option_index),
+            uow,
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     return makeup_out(makeup)

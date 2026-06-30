@@ -3,9 +3,14 @@ from sqlalchemy.orm import sessionmaker, Session
 from daythem.config import settings
 from daythem.adapters.orm import Base
 
-connect_args = {"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+connect_args = {"check_same_thread": False} if _is_sqlite else {}
 
-engine = create_engine(settings.DATABASE_URL, connect_args=connect_args)
+# For server DBs (MySQL/Postgres): recycle idle connections and ping before use so
+# a connection dropped by the DB (MySQL wait_timeout) doesn't surface as an error.
+engine_kwargs = {} if _is_sqlite else {"pool_pre_ping": True, "pool_recycle": 280}
+
+engine = create_engine(settings.DATABASE_URL, connect_args=connect_args, **engine_kwargs)
 
 # Enable WAL mode for SQLite concurrency
 if settings.DATABASE_URL.startswith("sqlite"):

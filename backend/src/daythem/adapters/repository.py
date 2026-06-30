@@ -130,6 +130,19 @@ class TuitionRepository:
             .where(and_(TuitionORM.class_id == class_id, TuitionORM.month == month))
         ))
 
+    def list_paid_by_teacher_year(self, teacher_id: str, year: int) -> list[TuitionORM]:
+        return list(self.session.scalars(
+            select(TuitionORM)
+            .join(TuitionORM.class_)
+            .options(selectinload(TuitionORM.class_), selectinload(TuitionORM.student))
+            .where(and_(
+                ClassORM.teacher_id == teacher_id,
+                TuitionORM.paid == True,
+                TuitionORM.month.like(f"{year}-%"),
+            ))
+            .order_by(TuitionORM.month)
+        ))
+
 
 class AnnouncementRepository:
     def __init__(self, session: Session):

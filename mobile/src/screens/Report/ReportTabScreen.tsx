@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
-import { IconSend, IconStar, IconWarn, IconBook, IconZalo } from '../../components/icons';
+import { IconSend, IconStar, IconWarn, IconBook, IconZalo, IconCheck } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
+import { useAuthStore, isDemoToken } from '../../store/auth';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const VND = (n: number) => (n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : n.toLocaleString('vi-VN') + 'đ');
 
@@ -140,29 +143,137 @@ const hlRow = StyleSheet.create({
   iconBox: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
 
+// ── Honest guiding empty state (real accounts) ────────────────
+function ReportGuide({ classes, gw, navigation, week }: any) {
+  const firstClass = classes[0];
+  const steps = [
+    {
+      done: classes.length > 0,
+      label: 'Tạo lớp học',
+      doneText: `✓ ${classes.length} lớp đã tạo`,
+      todoText: 'Chưa có lớp nào',
+      action: null as null | { label: string; onPress: () => void },
+    },
+    {
+      done: false,
+      label: 'Điểm danh buổi đầu',
+      doneText: '',
+      todoText: 'Chưa có buổi nào',
+      action: firstClass
+        ? { label: 'Điểm danh', onPress: () => navigation.navigate('Attendance', { classId: firstClass.id, className: firstClass.name }) }
+        : null,
+    },
+    {
+      done: false,
+      label: 'Ghi nhận học phí',
+      doneText: '',
+      todoText: 'Chưa thu khoản nào',
+      action: null as null | { label: string; onPress: () => void },
+    },
+  ];
+
+  return (
+    <>
+      <View style={[s.card, { padding: 18, marginBottom: 8 }]}>
+        <Text style={s.emptyTitle}>Chưa đủ dữ liệu thống kê</Text>
+        <Text style={[s.emptySub, { textAlign: 'left' }]}>
+          {gw === 'thầy' ? 'Thầy' : 'Cô'} điểm danh và ghi nhận học phí vài buổi, app sẽ tự tổng kết tuần ngay tại đây — chứ không bịa số 🌿
+        </Text>
+      </View>
+
+      <Text style={s.sectionLabel}>ĐỂ CÓ BÁO CÁO ĐẦY ĐỦ</Text>
+      <View style={[s.card, { padding: 18 }]}>
+        <View style={{ gap: 14 }}>
+          {steps.map((st2, i) => {
+            const active = !st2.done && steps.slice(0, i).every(x => x.done);
+            return (
+              <View key={i} style={rg.step}>
+                <View style={[rg.bullet, st2.done && rg.bulletDone, active && rg.bulletActive]}>
+                  {st2.done
+                    ? <IconCheck size={14} color="white" />
+                    : <Text style={[rg.bulletNum, active && { color: 'white' }]}>{i + 1}</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[rg.stepLabel, st2.done && rg.stepLabelDone]}>{st2.label}</Text>
+                  <Text style={[rg.stepSub, st2.done && rg.stepSubDone]}>{st2.done ? st2.doneText : st2.todoText}</Text>
+                </View>
+                {st2.action && (
+                  <TouchableOpacity style={rg.stepBtn} onPress={st2.action.onPress} activeOpacity={0.85}>
+                    <Text style={rg.stepBtnText}>{st2.action.label}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </View>
+
+      <Text style={s.sectionLabel}>MẪU TIN BÁO CÁO</Text>
+      <View style={s.previewBox}>
+        <Text style={rg.previewIntro}>Mỗi tuần phụ huynh sẽ nhận tin nhắn như thế này:</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <View style={s.zaloBubble}>
+            <Text style={{ fontSize: 13, lineHeight: 20, color: 'white' }}>
+              Báo cáo tuần {week} của <Text style={{ fontWeight: '700' }}>[Tên con]</Text>:{'\n'}
+              • Đi học: [_/_ buổi]{'\n'}
+              • Bài tập: [đánh giá]{'\n'}
+              • Học phí: [tình trạng]{'\n'}
+              <Text style={{ opacity: 0.85 }}>Mọi thắc mắc anh/chị nhắn {gw} nhé 🌿</Text>
+            </Text>
+          </View>
+        </View>
+        <Text style={s.previewNote}>Các ô [...] sẽ tự điền sau khi {gw} điểm danh & thu tiền</Text>
+      </View>
+    </>
+  );
+}
+
+const rg = StyleSheet.create({
+  step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  bullet: { width: 30, height: 30, borderRadius: 15, backgroundColor: colors.surfaceAlt, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  bulletActive: { backgroundColor: colors.green500 },
+  bulletDone: { backgroundColor: colors.green500 },
+  bulletNum: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+  stepLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  stepLabelDone: { color: colors.textSecondary },
+  stepSub: { fontSize: 12.5, color: colors.textSecondary, marginTop: 1 },
+  stepSubDone: { color: colors.green700, fontWeight: '600' },
+  stepBtn: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, flexShrink: 0 },
+  stepBtnText: { fontSize: 12.5, fontWeight: '700', color: colors.green700 },
+  previewIntro: { fontSize: 12.5, color: colors.textSecondary, marginBottom: 10 },
+});
+
 // ── Main screen ───────────────────────────────────────────────
 
-type Period = 'week' | 'month' | 'all';
-
 export function ReportTabScreen({ navigation, route }: any) {
+  const insets = useSafeAreaInsets();
   const { classes, fetchClasses } = useClassesStore();
-  const [period, setPeriod] = useState<Period>('week');
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
+  const gw = useAuthStore(st => st.teacher?.gender) === 'thay' ? 'thầy' : 'cô';
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
+  const [loading, setLoading] = useState(!isDemo);
 
-  const allClasses = classes.length > 0 ? classes : DEMO_CLASSES as any[];
+  const allClasses = isDemo ? (DEMO_CLASSES as any[]) : classes;
   const validClassIds = new Set(['all', ...allClasses.map((c: any) => c.id)]);
   const effectiveFilter = validClassIds.has(classFilter) ? classFilter : 'all';
   const displayClasses = effectiveFilter === 'all' ? allClasses : allClasses.filter((c: any) => c.id === effectiveFilter);
   const originClassId: string | undefined = route?.params?.filterClassId;
   const originClass = originClassId ? (classes as any[]).find(c => c.id === originClassId) : undefined;
-  const totalStudents = displayClasses.reduce((a: number, c: any) => a + (c.student_count || 0), 0) || 17;
+  const realTotalStudents = displayClasses.reduce((a: number, c: any) => a + (c.student_count || 0), 0);
+  const totalStudents = isDemo ? (realTotalStudents || 17) : realTotalStudents;
   const presentCount = totalStudents - 2;
 
-  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => {
+    if (isDemo) return;
+    let alive = true;
+    setLoading(true);
+    Promise.resolve(fetchClasses()).finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [isDemo]);
 
   const handleConfirmSend = async () => {
     setShowZalo(false);
@@ -174,8 +285,11 @@ export function ReportTabScreen({ navigation, route }: any) {
       setProgress(p);
       if (p >= totalStudents) { clearInterval(interval); setTimeout(() => setDone(true), 200); }
     }, 80);
-    for (const cls of classes) {
-      generateReport(cls.id, getMondayOfWeek()).catch(() => {});
+    if (isDemo) return;
+    try {
+      await Promise.all(displayClasses.map((cls: any) => generateReport(cls.id, getMondayOfWeek())));
+    } catch {
+      Alert.alert('Chưa gửi được', 'Không tạo được báo cáo. Kiểm tra mạng và thử lại.');
     }
   };
 
@@ -194,6 +308,34 @@ export function ReportTabScreen({ navigation, route }: any) {
     );
   }
 
+  if (loading) {
+    return (
+      <View style={[s.container, s.center]}>
+        <ActivityIndicator color={colors.green500} size="large" />
+      </View>
+    );
+  }
+
+  if (!isDemo && allClasses.length === 0) {
+    return (
+      <View style={s.container}>
+        <View style={s.header}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.title}>Báo cáo</Text>
+            <Text style={s.subtitle}>{weekLabel()}</Text>
+          </View>
+        </View>
+        <EmptyState
+          icon="📊"
+          title="Chưa có lớp để làm báo cáo"
+          subtitle="Tạo lớp và thêm học sinh, rồi mỗi tuần app sẽ tổng kết đi học & học phí để bạn gửi phụ huynh qua Zalo."
+          ctaLabel="+ Tạo lớp học"
+          onCta={() => navigation.navigate('CreateClass')}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       {/* Header */}
@@ -201,18 +343,6 @@ export function ReportTabScreen({ navigation, route }: any) {
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Báo cáo</Text>
           <Text style={s.subtitle}>{weekLabel()} · {displayClasses.length} lớp</Text>
-        </View>
-        {/* Period tabs */}
-        <View style={s.periodTabs}>
-          {([['week', 'Tuần'], ['month', 'Tháng'], ['all', 'Tổng']] as [Period, string][]).map(([id, label]) => (
-            <TouchableOpacity
-              key={id}
-              style={[s.periodTab, period === id && s.periodTabActive]}
-              onPress={() => setPeriod(id)}
-            >
-              <Text style={[s.periodTabText, period === id && s.periodTabTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
       </View>
 
@@ -240,132 +370,146 @@ export function ReportTabScreen({ navigation, route }: any) {
       </ScrollView>
 
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: sending ? 24 : 110 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: (sending ? 24 : 110) + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── 4 stat chips ── */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          <StatChip
-            label="BUỔI ĐÃ DẠY"
-            value={String(displayClasses.length * 2)}
-            sub="100% kế hoạch"
-            bg={colors.green100}
-            color={colors.green700}
-          />
-          <StatChip
-            label="CÓ MẶT"
-            value={`${presentCount}/${totalStudents}`}
-            sub="↑ 6%"
-            bg="#f0faf4"
-            color={colors.green700}
-          />
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-          <StatChip
-            label="ĐÃ THU"
-            value="5,4tr"
-            sub="↑ 1,2tr"
-            bg={colors.honey100}
-            color="#8a6d30"
-          />
-          <StatChip
-            label="VẮNG"
-            value="2"
-            sub="2 con riêng biệt"
-            bg={colors.coral100}
-            color={colors.coral700}
-          />
-        </View>
-
-        {/* ── Attendance trend ── */}
-        <View style={s.card} >
-          <View style={{ padding: 14, paddingHorizontal: 16 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={s.cardTitle}>Tỉ lệ chuyên cần</Text>
-              <Text style={s.cardSub}>8 tuần gần đây</Text>
-            </View>
-            <AttendanceChart data={ATTENDANCE_TREND} />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>01/04</Text>
-              <Text style={{ fontSize: 11, color: colors.textSecondary }}>20/05</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* ── Per-class detail ── */}
-        <Text style={s.sectionLabel}>BÁO CÁO TỪNG LỚP</Text>
-        <View style={s.card}>
-          {displayClasses.map((cls: any, i: number) => {
-            const present = (cls.student_count || 1) - 1;
-            const chapters = ['Ch.7', 'Ch.4'];
-            const paidCount = i === 0 ? 4 : 7;
-            return (
-              <ClassDetailCard
-                key={cls.id}
-                cls={cls}
-                present={present}
-                total={cls.student_count}
-                paidCount={paidCount}
-                chapter={chapters[i] || 'Ch.1'}
-                divider={i > 0}
+        {/* ── Stats + trend (demo only — số liệu thật chưa đủ để tổng hợp) ── */}
+        {isDemo ? (
+          <>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+              <StatChip
+                label="BUỔI ĐÃ DẠY"
+                value={String(displayClasses.length * 2)}
+                sub="100% kế hoạch"
+                bg={colors.green100}
+                color={colors.green700}
               />
-            );
-          })}
-        </View>
-
-        {/* ── Highlights ── */}
-        <Text style={s.sectionLabel}>NỔI BẬT</Text>
-        <View style={s.card}>
-          <HighlightRow
-            iconBg={colors.honey100} iconColor="#8a6d30" Icon={IconStar}
-            title="HỌC SINH TIẾN BỘ NHẤT"
-            name="Mai Khánh Linh"
-            detail={`${displayClasses[1]?.name || 'Lớp 10'} · chuyên cần 100% 4 tuần liền`}
-          />
-          <HighlightRow
-            iconBg={colors.coral100} iconColor={colors.coral700} Icon={IconWarn}
-            title="CẦN LƯU Ý"
-            name="Bùi Nam Sơn"
-            detail="Vắng 3 buổi / 5 buổi gần nhất"
-            divider
-          />
-          <HighlightRow
-            iconBg={colors.green100} iconColor={colors.green700} Icon={IconBook}
-            title="BÀI ĐÃ DẠY"
-            name="Hình học Ch.7 · Đại số Ch.4"
-            detail={`${displayClasses[0]?.name || 'Lớp 9'} · ${displayClasses[1]?.name || 'Lớp 10'}`}
-            divider
-          />
-        </View>
-
-        {/* ── Zalo preview ── */}
-        <Text style={s.sectionLabel}>TIN NHẮN GỬI PHỤ HUYNH</Text>
-        <View style={s.previewBox}>
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={s.zaloBubble}>
-              <Text style={{ fontSize: 13, lineHeight: 20, color: 'white' }}>
-                Báo cáo tuần {weekLabel()} của <Text style={{ fontWeight: '700' }}>[Tên con]</Text>:{'\n'}
-                • Đi học: 1/1 buổi{'\n'}
-                • Bài tập: làm đầy đủ{'\n'}
-                • Học phí: đã thu T5{'\n'}
-                <Text style={{ opacity: 0.85 }}>Mọi thắc mắc anh/chị nhắn lại cho cô nhé. Cảm ơn! 🌿</Text>
-              </Text>
+              <StatChip
+                label="CÓ MẶT"
+                value={`${presentCount}/${totalStudents}`}
+                sub="↑ 6%"
+                bg="#f0faf4"
+                color={colors.green700}
+              />
             </View>
-          </View>
-          <Text style={s.previewNote}>Tên con và số liệu được điền tự động cho từng phụ huynh</Text>
-        </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <StatChip
+                label="ĐÃ THU"
+                value="5,4tr"
+                sub="↑ 1,2tr"
+                bg={colors.honey100}
+                color="#8a6d30"
+              />
+              <StatChip
+                label="VẮNG"
+                value="2"
+                sub="2 học sinh"
+                bg={colors.coral100}
+                color={colors.coral700}
+              />
+            </View>
+
+            {/* ── Attendance trend ── */}
+            <View style={s.card} >
+              <View style={{ padding: 14, paddingHorizontal: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <Text style={s.cardTitle}>Tỉ lệ chuyên cần</Text>
+                  <Text style={s.cardSub}>8 tuần gần đây</Text>
+                </View>
+                <AttendanceChart data={ATTENDANCE_TREND} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>01/04</Text>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary }}>20/05</Text>
+                </View>
+              </View>
+            </View>
+          </>
+        ) : (
+          <ReportGuide classes={allClasses} gw={gw} navigation={navigation} week={weekLabel()} />
+        )}
+
+        {/* ── Per-class detail (demo only — số liệu buổi/bài tập chưa có cho lớp thật) ── */}
+        {isDemo && (
+          <>
+            <Text style={s.sectionLabel}>BÁO CÁO TỪNG LỚP</Text>
+            <View style={s.card}>
+              {displayClasses.map((cls: any, i: number) => {
+                const present = (cls.student_count || 1) - 1;
+                const chapters = ['Ch.7', 'Ch.4'];
+                const paidCount = i === 0 ? 4 : 7;
+                return (
+                  <ClassDetailCard
+                    key={cls.id}
+                    cls={cls}
+                    present={present}
+                    total={cls.student_count}
+                    paidCount={paidCount}
+                    chapter={chapters[i] || 'Ch.1'}
+                    divider={i > 0}
+                  />
+                );
+              })}
+            </View>
+
+            {/* ── Highlights ── */}
+            <Text style={s.sectionLabel}>NỔI BẬT</Text>
+            <View style={s.card}>
+              <HighlightRow
+                iconBg={colors.honey100} iconColor="#8a6d30" Icon={IconStar}
+                title="HỌC SINH TIẾN BỘ NHẤT"
+                name="Mai Khánh Linh"
+                detail={`${displayClasses[1]?.name || 'Lớp 10'} · chuyên cần 100% 4 tuần liền`}
+              />
+              <HighlightRow
+                iconBg={colors.coral100} iconColor={colors.coral700} Icon={IconWarn}
+                title="CẦN LƯU Ý"
+                name="Bùi Nam Sơn"
+                detail="Vắng 3 buổi / 5 buổi gần nhất"
+                divider
+              />
+              <HighlightRow
+                iconBg={colors.green100} iconColor={colors.green700} Icon={IconBook}
+                title="BÀI ĐÃ DẠY"
+                name="Hình học Ch.7 · Đại số Ch.4"
+                detail={`${displayClasses[0]?.name || 'Lớp 9'} · ${displayClasses[1]?.name || 'Lớp 10'}`}
+                divider
+              />
+            </View>
+          </>
+        )}
+
+        {/* ── Zalo preview (demo only — real accounts see the honest MẪU TIN above) ── */}
+        {isDemo && (
+          <>
+            <Text style={s.sectionLabel}>TIN NHẮN GỬI PHỤ HUYNH</Text>
+            <View style={s.previewBox}>
+              <View style={{ alignItems: 'flex-end' }}>
+                <View style={s.zaloBubble}>
+                  <Text style={{ fontSize: 13, lineHeight: 20, color: 'white' }}>
+                    Báo cáo tuần {weekLabel()} của <Text style={{ fontWeight: '700' }}>[Tên con]</Text>:{'\n'}
+                    • Đi học: 1/1 buổi{'\n'}
+                    • Bài tập: làm đầy đủ{'\n'}
+                    • Học phí: đã thu T5{'\n'}
+                    <Text style={{ opacity: 0.85 }}>Mọi thắc mắc anh/chị nhắn lại cho {gw} nhé. Cảm ơn! 🌿</Text>
+                  </Text>
+                </View>
+              </View>
+              <Text style={s.previewNote}>Tên con và số liệu được điền tự động cho từng phụ huynh</Text>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* Bottom bar */}
       {!sending ? (
-        <View style={[s.bottomBar, { backgroundImage: 'linear-gradient(to top, #f7f5f0 60%, transparent)' } as any]}>
+        <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32), backgroundImage: 'linear-gradient(to top, #f7f5f0 60%, transparent)' } as any]}>
           <TouchableOpacity style={s.btnPrimary} onPress={() => setShowZalo(true)}>
             <IconZalo size={20} color="white" />
             <Text style={s.btnPrimaryText}>Soạn báo cáo Zalo · {totalStudents} phụ huynh</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={s.sendingBar}>
+        <View style={[s.sendingBar, { paddingBottom: Math.max(insets.bottom + 16, 36) }]}>
           <View style={s.sendingIcon}><IconSend size={18} color={colors.green600} /></View>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Đang gửi Zalo...</Text>
@@ -381,7 +525,7 @@ export function ReportTabScreen({ navigation, route }: any) {
         <ZaloCopySheet
           title={`Báo cáo tuần · ${totalStudents} phụ huynh`}
           recipient={`${totalStudents} phụ huynh · ${displayClasses.length} lớp`}
-          message={`Báo cáo tuần ${weekLabel()} của [Tên con]:\n• Đi học: 1/1 buổi\n• Bài tập: làm đầy đủ\n• Học phí: đã thu T${new Date().getMonth() + 1}\n\nMọi thắc mắc anh/chị nhắn lại cho cô nhé. Cảm ơn! 🌿`}
+          message={`Báo cáo tuần ${weekLabel()} của [Tên con]:\n• Đi học: 1/1 buổi\n• Bài tập: làm đầy đủ\n• Học phí: đã thu T${new Date().getMonth() + 1}\n\nMọi thắc mắc anh/chị nhắn lại cho ${gw} nhé. Cảm ơn! 🌿`}
           hint="nhóm lớp hoặc từng phụ huynh"
           onConfirm={handleConfirmSend}
           onClose={() => setShowZalo(false)}
@@ -393,14 +537,12 @@ export function ReportTabScreen({ navigation, route }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12, flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   title: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5 },
   subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
-  periodTabs: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 3, gap: 2 },
-  periodTab: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
-  periodTabActive: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 } },
-  periodTabText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  periodTabTextActive: { color: colors.textPrimary },
   sectionLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: '700', letterSpacing: 0.4, marginBottom: 10, marginTop: 16 },
   card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 4 },
   cardTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
@@ -408,8 +550,8 @@ const s = StyleSheet.create({
   previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14, marginBottom: 16 },
   zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '90%' as any },
   previewNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
-  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: 32 },
-  sendingBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, paddingBottom: 36, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16 },
+  sendingBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   sendingIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: colors.green50, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden', marginTop: 8 },
   progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.green500 },

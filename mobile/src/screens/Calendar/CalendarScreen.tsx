@@ -4,7 +4,9 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 import { useClassesStore } from '../../store/classes';
+import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -30,6 +32,7 @@ function getDaysInMonth(year: number, month: number) {
 
 export function CalendarScreen({ navigation }: any) {
   const { classes } = useClassesStore();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
@@ -69,8 +72,9 @@ export function CalendarScreen({ navigation }: any) {
   const selDayN = selDow === 0 ? 7 : selDow;
   const selectedClasses = classes.filter((c: any) => c.schedule?.day === selDayN);
 
-  // Monthly stats
-  const monthlyScheduled = classes.length * 4; // ~4 sessions/month per class
+  // Monthly stats — scheduled is a reasonable estimate (~4 buổi/tháng mỗi lớp).
+  // Buổi bù / buổi nghỉ chỉ có số liệu trong phiên demo.
+  const monthlyScheduled = classes.length * 4;
   const monthlyMakeup = 1;
   const monthlyCancelled = 1;
 
@@ -189,8 +193,8 @@ export function CalendarScreen({ navigation }: any) {
           <Text style={s.sectionLabel}>TỔNG QUAN THÁNG {month + 1}</Text>
           <View style={s.statsCard}>
             <StatItem value={String(monthlyScheduled)} label="Buổi định kỳ" color={colors.green700} bg={colors.green100} />
-            <StatItem value={String(monthlyMakeup)} label="Buổi bù" color="#8a6d30" bg={colors.honey100} />
-            <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />
+            {isDemo && <StatItem value={String(monthlyMakeup)} label="Buổi bù" color="#8a6d30" bg={colors.honey100} />}
+            {isDemo && <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />}
           </View>
         </View>
 
@@ -208,7 +212,7 @@ export function CalendarScreen({ navigation }: any) {
                     <View style={{ flex: 1 }}>
                       <Text style={s.className}>{cls.name} · {cls.subject}</Text>
                       <Text style={s.classSub}>
-                        {dayName}{cls.schedule?.start_time ? ` · ${cls.schedule.start_time}` : ''} · {cls.student_count || 0} HS
+                        {dayName}{cls.schedule?.start_time ? ` · ${cls.schedule.start_time}` : ''} · {cls.student_count || 0} học sinh
                       </Text>
                     </View>
                   </View>
@@ -219,11 +223,13 @@ export function CalendarScreen({ navigation }: any) {
         )}
 
         {classes.length === 0 && (
-          <View style={[s.section, { alignItems: 'center', paddingVertical: 32 }]}>
-            <Text style={{ fontSize: 36, marginBottom: 12 }}>📅</Text>
-            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 }}>Chưa có lớp nào</Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center' }}>Vào tab "Lớp học" để thêm lớp mới.</Text>
-          </View>
+          <EmptyState
+            icon="📅"
+            title="Chưa có lịch học nào"
+            subtitle="Tạo lớp và đặt lịch học để xem trên lịch tuần/tháng."
+            ctaLabel="+ Tạo lớp học"
+            onCta={() => navigation.navigate('CreateClass')}
+          />
         )}
       </ScrollView>
     </View>

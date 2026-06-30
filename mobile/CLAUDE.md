@@ -106,8 +106,13 @@ Stack
       ├── CancelClass     (params: classId, className)
       ├── MakeupPoll      (params: announcementId, makeupId)
       ├── Profile
-      └── Calendar
+      ├── Calendar
+      └── Tax             ← Thuế TNCN + tờ khai 09/KK-TNCN (vào từ Profile)
 ```
+
+**Schedule schema** (lưu trong `class.schedule`): `{ day: 1..7 (T2..CN), start_time: "HH:MM", duration: phút, location: string }`. Cả writer (SetupScreen, CreateClassScreen) lẫn reader (Home/Classes/Calendar/ClassSettings) đều dùng đúng các key này.
+
+**Demo data**: chỉ hiện khi `isDemoToken(token)` (token bắt đầu `demo-`, tức offline fallback). Tài khoản thật luôn thấy data thật + loading/empty/error state — KHÔNG hiện seed data giả.
 
 **Context lớp học**: khi vào ClassDetail → các sub-screen (Students, Tuition, Report, Settings) đều nhận `classId` + `className` qua params → giữ được context "đang ở trong lớp nào".
 

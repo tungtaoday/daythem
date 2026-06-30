@@ -2,43 +2,66 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { recordAttendance } from '../../api/attendance';
+import { useAuthStore, isDemoToken } from '../../store/auth';
 
-// SVG-as-any — works in expo web (react-native-web renders to DOM SVG)
-const SvgEl = 'svg' as any;
-const CircleEl = 'circle' as any;
-
-function RingCounter({ present, total }: { present: number; total: number }) {
-  const r = 20;
+// Hero progress ring — react-native-svg renders on iOS, Android and web.
+function HeroRing({ present, total }: { present: number; total: number }) {
+  const size = 156;
+  const stroke = 12;
+  const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const pct = total > 0 ? present / total : 0;
   return (
-    <View style={{ width: 52, height: 52 }}>
-      <SvgEl width={52} height={52} viewBox="0 0 48 48">
-        <CircleEl cx="24" cy="24" r={r} fill="none" stroke={colors.green100} strokeWidth="5" />
-        <CircleEl cx="24" cy="24" r={r} fill="none" stroke={colors.green500} strokeWidth="5"
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size}>
+        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.green100} strokeWidth={stroke} />
+        <Circle
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.green500} strokeWidth={stroke}
           strokeDasharray={`${pct * circ} ${circ}`}
           strokeLinecap="round"
-          transform="rotate(-90 24 24)"
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
-      </SvgEl>
-      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: colors.green700 }}>{present}/{total}</Text>
+      </Svg>
+      <View style={s.ringCenter}>
+        <Text style={s.ringNumber}>{present}<Text style={s.ringTotal}>/{total}</Text></Text>
+        <Text style={s.ringLabel}>có mặt</Text>
       </View>
     </View>
   );
+}
+
+const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+
+function formatDateLine(): string {
+  const d = new Date();
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${WEEKDAYS[d.getDay()]} · ${dd}/${mm}/${d.getFullYear()} · ${hh}:${mi}`;
 }
 
 type Mark = 'present' | 'absent';
 
 export function AttendanceScreen({ route, navigation }: any) {
   const { classId } = route.params;
+  const insets = useSafeAreaInsets();
   const { students, fetchStudents, classes } = useClassesStore();
+  const cls = classes.find((c: any) => c.id === classId);
+  const className = route.params.className || cls?.name || 'Lớp';
+  const subject = cls?.subject || '';
+  const dateLine = formatDateLine();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
+  const teacher = useAuthStore(st => st.teacher);
+  const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
   const classStudents = students[classId] || [];
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -69,8 +92,17 @@ export function AttendanceScreen({ route, navigation }: any) {
       present: marks[s.id] !== 'absent',
       absence_reason: notes[s.id],
     }));
-    try { await recordAttendance(classId, { session_date: today, records }); } catch {}
-    setSubmitted(true);
+    // Demo sessions: keep optimistic success without touching the API
+    if (isDemo) {
+      setSubmitted(true);
+      return;
+    }
+    try {
+      await recordAttendance(classId, { session_date: today, records });
+      setSubmitted(true);
+    } catch {
+      Alert.alert('Chưa lưu được', 'Không lưu được điểm danh. Kiểm tra mạng và thử lại.');
+    }
   };
 
   if (submitted) {
@@ -109,7 +141,7 @@ export function AttendanceScreen({ route, navigation }: any) {
         <ZaloCopySheet
           title="Hỏi thăm học sinh vắng"
           recipient={`Phụ huynh của ${firstAbsent.name}`}
-          message={`Chào anh/chị, cô xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} hôm nay không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. Cô mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
+          message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} hôm nay không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
           hint={`phụ huynh của ${firstAbsent.name}`}
           onConfirm={() => setShowZalo(false)}
           onClose={() => setShowZalo(false)}
@@ -119,20 +151,30 @@ export function AttendanceScreen({ route, navigation }: any) {
     );
   }
 
+  const total = classStudents.length;
+  const allPresent = total > 0 && absentCount === 0;
+
   return (
     <View style={s.container}>
-      {/* Ring counter bar */}
-      <View style={s.counterBar}>
-        <RingCounter present={presentCount} total={classStudents.length} />
-        <View style={{ flex: 1, marginLeft: 14 }}>
-          <Text style={s.counterTitle}>
-            {absentCount === 0 ? 'Cả lớp có mặt 🎉' : `${absentCount} bạn vắng`}
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
+        {/* Hero — counter ring */}
+        <View style={[s.hero, { paddingTop: insets.top + 18 }]}>
+          <Text style={s.heroEyebrow}>
+            ĐIỂM DANH · {className.toUpperCase()}{subject ? ` · ${subject.toUpperCase()}` : ''}
           </Text>
-          <Text style={s.counterSub}>Chạm vào tên để đổi giữa có mặt / vắng</Text>
-        </View>
-      </View>
+          <Text style={s.heroDate}>{dateLine}</Text>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}>
+          <View style={s.ringWrap}>
+            <HeroRing present={presentCount} total={total} />
+          </View>
+
+          <Text style={s.heroCaption}>
+            {allPresent ? 'Cả lớp có mặt 🎉' : `${presentCount}/${total} có mặt`}
+          </Text>
+          <Text style={s.heroHint}>Chạm vào tên để đổi có mặt / vắng</Text>
+        </View>
+
+        <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
         <View style={s.card}>
           {classStudents.map((stu) => {
             const isPresent = marks[stu.id] !== 'absent';
@@ -167,10 +209,11 @@ export function AttendanceScreen({ route, navigation }: any) {
             );
           })}
         </View>
+        </View>
       </ScrollView>
 
       {/* Bottom bar */}
-      <View style={s.bottomBar}>
+      <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
         <TouchableOpacity style={s.btnPrimary} onPress={handleSave}>
           <Text style={s.btnPrimaryText}>Hoàn tất điểm danh</Text>
         </TouchableOpacity>
@@ -245,13 +288,37 @@ const s = StyleSheet.create({
   zaloPrimaryText: { color: 'white', fontSize: 14, fontWeight: '600' },
   ghostBtn: { padding: 12 },
   ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
-  counterBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100,
-    borderRadius: 18, margin: 16, padding: 14,
+  hero: {
+    alignItems: 'center',
+    backgroundColor: colors.green50,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
+    borderBottomWidth: 1, borderColor: colors.green100,
+    paddingHorizontal: 24, paddingBottom: 24,
   },
-  counterTitle: { fontSize: 14, fontWeight: '700', color: '#1a3d2a' },
-  counterSub: { fontSize: 12, color: colors.green700, marginTop: 2 },
+  heroEyebrow: {
+    fontSize: 12, fontWeight: '700', letterSpacing: 0.6,
+    color: colors.green700, textAlign: 'center',
+  },
+  heroDate: {
+    fontSize: 13, fontWeight: '500', color: colors.green600,
+    marginTop: 4, textAlign: 'center',
+  },
+  ringWrap: { marginTop: 18, marginBottom: 6 },
+  ringCenter: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  ringNumber: { fontSize: 44, fontWeight: '800', color: colors.green900, letterSpacing: -1 },
+  ringTotal: { fontSize: 24, fontWeight: '700', color: colors.green600 },
+  ringLabel: { fontSize: 13, fontWeight: '600', color: colors.green600, marginTop: -2 },
+  heroCaption: {
+    fontSize: 17, fontWeight: '700', color: colors.green900,
+    marginTop: 10, textAlign: 'center',
+  },
+  heroHint: {
+    fontSize: 13, fontWeight: '500', color: colors.green600,
+    marginTop: 4, textAlign: 'center',
+  },
   card: {
     backgroundColor: 'white', borderRadius: 18,
     borderWidth: 1, borderColor: colors.border, padding: 6,
@@ -275,7 +342,7 @@ const s = StyleSheet.create({
   toggleAbsent: { backgroundColor: 'white', borderWidth: 2, borderColor: colors.coral500 },
   bottomBar: {
     position: 'absolute', left: 0, right: 0, bottom: 0,
-    padding: 16, paddingBottom: 32,
+    padding: 16,
     backgroundColor: 'transparent',
   },
   btnPrimary: {

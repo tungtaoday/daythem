@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal, Alert, Linking,
+  TextInput, Modal, Alert, Linking, ActivityIndicator,
 } from 'react-native';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { useClassesStore } from '../../store/classes';
+import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Demo data ─────────────────────────────────────────────────
 
@@ -55,7 +57,7 @@ const STATUS_CFG = {
 };
 
 // ── Demo student row ──────────────────────────────────────────
-function DemoStuRow({ stu, onPress, last }: { stu: DemoStu; onPress: () => void; last?: boolean }) {
+function DemoStuRow({ stu, onPress, last, isDemo }: { stu: DemoStu; onPress: () => void; last?: boolean; isDemo?: boolean }) {
   const cfg = STATUS_CFG[stu.status];
   return (
     <TouchableOpacity
@@ -65,19 +67,23 @@ function DemoStuRow({ stu, onPress, last }: { stu: DemoStu; onPress: () => void;
     >
       <View style={sr.avatarWrap}>
         <Avatar name={stu.name} size={42} />
-        {stu.status === 'risk' && (
+        {isDemo && stu.status === 'risk' && (
           <View style={sr.riskDot}><IconWarn size={9} color="white" /></View>
         )}
       </View>
       <View style={sr.info}>
         <Text style={sr.name} numberOfLines={1}>{stu.name}</Text>
         <Text style={sr.sub} numberOfLines={1}>
-          {stu.attend}% chuyên cần{stu.debt > 0 ? ` · Nợ ${(stu.debt / 1000).toFixed(0)}k` : ''}
+          {isDemo
+            ? `${stu.attend}% chuyên cần${stu.debt > 0 ? ` · Nợ ${(stu.debt / 1000).toFixed(0)}k` : ''}`
+            : (stu.parent_phone ? `PH: ${stu.parent_phone}` : 'Chưa có dữ liệu')}
         </Text>
       </View>
-      <View style={[sr.badge, { backgroundColor: cfg.bg }]}>
-        <Text style={[sr.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
-      </View>
+      {isDemo && (
+        <View style={[sr.badge, { backgroundColor: cfg.bg }]}>
+          <Text style={[sr.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -113,10 +119,12 @@ const DEMO_MONEY = [
 ];
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
-function StudentProfile({ student, clsName, onClose }: any) {
+function StudentProfile({ student, clsName, isDemo, onClose }: any) {
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
-  const isRisk = student.status === 'risk';
+  const teacher = useAuthStore(s => s.teacher);
+  const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
+  const isRisk = isDemo && student.status === 'risk';
 
   return (
     <View style={pp.container}>
@@ -135,13 +143,21 @@ function StudentProfile({ student, clsName, onClose }: any) {
             )}
           </View>
           <Text style={pp.name}>{student.name}</Text>
-          <Text style={pp.sub}>{clsName || 'Lớp học'} · Tham gia từ 03/2026</Text>
+          <Text style={pp.sub}>{isDemo ? `${clsName || 'Lớp học'} · Tham gia từ 03/2026` : (clsName || 'Lớp học')}</Text>
 
-          <View style={pp.statsRow}>
-            <MiniStat label="Đã học" value="6" sub="buổi" />
-            <MiniStat label="Vắng" value="2" sub="buổi" warn />
-            <MiniStat label="Còn nợ" value={student.debt > 0 ? VND(student.debt) : '0đ'} warn={student.debt > 0} />
-          </View>
+          {isDemo ? (
+            <View style={pp.statsRow}>
+              <MiniStat label="Đã học" value="6" sub="buổi" />
+              <MiniStat label="Vắng" value="2" sub="buổi" warn />
+              <MiniStat label="Còn nợ" value={student.debt > 0 ? VND(student.debt) : '0đ'} warn={student.debt > 0} />
+            </View>
+          ) : (
+            <View style={pp.statsRow}>
+              <MiniStat label="Đã học" value="–" sub="buổi" />
+              <MiniStat label="Vắng" value="–" sub="buổi" />
+              <MiniStat label="Còn nợ" value="–" />
+            </View>
+          )}
 
           <View style={pp.actionRow}>
             <TouchableOpacity
@@ -191,29 +207,46 @@ function StudentProfile({ student, clsName, onClose }: any) {
                 </Text>
               </View>
             )}
-            <Text style={pp.sectionLabel}>PHỤHUYNH</Text>
-            <View style={pp.infoCard}>
-              <View style={[pp.infoRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-                <View style={pp.infoIconBox}><IconPhone size={15} color={colors.textSecondary} /></View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={pp.infoLabel}>Mẹ – Chị Hà</Text>
-                  <Text style={pp.infoValue}>{student.parent_phone || '091 234 5678'}</Text>
+            <Text style={pp.sectionLabel}>PHỤ HUYNH</Text>
+            {isDemo ? (
+              <View style={pp.infoCard}>
+                <View style={[pp.infoRow, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+                  <View style={pp.infoIconBox}><IconPhone size={15} color={colors.textSecondary} /></View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={pp.infoLabel}>Mẹ – Chị Hà</Text>
+                    <Text style={pp.infoValue}>{student.parent_phone || '091 234 5678'}</Text>
+                  </View>
+                </View>
+                <View style={pp.infoRow}>
+                  <View style={pp.infoIconBox}><IconZalo size={15} color={colors.green600} /></View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={pp.infoLabel}>Zalo đã kết nối</Text>
+                    <Text style={pp.infoValue}>Đã đọc tin gần nhất 2h trước</Text>
+                  </View>
                 </View>
               </View>
-              <View style={pp.infoRow}>
-                <View style={pp.infoIconBox}><IconZalo size={15} color={colors.green600} /></View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={pp.infoLabel}>Zalo đã kết nối</Text>
-                  <Text style={pp.infoValue}>Đã đọc tin gần nhất 2h trước</Text>
+            ) : (
+              <View style={pp.infoCard}>
+                <View style={pp.infoRow}>
+                  <View style={pp.infoIconBox}><IconPhone size={15} color={colors.textSecondary} /></View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={pp.infoLabel}>SĐT phụ huynh</Text>
+                    <Text style={pp.infoValue}>{student.parent_phone || 'Chưa có'}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
+            )}
           </View>
         )}
 
         {tab === 'attend' && (
           <View style={pp.content}>
-            {DEMO_ATTEND.map((r, i) => (
+            {!isDemo ? (
+              <View style={pp.emptyTab}>
+                <Text style={pp.emptyTabTitle}>Chưa có dữ liệu điểm danh</Text>
+                <Text style={pp.emptyTabSub}>Điểm danh các buổi học để xem lịch sử ở đây.</Text>
+              </View>
+            ) : DEMO_ATTEND.map((r, i) => (
               <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={[pp.histIcon, r.ok ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
                   {r.ok ? <IconCheck size={16} color={colors.green700} /> : <IconX size={16} color={colors.coral700} />}
@@ -232,7 +265,12 @@ function StudentProfile({ student, clsName, onClose }: any) {
 
         {tab === 'money' && (
           <View style={pp.content}>
-            {DEMO_MONEY.map((r, i) => (
+            {!isDemo ? (
+              <View style={pp.emptyTab}>
+                <Text style={pp.emptyTabTitle}>Chưa có dữ liệu học phí</Text>
+                <Text style={pp.emptyTabSub}>Ghi nhận học phí để xem lịch sử ở đây.</Text>
+              </View>
+            ) : DEMO_MONEY.map((r, i) => (
               <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={[pp.histIcon, r.paid ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
                   <IconWallet size={16} color={r.paid ? colors.green700 : colors.coral700} />
@@ -257,7 +295,7 @@ function StudentProfile({ student, clsName, onClose }: any) {
         <ZaloCopySheet
           title={`Nhắn Zalo · ${student.name}`}
           recipient={`Phụ huynh của ${student.name}`}
-          message={`Chào anh/chị, cô muốn hỏi thăm bé ${student.name.split(' ').slice(-1)[0]} ạ. Tuần này bé học như thế nào rồi? Anh/chị có điều gì muốn trao đổi thêm với cô không ạ? 🌿`}
+          message={`Chào anh/chị, ${gw} muốn hỏi thăm bé ${student.name.split(' ').slice(-1)[0]} ạ. Tuần này bé học như thế nào rồi? Anh/chị có điều gì muốn trao đổi thêm với ${gw} không ạ? 🌿`}
           hint={`phụ huynh của ${student.name}`}
           onConfirm={() => setShowZalo(false)}
           onClose={() => setShowZalo(false)}
@@ -309,6 +347,9 @@ const pp = StyleSheet.create({
   histRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
   histIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   chip: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 },
+  emptyTab: { alignItems: 'center', paddingVertical: 32 },
+  emptyTabTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  emptyTabSub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
 });
 
 // ── Main screen ───────────────────────────────────────────────
@@ -317,6 +358,7 @@ type Filter = 'all' | 'unpaid' | 'risk' | string; // string = classId
 
 export function StudentsTabScreen({ navigation, route }: any) {
   const { classes, students, fetchClasses, fetchStudents, addStudent } = useClassesStore();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
   const [filter, setFilter] = useState<Filter>(route?.params?.filterClassId ?? 'all');
   const originClassId: string | undefined = route?.params?.filterClassId;
   const originClass = originClassId ? classes.find(c => c.id === originClassId) : undefined;
@@ -326,11 +368,17 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const [addClsId, setAddClsId] = useState('');
   const [name, setName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [loading, setLoading] = useState(!isDemo);
 
-  useEffect(() => { fetchClasses(); }, []);
+  useEffect(() => {
+    if (isDemo) return;
+    let alive = true;
+    setLoading(true);
+    Promise.resolve(fetchClasses()).finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [isDemo]);
   useEffect(() => { classes.forEach(c => fetchStudents(c.id)); }, [classes.length]);
 
-  const isDemo = classes.length === 0;
   const displayGroups: DemoClsGroup[] = isDemo
     ? DEMO_GROUPS
     : classes.map(c => ({
@@ -338,7 +386,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
         name: c.name,
         subject: c.subject || '',
         students: (students[c.id] || []).map(s => ({
-          id: s.id, name: s.name, attend: 88, status: 'ok' as const, debt: 0, parent_phone: s.parent_phone ?? null,
+          id: s.id, name: s.name, attend: 0, status: 'ok' as const, debt: 0, parent_phone: s.parent_phone ?? null,
         })),
       }));
 
@@ -348,6 +396,10 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const totalCount = allStus.length;
   const unpaidCount = unpaidStus.length;
   const riskCount = riskStus.length;
+  // Chuyên cần: demo tính trung bình thật; tài khoản thật chưa có dữ liệu → "–"
+  const avgAttend = isDemo && allStus.length
+    ? Math.round(allStus.reduce((sum, st) => sum + st.attend, 0) / allStus.length)
+    : null;
 
   // Normalize filter — ignore unknown IDs (e.g. real UUID when in demo mode)
   const validFilterIds = new Set(['all', 'unpaid', 'risk', ...displayGroups.map(g => g.id)]);
@@ -374,6 +426,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
       <StudentProfile
         student={profileStu}
         clsName={profileCls}
+        isDemo={isDemo}
         onClose={() => setProfileStu(null)}
       />
     );
@@ -386,13 +439,21 @@ export function StudentsTabScreen({ navigation, route }: any) {
     ...displayGroups.map(g => ({ id: g.id, label: g.name })),
   ];
 
+  if (loading) {
+    return (
+      <View style={[s.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={colors.green500} size="large" />
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       {/* Header */}
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Học sinh</Text>
-          <Text style={s.subtitle}>{totalCount} con · {displayGroups.length} lớp</Text>
+          <Text style={s.subtitle}>{totalCount} học sinh · {displayGroups.length} lớp</Text>
         </View>
       </View>
 
@@ -405,6 +466,24 @@ export function StudentsTabScreen({ navigation, route }: any) {
           <Text style={s.breadcrumbText}>‹ {originClass.name}</Text>
         </TouchableOpacity>
       )}
+
+      {/* Stat band — dải thống kê màu */}
+      <View style={s.statBand}>
+        <View style={[s.statPill, { backgroundColor: colors.green100 }]}>
+          <Text style={[s.statValue, { color: colors.green700 }]}>{totalCount}</Text>
+          <Text style={[s.statLabel, { color: colors.green700 }]}>Đang học</Text>
+        </View>
+        <View style={[s.statPill, { backgroundColor: colors.coral100 }]}>
+          <Text style={[s.statValue, { color: colors.coral700 }]}>{riskCount}</Text>
+          <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
+        </View>
+        <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
+          <Text style={[s.statValue, { color: '#8a6d30' }]}>
+            {avgAttend !== null ? `${avgAttend}%` : '–'}
+          </Text>
+          <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
+        </View>
+      </View>
 
       {/* Filter chips */}
       <ScrollView
@@ -433,7 +512,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
           <View key={group.id} style={{ marginBottom: 20 }}>
             {/* Class section header */}
             <View style={s.clsHeader}>
-              <Text style={s.clsLabel}>{group.name.toUpperCase()} · {group.students.length} CON</Text>
+              <Text style={s.clsLabel}>{group.name.toUpperCase()} · {group.students.length} HỌC SINH</Text>
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
                 onPress={() => {
@@ -453,6 +532,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
                 <DemoStuRow
                   key={stu.id}
                   stu={stu}
+                  isDemo={isDemo}
                   last={i === group.students.length - 1}
                   onPress={() => { setProfileStu(stu); setProfileCls(group.name); }}
                 />
@@ -474,15 +554,15 @@ export function StudentsTabScreen({ navigation, route }: any) {
         ))}
 
         {filteredGroups.length === 0 && (
-          <View style={s.empty}>
-            <Text style={{ fontSize: 36, marginBottom: 10 }}>👥</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 }}>
-              {effectiveFilter === 'all' ? 'Chưa có học sinh' : 'Không có kết quả'}
-            </Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary }}>
-              {effectiveFilter === 'all' ? 'Thêm học sinh từ màn hình chi tiết lớp.' : 'Thử bộ lọc khác nhé.'}
-            </Text>
-          </View>
+          effectiveFilter === 'all'
+            ? <EmptyState
+                icon="👥"
+                title="Chưa có lớp để thêm học sinh"
+                subtitle="Tạo lớp học đầu tiên, rồi thêm học sinh và phụ huynh vào lớp."
+                ctaLabel="+ Tạo lớp học"
+                onCta={() => navigation.navigate('CreateClass')}
+              />
+            : <EmptyState icon="🔍" title="Không có kết quả" subtitle="Thử chọn bộ lọc khác nhé." compact />
         )}
 
         <View style={{ height: 40 }} />
@@ -524,6 +604,10 @@ const s = StyleSheet.create({
   subtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
   breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
+  statBand: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 2 },
+  statPill: { flex: 1, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
+  statValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
+  statLabel: { fontSize: 11, fontWeight: '700', marginTop: 2, textAlign: 'center' },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, alignItems: 'center' },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surfaceAlt, alignSelf: 'center' },

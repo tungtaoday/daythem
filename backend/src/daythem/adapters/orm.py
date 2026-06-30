@@ -19,6 +19,21 @@ class TeacherORM(Base):
     name: Mapped[Optional[str]] = mapped_column(String(100))
     avatar_url: Mapped[Optional[str]] = mapped_column(Text)
     password_hash: Mapped[Optional[str]] = mapped_column(String(200))
+    push_token: Mapped[Optional[str]] = mapped_column(Text)
+    notif_attendance: Mapped[bool] = mapped_column(Boolean, default=True)
+    notif_tuition: Mapped[bool] = mapped_column(Boolean, default=True)
+    notif_report: Mapped[bool] = mapped_column(Boolean, default=True)
+    dnd_start: Mapped[Optional[str]] = mapped_column(String(5))
+    dnd_end: Mapped[Optional[str]] = mapped_column(String(5))
+    # Rich per-user notification prefs (utility rule on/off + times + marketing opt-in).
+    notif_prefs: Mapped[Optional[dict]] = mapped_column(JSON)
+    # Manual segment tags set by the owner (e.g. ["high_value","beta"]).
+    notif_tags: Mapped[Optional[list]] = mapped_column(JSON)
+    tax_id: Mapped[Optional[str]] = mapped_column(String(20))
+    full_legal_name: Mapped[Optional[str]] = mapped_column(String(200))
+    id_number: Mapped[Optional[str]] = mapped_column(String(20))
+    date_of_birth: Mapped[Optional[str]] = mapped_column(String(10))
+    address: Mapped[Optional[str]] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     classes: Mapped[list["ClassORM"]] = relationship(back_populates="teacher", lazy="select")
@@ -170,3 +185,14 @@ class OTPORM(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime)
     used: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class NotifEventORM(Base):
+    """Notification interaction log — foundation for the fatigue model."""
+    __tablename__ = "notif_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    teacher_id: Mapped[str] = mapped_column(String(36), ForeignKey("teachers.id"), index=True)
+    channel: Mapped[str] = mapped_column(String(20))       # utility | marketing
+    rule: Mapped[Optional[str]] = mapped_column(String(40))  # rule id / campaign id
+    event_type: Mapped[str] = mapped_column(String(20))    # delivered | opened | dismissed
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)

@@ -11,7 +11,7 @@ def setup(auth_client):
         "session_date": "2026-05-12",
         "records": [{"student_id": s1["id"], "present": True}, {"student_id": s2["id"], "present": False}],
     })
-    client.post(f"/api/v1/classes/{klass['id']}/tuition/payment", json={"student_id": s1["id"], "paid": True})
+    client.post(f"/api/v1/classes/{klass['id']}/tuition/payment", json={"student_id": s1["id"], "paid": True, "month": "2026-05"})
     return client, klass["id"]
 
 

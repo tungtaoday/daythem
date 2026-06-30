@@ -1,0 +1,17 @@
+# EAS Build uses THIS (at git root) instead of .gitignore for the archive.
+# Mirror ignores EXCEPT *.png/*.jpg, so mobile/assets icons get uploaded.
+.git/
+.claude/
+claude/
+backend/
+node_modules/
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/android/
+mobile/ios/
+mobile/src/__tests__/
+*.log
+.DS_Store
+Thumbs.db

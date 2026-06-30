@@ -59,3 +59,36 @@ def test_vote_and_confirm(setup):
     resp = client.post(f"/api/v1/makeups/{makeup['id']}/confirm", json={"option_index": 0})
     assert resp.status_code == 200
     assert resp.json()["confirmed_option"] == 0
+
+
+def test_vote_invalid_option_index_rejected(setup):
+    client, class_id = setup
+    ann = client.post(f"/api/v1/classes/{class_id}/cancel", json={
+        "session_date": "2026-05-20", "content": "Lớp nghỉ",
+    }).json()
+    makeup = client.post(f"/api/v1/announcements/{ann['id']}/makeup", json={
+        "options": [{"date": "2026-05-22", "time": "19:00", "label": "Thứ Sáu"}]
+    }).json()
+
+    resp = client.post(f"/api/v1/makeups/{makeup['id']}/vote", json={"option_index": 9, "voter_name": "X"})
+    assert resp.status_code == 400
+
+
+def test_confirm_makeup_other_teacher_forbidden(setup, client):
+    """A second teacher must not be able to confirm teacher A's makeup poll (IDOR)."""
+    owner_client, class_id = setup
+    ann = owner_client.post(f"/api/v1/classes/{class_id}/cancel", json={
+        "session_date": "2026-05-20", "content": "Lớp nghỉ",
+    }).json()
+    makeup = owner_client.post(f"/api/v1/announcements/{ann['id']}/makeup", json={
+        "options": [{"date": "2026-05-22", "time": "19:00", "label": "Thứ Sáu"}]
+    }).json()
+
+    # A different teacher logs in on a fresh client and tries to confirm.
+    other = client
+    other.post("/api/v1/auth/request-otp", json={"phone": "0988888888"})
+    tok = other.post("/api/v1/auth/verify-otp", json={"phone": "0988888888", "code": "123456"}).json()["token"]
+    other.headers["Authorization"] = f"Bearer {tok}"
+
+    resp = other.post(f"/api/v1/makeups/{makeup['id']}/confirm", json={"option_index": 0})
+    assert resp.status_code == 403

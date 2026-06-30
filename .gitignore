@@ -7,6 +7,9 @@
 *.jpg
 *.jpeg
 
+# ...but the mobile app icon/splash assets MUST be included (EAS build needs them)
+!mobile/assets/**
+
 # Backend Python artifacts
 backend/__pycache__/
 backend/**/__pycache__/
@@ -25,3 +28,6 @@ mobile/dist/
 .DS_Store
 Thumbs.db
 claude/
+
+# Design reference mockups (large, local only)
+template/

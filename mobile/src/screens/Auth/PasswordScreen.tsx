@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { useAuthStore } from '../../store/auth';
 
 export function PasswordScreen({ route, navigation }: any) {
   const { phone } = route.params;
+  const insets = useSafeAreaInsets();
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const { loginWithPassword, isLoading } = useAuthStore();
@@ -17,7 +19,13 @@ export function PasswordScreen({ route, navigation }: any) {
   const valid = password.length >= 6;
 
   const handleLogin = async () => {
-    await loginWithPassword(phone, password);
+    try {
+      await loginWithPassword(phone, password);
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        Alert.alert('Mật khẩu không đúng', 'Vui lòng kiểm tra lại mật khẩu.');
+      }
+    }
   };
 
   return (
@@ -30,11 +38,16 @@ export function PasswordScreen({ route, navigation }: any) {
       </TouchableOpacity>
 
       <View style={s.content}>
-        <Text style={s.title}>Mật khẩu của bạn</Text>
+        <Text style={s.title}>Mật khẩu cho số này</Text>
         <Text style={s.sub}>
           Nhập mật khẩu cho số{' '}
           <Text style={s.subPhone}>{maskedPhone}</Text>
         </Text>
+        <View style={s.infoBox}>
+          <Text style={s.infoText}>
+            Lần đầu dùng số này? Mật khẩu bạn nhập sẽ là mật khẩu để đăng nhập từ lần sau. Hãy chọn mật khẩu dễ nhớ nhé.
+          </Text>
+        </View>
 
         <View style={s.pwRow}>
           <TextInput
@@ -64,7 +77,7 @@ export function PasswordScreen({ route, navigation }: any) {
         )}
       </View>
 
-      <View style={s.footer}>
+      <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
         <TouchableOpacity
           style={[s.btnPrimary, (!valid || isLoading) && s.btnDisabled]}
           onPress={handleLogin}
@@ -74,7 +87,7 @@ export function PasswordScreen({ route, navigation }: any) {
             ? <ActivityIndicator color="white" />
             : <Text style={s.btnText}>Đăng nhập</Text>}
         </TouchableOpacity>
-        <Text style={s.forgotText}>Quên mật khẩu? Liên hệ hỗ trợ tại cài đặt.</Text>
+        <Text style={s.forgotText}>Quên mật khẩu? Nhắn Zalo hỗ trợ: 0900 000 000</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -93,8 +106,10 @@ const s = StyleSheet.create({
 
   content: { flex: 1, paddingHorizontal: spacing.lg },
   title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, lineHeight: 30, marginBottom: 8 },
-  sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 28 },
+  sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 16 },
   subPhone: { fontWeight: '700', color: colors.textPrimary },
+  infoBox: { backgroundColor: colors.green50, borderRadius: radius.md, padding: 12, marginBottom: 20 },
+  infoText: { fontSize: 13, color: colors.green700, lineHeight: 19 },
 
   pwRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -113,7 +128,7 @@ const s = StyleSheet.create({
   },
   devHintText: { fontSize: 13, color: colors.textSecondary },
 
-  footer: { padding: spacing.lg, paddingBottom: 32, gap: 14 },
+  footer: { padding: spacing.lg, gap: 14 },
   btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
   btnText: { color: 'white', fontSize: 15, fontWeight: '600' },
   btnDisabled: { opacity: 0.5 },

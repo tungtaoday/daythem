@@ -1,79 +1,200 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
 import { useClassesStore } from '../../store/classes';
+import { useAuthStore, isDemoToken } from '../../store/auth';
+import { getTuition } from '../../api/tuition';
 import {
-  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings,
+  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
 } from '../../components/icons';
 
-type Action = { Icon: any; iconColor: string; label: string; kind: string; color: string };
+// ── day / time / countdown helpers ───────────────────────────
+const DAY_FULL: Record<number, string> = {
+  1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 7: 'Chủ nhật',
+};
+const DAY_N: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
 
-const ACTIONS: Action[] = [
-  { Icon: IconCheck,    iconColor: '#2f6849', label: 'Điểm danh', kind: 'Attendance',  color: '#d8f3e3' },
-  { Icon: IconWallet,   iconColor: '#b85a42', label: 'Thu tiền',   kind: 'ClassTuition', color: '#ffe5da' },
-  { Icon: IconBell,     iconColor: '#b85a42', label: 'Báo nghỉ',  kind: 'CancelClass',  color: '#fff4f0' },
-  { Icon: IconChart,    iconColor: '#2f6849', label: 'Báo cáo',   kind: 'ClassReport',  color: '#f0faf4' },
-  { Icon: IconUsers,    iconColor: '#555',    label: 'Học sinh',  kind: 'ClassStudents', color: '#f5f3ed' },
-  { Icon: IconSettings, iconColor: '#555',    label: 'Cài đặt',   kind: 'settings',    color: '#f5f3ed' },
+function addMinutes(time: string, mins: number): string {
+  const parts = time.split(':').map(Number);
+  const total = parts[0] * 60 + (parts[1] || 0) + (mins || 0);
+  const hh = ((Math.floor(total / 60) % 24) + 24) % 24;
+  const mm = ((total % 60) + 60) % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function countdownWord(delta: number): string {
+  if (delta === 0) return 'HÔM NAY';
+  if (delta === 1) return 'NGÀY MAI';
+  return `CÒN ${delta} NGÀY`;
+}
+
+type Tile = { Icon: any; label: string; kind: string; bg: string; fg: string };
+
+const TILES: Tile[] = [
+  { Icon: IconWallet,   label: 'Thu tiền',  kind: 'ClassTuition',  bg: '#ffe5da', fg: '#b85a42' },
+  { Icon: IconBell,     label: 'Báo nghỉ',  kind: 'CancelClass',   bg: '#fff4f0', fg: '#b85a42' },
+  { Icon: IconChart,    label: 'Báo cáo',   kind: 'ClassReport',   bg: '#f0faf4', fg: '#2f6849' },
+  { Icon: IconClock,    label: 'Học bù',    kind: 'MakeupPoll',    bg: '#fef5e1', fg: '#b07a20' },
+  { Icon: IconUsers,    label: 'Học sinh',  kind: 'ClassStudents', bg: '#f5f3ed', fg: '#555' },
+  { Icon: IconSettings, label: 'Cài đặt',   kind: 'settings',      bg: '#f5f3ed', fg: '#555' },
 ];
 
 export function ClassDetailScreen({ route, navigation }: any) {
   const { classId } = route.params;
   const { classes, students, fetchStudents, addStudent } = useClassesStore();
+  const teacher = useAuthStore(st => st.teacher);
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
   const klass = classes.find(c => c.id === classId);
   const classStudents = students[classId] || [];
   const [loaded, setLoaded] = useState(false);
+  const [tuition, setTuition] = useState<{ paid: number; total: number } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
+  const [addParentName, setAddParentName] = useState('');
   const [addPhone, setAddPhone] = useState('');
+  const [addNote, setAddNote] = useState('');
+
+  const resetAddForm = () => { setAddName(''); setAddParentName(''); setAddPhone(''); setAddNote(''); };
 
   useEffect(() => {
     if (!loaded) { fetchStudents(classId); setLoaded(true); }
   }, [classId]);
 
-  if (!klass) return null;
+  // học phí tháng này — chỉ để hiện stat "Đã nộp", lỗi thì bỏ qua
+  useEffect(() => {
+    const month = new Date().toISOString().slice(0, 7);
+    getTuition(classId, month)
+      .then((data: any[]) => {
+        if (!Array.isArray(data)) return;
+        setTuition({ paid: data.filter(d => d.paid).length, total: data.length });
+      })
+      .catch(() => {});
+  }, [classId]);
+
+  if (!klass) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
+        {classes.length === 0 ? (
+          <ActivityIndicator color={colors.green500} size="large" />
+        ) : (
+          <>
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 }}>Không tìm thấy lớp</Text>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ paddingHorizontal: 20, paddingVertical: 12, backgroundColor: colors.green500, borderRadius: 12 }}>
+              <Text style={{ color: 'white', fontWeight: '700' }}>Quay lại</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
+    );
+  }
 
   const handleAdd = async () => {
     if (!addName.trim()) return;
     try {
-      await addStudent(classId, { name: addName.trim(), parent_phone: addPhone || null });
-      setAddName(''); setAddPhone(''); setShowAdd(false);
+      await addStudent(classId, {
+        name: addName.trim(),
+        parent_name: addParentName.trim() || null,
+        parent_phone: addPhone.trim() || null,
+        note: addNote.trim() || null,
+      });
+      resetAddForm(); setShowAdd(false);
     } catch {
       Alert.alert('Lỗi', 'Không thể thêm học sinh.');
     }
   };
 
+  const navTo = (kind: string) => {
+    if (kind === 'settings') {
+      navigation.navigate('ClassSettings', { classId, className: klass.name });
+    } else if (kind === 'MakeupPoll') {
+      navigation.navigate('MakeupPoll', { className: klass.name });
+    } else {
+      navigation.navigate(kind, { classId, className: klass.name });
+    }
+  };
+
+  // ── countdown line: "THỨ 4 · 18:30 – 20:00 · CÒN 4 NGÀY" ──
+  const sched = klass.schedule || {};
+  const day: number | undefined = sched.day;
+  const start: string = sched.start_time || '';
+  const dur: number = sched.duration || 0;
+  const end = start && dur ? addMinutes(start, dur) : '';
+  const timeStr = start ? (end ? `${start} – ${end}` : start) : '';
+  const loc: string = sched.location || '';
+  const todayN = DAY_N[new Date().getDay()];
+  const delta = day ? (((day - todayN) % 7) + 7) % 7 : null;
+  const countdownLine = [
+    day ? DAY_FULL[day].toUpperCase() : '',
+    timeStr,
+    delta !== null ? countdownWord(delta) : '',
+  ].filter(Boolean).join(' · ');
+
+  const studentN = klass.student_count ?? classStudents.length ?? 0;
+  const tchTitle = teacher?.gender === 'thay' ? 'thầy' : 'cô';
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Class info card */}
-      <View style={styles.classInfo}>
-        <Text style={styles.classSubject}>{klass.subject} · Lớp {klass.grade}</Text>
-        <Text style={styles.className}>{klass.name}</Text>
-        <Text style={styles.classMeta}>{klass.student_count} học sinh · {klass.default_fee.toLocaleString('vi-VN')}đ/tháng</Text>
+      {/* ── GREEN HERO ── */}
+      <View style={styles.hero}>
+        <View style={styles.heroTop}>
+          <Text style={styles.heroCountdown} numberOfLines={1}>
+            {countdownLine || 'Chưa đặt lịch học'}
+          </Text>
+          <TouchableOpacity
+            style={styles.gearBtn}
+            onPress={() => navTo('settings')}
+            activeOpacity={0.8}
+            accessibilityLabel="Cài đặt lớp"
+          >
+            <IconSettings size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.heroTitle}>{klass.name} · {klass.subject}</Text>
+        {loc ? <Text style={styles.heroSub}>{loc}</Text> : null}
+
+        {/* stat row */}
+        <View style={styles.statRow}>
+          <View style={styles.stat}>
+            <Text style={styles.statVal}>{studentN}</Text>
+            <Text style={styles.statLabel}>Học sinh</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.stat}>
+            <Text style={styles.statVal}>{isDemo ? '96%' : '—'}</Text>
+            <Text style={styles.statLabel}>Chuyên cần</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.stat}>
+            <Text style={styles.statVal}>{tuition ? `${tuition.paid}/${tuition.total}` : '—'}</Text>
+            <Text style={styles.statLabel}>Đã nộp</Text>
+          </View>
+        </View>
       </View>
 
-      {/* 6 action tiles */}
+      {/* ── PRIMARY action ── */}
+      <TouchableOpacity
+        style={styles.primaryBtn}
+        onPress={() => navTo('Attendance')}
+        activeOpacity={0.85}
+      >
+        <IconCheck size={22} color="#fff" />
+        <Text style={styles.primaryBtnText}>Điểm danh buổi hôm nay</Text>
+      </TouchableOpacity>
+
+      {/* ── secondary action tiles ── */}
       <View style={styles.grid}>
-        {ACTIONS.map(a => (
+        {TILES.map(t => (
           <TouchableOpacity
-            key={a.label}
-            style={[styles.action, { backgroundColor: a.color }]}
-            onPress={() => {
-              if (a.kind.startsWith('tab:')) {
-                const tabScreen = a.kind.replace('tab:', '');
-                navigation.navigate('MainTabs', { screen: tabScreen, params: { filterClassId: classId } });
-              } else if (a.kind === 'settings') {
-                navigation.navigate('ClassSettings', { classId, className: klass.name });
-              } else {
-                navigation.navigate(a.kind, { classId, className: klass.name });
-              }
-            }}
+            key={t.label}
+            style={[styles.action, { backgroundColor: t.bg }]}
+            onPress={() => navTo(t.kind)}
             activeOpacity={0.8}
           >
-            <a.Icon size={26} color={a.iconColor} />
-            <Text style={styles.actionLabel}>{a.label}</Text>
+            <t.Icon size={26} color={t.fg} />
+            <Text style={styles.actionLabel}>{t.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -88,7 +209,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
       <Card>
         {classStudents.length === 0 ? (
           <TouchableOpacity style={styles.emptyRow} onPress={() => setShowAdd(true)}>
-            <Text style={styles.emptyText}>+ Thêm học sinh đầu tiên vào lớp</Text>
+            <Text style={styles.emptyText}>+ Lớp của {tchTitle} chưa có học sinh — thêm em đầu tiên nhé</Text>
           </TouchableOpacity>
         ) : (
           classStudents.map((s, i) => (
@@ -114,23 +235,40 @@ export function ClassDetailScreen({ route, navigation }: any) {
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Thêm học sinh</Text>
-            <TouchableOpacity onPress={() => { setShowAdd(false); setAddName(''); setAddPhone(''); }}>
+            <TouchableOpacity onPress={() => { setShowAdd(false); resetAddForm(); }}>
               <Text style={styles.modalClose}>Huỷ</Text>
             </TouchableOpacity>
           </View>
+          <Text style={styles.fieldLabel}>Tên học sinh *</Text>
           <TextInput
             style={styles.input}
-            placeholder="Tên học sinh *"
+            placeholder="VD: Nguyễn Minh An"
             value={addName}
             onChangeText={setAddName}
             autoFocus
           />
+          <Text style={styles.fieldLabel}>Tên phụ huynh</Text>
           <TextInput
             style={styles.input}
-            placeholder="SĐT phụ huynh"
+            placeholder="VD: Chị Hương (mẹ An)"
+            value={addParentName}
+            onChangeText={setAddParentName}
+          />
+          <Text style={styles.fieldLabel}>SĐT phụ huynh (Zalo)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="VD: 0901 234 567"
             value={addPhone}
             onChangeText={setAddPhone}
             keyboardType="phone-pad"
+          />
+          <Text style={styles.fieldLabel}>Ghi chú</Text>
+          <TextInput
+            style={[styles.input, { height: 72, textAlignVertical: 'top' }]}
+            placeholder="VD: Học sinh cũ, cần kèm thêm Hình học..."
+            value={addNote}
+            onChangeText={setAddNote}
+            multiline
           />
           <TouchableOpacity
             style={[styles.saveBtn, !addName.trim() && { opacity: 0.5 }]}
@@ -148,13 +286,29 @@ export function ClassDetailScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: 40 },
-  classInfo: { backgroundColor: colors.green500, padding: spacing.lg, borderRadius: radius.lg },
-  classSubject: { ...typography.caption, color: colors.green100 },
-  className: { ...typography.h2, color: '#fff', marginTop: 4 },
-  classMeta: { ...typography.caption, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
+
+  // hero (solid green — native safe, no gradient)
+  hero: { backgroundColor: colors.green500, padding: spacing.lg, borderRadius: radius.xl },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  heroCountdown: { flex: 1, fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#ffe6a3' },
+  gearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.4, color: '#fff', marginTop: 10 },
+  heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+
+  statRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.md, paddingVertical: 12 },
+  stat: { flex: 1, alignItems: 'center' },
+  statVal: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  statLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  statDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 4 },
+
+  // primary button
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.green600, paddingVertical: 18, borderRadius: radius.lg, shadowColor: colors.green700, shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
+  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   action: { width: '31%', aspectRatio: 1, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   actionLabel: { ...typography.caption, fontWeight: '600', textAlign: 'center' },
+
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...typography.h3 },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
@@ -171,6 +325,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   modalClose: { fontSize: 16, color: colors.green600, fontWeight: '600' },
   input: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 14, fontSize: 16, marginBottom: 12, color: colors.textPrimary },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6, marginLeft: 2 },
   saveBtn: { backgroundColor: colors.green500, padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 8 },
   saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });

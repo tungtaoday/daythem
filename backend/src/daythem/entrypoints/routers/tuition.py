@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from daythem.entrypoints.deps import get_uow, get_current_teacher
-from daythem.service.handlers import RecordPaymentCommand, handle_record_payment
+from daythem.service.handlers import RecordPaymentCommand, handle_record_payment, _vn_month
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.adapters.orm import TeacherORM
 
@@ -24,7 +24,8 @@ def tuition_out(t) -> dict:
 class RecordPaymentBody(BaseModel):
     student_id: str
     paid: bool
-    amount: Optional[float] = None
+    amount: Optional[float] = Field(default=None, ge=0)
+    month: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}$")  # "YYYY-MM"; defaults to current month (VN time)
 
 
 @router.get("/classes/{class_id}/tuition/{month}")
@@ -75,8 +76,7 @@ def record_payment(
         if not klass or klass.teacher_id != teacher.id:
             raise HTTPException(404, "Class not found")
 
-    from datetime import datetime, timezone
-    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    month = body.month or _vn_month()
     tuition = handle_record_payment(
         RecordPaymentCommand(
             class_id=class_id,

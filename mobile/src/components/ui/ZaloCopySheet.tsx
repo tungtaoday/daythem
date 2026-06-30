@@ -4,16 +4,8 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 import { IconZalo, IconCheck } from '../icons';
-
-// ── Clipboard helper (web-safe) ───────────────────────────────
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await (navigator as any).clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { copyToClipboard } from '../../utils/clipboard';
+import { openZalo } from '../../utils/zalo';
 
 // ── Types ─────────────────────────────────────────────────────
 export type ZaloTemplate = { tone: string; body: string };
@@ -43,7 +35,7 @@ export function ZaloCopySheet({ title, recipient, message, hint, templates, onCo
   };
 
   const handleCopy = async () => {
-    const ok = await copyText(text);
+    const ok = await copyToClipboard(text);
     if (ok) setCopied(true);
   };
 
@@ -61,8 +53,8 @@ export function ZaloCopySheet({ title, recipient, message, hint, templates, onCo
             <View style={s.successCircle}>
               <IconCheck size={28} color={colors.green600} />
             </View>
-            <Text style={s.successTitle}>Đã xác nhận gửi!</Text>
-            <Text style={s.successSub}>Tin nhắn đã được ghi nhận vào lịch sử thông báo.</Text>
+            <Text style={s.successTitle}>Đã đánh dấu là đã gửi</Text>
+            <Text style={s.successSub}>Bạn nhớ đã dán và gửi trong Zalo nhé.</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -134,7 +126,17 @@ export function ZaloCopySheet({ title, recipient, message, hint, templates, onCo
           </View>
         )}
 
-        {/* Confirm sent */}
+        {/* Open Zalo — the actual send happens here, in Zalo */}
+        <TouchableOpacity
+          style={[s.zaloBtn, !copied && s.zaloBtnMuted]}
+          onPress={() => { openZalo(); }}
+          activeOpacity={0.85}
+        >
+          <IconZalo size={18} color={copied ? 'white' : '#3a7dd3'} />
+          <Text style={[s.zaloBtnText, !copied && { color: '#3a7dd3' }]}>Mở Zalo để dán &amp; gửi</Text>
+        </TouchableOpacity>
+
+        {/* Self-confirmation — teacher tells the app she already sent it */}
         <TouchableOpacity
           style={[s.confirmBtn, !copied && s.confirmBtnDisabled]}
           onPress={copied ? handleConfirm : undefined}
@@ -142,12 +144,12 @@ export function ZaloCopySheet({ title, recipient, message, hint, templates, onCo
         >
           <IconCheck size={18} color={copied ? 'white' : colors.textMuted} />
           <Text style={[s.confirmBtnText, !copied && { color: colors.textMuted }]}>
-            Đã gửi Zalo ✓
+            Tôi đã gửi trong Zalo
           </Text>
         </TouchableOpacity>
 
         {!copied && (
-          <Text style={s.confirmHint}>Copy tin nhắn trước, sau đó xác nhận đã gửi</Text>
+          <Text style={s.confirmHint}>Copy tin nhắn trước, mở Zalo dán &amp; gửi, rồi xác nhận</Text>
         )}
       </TouchableOpacity>
     </TouchableOpacity>
@@ -198,6 +200,14 @@ const s = StyleSheet.create({
   copiedCheck: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center' },
   copiedText: { fontSize: 14, fontWeight: '700', color: colors.green700 },
   hintText: { fontSize: 12, color: colors.green700, lineHeight: 18 },
+
+  zaloBtn: {
+    height: 52, borderRadius: 14, backgroundColor: '#3a7dd3',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginBottom: 10,
+  },
+  zaloBtnMuted: { backgroundColor: '#e8f2fb' },
+  zaloBtnText: { color: 'white', fontSize: 15, fontWeight: '700' },
 
   confirmBtn: {
     height: 52, borderRadius: 14, backgroundColor: colors.green600,

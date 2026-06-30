@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
-import { useAuthStore } from '../../store/auth';
+import { useAuthStore, isDemoToken } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
 import { getTuition } from '../../api/tuition';
@@ -16,6 +16,22 @@ const DAY_FULL: Record<number, string> = {
   1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 7: 'Chủ nhật',
 };
 const DAY_N: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
+
+// ── time / countdown helpers ──────────────────────────────────
+
+function addMinutes(time: string, mins: number): string {
+  const parts = time.split(':').map(Number);
+  const total = parts[0] * 60 + (parts[1] || 0) + (mins || 0);
+  const hh = ((Math.floor(total / 60) % 24) + 24) % 24;
+  const mm = ((total % 60) + 60) % 60;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+
+function countdownLabel(delta: number, day: number): string {
+  if (delta === 0) return 'HÔM NAY';
+  if (delta === 1) return `${DAY_FULL[day].toUpperCase()} · NGÀY MAI`;
+  return `${DAY_FULL[day].toUpperCase()} TỚI · CÒN ${delta} NGÀY`;
+}
 
 // ── AvatarStack (overlapping circles) ────────────────────────
 
@@ -203,10 +219,89 @@ const ar = StyleSheet.create({
   time: { fontSize: 12, color: '#888', marginTop: 1 },
 });
 
+// ── HeroCard: BUỔI TỚI GẦN NHẤT ───────────────────────────────
+
+function HeroCard({ klass, delta, studentNames, onPress }: any) {
+  const day = klass.schedule?.day;
+  const start = klass.schedule?.start_time || '';
+  const dur = klass.schedule?.duration || 0;
+  const end = start && dur ? addMinutes(start, dur) : '';
+  const loc = klass.schedule?.location || '';
+
+  const timeLine = [
+    start ? (end ? `${start} – ${end}` : start) : '',
+    loc,
+  ].filter(Boolean).join(' · ');
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <View
+        style={[hc.card, { backgroundImage: 'linear-gradient(155deg, #4a9e72, #2f6849)' } as any]}
+      >
+        {/* decorative blobs */}
+        <View style={hc.blob1} />
+        <View style={hc.blob2} />
+
+        {/* label row */}
+        <View style={hc.labelRow}>
+          <View style={hc.dot} />
+          <Text style={hc.label}>BUỔI TỚI GẦN NHẤT</Text>
+        </View>
+
+        {/* countdown */}
+        <Text style={hc.countdown}>{countdownLabel(delta, day)}</Text>
+
+        {/* title */}
+        <Text style={hc.title}>{klass.name} · {klass.subject}</Text>
+
+        {/* time + location */}
+        {timeLine ? <Text style={hc.meta}>{timeLine}</Text> : null}
+
+        {/* bottom: avatars + button */}
+        <View style={hc.bottom}>
+          {studentNames.length > 0 ? (
+            <AvatarStack names={studentNames} maxVisible={4} ringColor="#3a8a61" />
+          ) : (
+            <Text style={hc.countText}>{klass.student_count || 0} học sinh</Text>
+          )}
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity style={hc.btn} onPress={onPress} activeOpacity={0.85}>
+            <Text style={hc.btnText}>Mở lớp →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+const hc = StyleSheet.create({
+  card: {
+    backgroundColor: '#4a9e72', borderRadius: 26, padding: 22, overflow: 'hidden',
+    position: 'relative', shadowColor: '#2f6849', shadowOpacity: 0.32, shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 }, elevation: 10,
+  },
+  blob1: { position: 'absolute', top: -50, right: -36, width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.10)' },
+  blob2: { position: 'absolute', bottom: -60, right: 30, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.06)' },
+
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#f2c94c' },
+  label: { fontSize: 11, fontWeight: '800', letterSpacing: 1, color: 'rgba(255,255,255,0.9)' },
+
+  countdown: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4, color: '#ffe6a3', marginBottom: 6 },
+  title: { fontSize: 24, fontWeight: '800', letterSpacing: -0.4, color: 'white' },
+  meta: { fontSize: 14, color: 'rgba(255,255,255,0.88)', marginTop: 4 },
+
+  bottom: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
+  countText: { fontSize: 13, color: 'rgba(255,255,255,0.85)' },
+  btn: { backgroundColor: 'white', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
+  btnText: { fontSize: 14, fontWeight: '800', color: '#2f6849' },
+});
+
 // ── ClassesScreen (HomeB) ─────────────────────────────────────
 
 export function ClassesScreen({ navigation }: any) {
   const { teacher } = useAuthStore();
+  const isDemo = isDemoToken(useAuthStore(st => st.token));
   const { classes, students, isLoading, fetchClasses, fetchStudents } = useClassesStore();
 
   // tuition data: { classId → { paid: number, total: number } }
@@ -235,6 +330,21 @@ export function ClassesScreen({ navigation }: any) {
     return aToday === bToday ? 0 : aToday ? -1 : 1;
   });
 
+  // ── next upcoming class (soonest schedule.day ≥ today, wrap week) ──
+  let heroClass: any = null;
+  let heroDelta = 99;
+  classes.forEach(c => {
+    const day = c.schedule?.day;
+    if (!day) return;
+    const delta = ((day - todayN) % 7 + 7) % 7;
+    const startA = heroClass?.schedule?.start_time || '99:99';
+    const startC = c.schedule?.start_time || '99:99';
+    if (delta < heroDelta || (delta === heroDelta && startC < startA)) {
+      heroDelta = delta;
+      heroClass = c;
+    }
+  });
+
   const todayCount = classes.filter(c => c.schedule?.day === todayN).length;
   const totalStudents = classes.reduce((t, c) => t + (c.student_count || 0), 0);
   // unpaid across all classes
@@ -249,7 +359,7 @@ export function ClassesScreen({ navigation }: any) {
       <View style={s.header}>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>{dateStr}</Text>
-          <Text style={s.headerTitle}>Lớp của cô</Text>
+          <Text style={s.headerTitle}>Lớp của {teacher?.gender === 'thay' ? 'thầy' : 'cô'}{teacher?.name ? ` ${teacher.name.trim().split(/\s+/).pop()}` : ''}</Text>
         </View>
         {teacher?.name ? <Avatar name={teacher.name} size={42} /> : null}
       </View>
@@ -260,6 +370,16 @@ export function ClassesScreen({ navigation }: any) {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor="#4a9e72" />}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Hero: buổi tới gần nhất ── */}
+        {heroClass && (
+          <HeroCard
+            klass={heroClass}
+            delta={heroDelta}
+            studentNames={(students[heroClass.id] || []).map(st => st.name)}
+            onPress={() => navigation.navigate('ClassDetail', { classId: heroClass.id, className: heroClass.name })}
+          />
+        )}
+
         {/* ── Quick stats strip ── */}
         {classes.length > 0 && (
           <View style={s.statStrip}>
@@ -269,12 +389,14 @@ export function ClassesScreen({ navigation }: any) {
             </View>
             <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
               <Text style={[s.statPillLabel, { color: '#b85a42' }]}>CHƯA NỘP</Text>
-              <Text style={[s.statPillVal, { color: '#b85a42' }]}>{unpaidCount} hs</Text>
+              <Text style={[s.statPillVal, { color: '#b85a42' }]}>{unpaidCount} học sinh</Text>
             </View>
-            <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
-              <Text style={[s.statPillLabel, { color: colors.coral700 }]}>NGHỈ NHIỀU</Text>
-              <Text style={[s.statPillVal, { color: colors.coral700 }]}>3 hs</Text>
-            </View>
+            {isDemo && (
+              <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
+                <Text style={[s.statPillLabel, { color: colors.coral700 }]}>NGHỈ NHIỀU</Text>
+                <Text style={[s.statPillVal, { color: colors.coral700 }]}>3 học sinh</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -315,8 +437,8 @@ export function ClassesScreen({ navigation }: any) {
           <Text style={s.addBtnText}>Thêm lớp mới</Text>
         </TouchableOpacity>
 
-        {/* ── Recent activity ── */}
-        {classes.length > 0 && (
+        {/* ── Recent activity (demo only — chưa có nguồn hoạt động thật) ── */}
+        {classes.length > 0 && isDemo && (
           <>
             <Text style={s.sectionTitle}>Hoạt động gần đây</Text>
             <View style={s.activityCard}>

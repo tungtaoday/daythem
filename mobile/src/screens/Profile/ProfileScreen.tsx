@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuthStore, Gender } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
+import { storage } from '../../store/storage';
 import { IconChevron, IconWallet } from '../../components/icons';
 
 // ── Static sub-components ─────────────────────────────────────
@@ -137,26 +139,43 @@ const cp = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────
 
 export function ProfileScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { teacher, logout, updateProfile, setGender } = useAuthStore();
   const { classes } = useClassesStore();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(teacher?.name || '');
   const [editPhone, setEditPhone] = useState(teacher?.phone || '');
-  const [editEmail, setEditEmail] = useState('ngthumai@gmail.com');
+  const [editEmail, setEditEmail] = useState('');
   const [editGender, setEditGender] = useState<Gender>(teacher?.gender ?? 'co');
   const [saving, setSaving] = useState(false);
-  const [showChangePwd, setShowChangePwd] = useState(false);
 
-  // Bank info state
-  const [bankName, setBankName] = useState('Vietcombank');
-  const [bankNumber, setBankNumber] = useState('0123 456 789');
-  const [bankHolder, setBankHolder] = useState('NG. T. MAI');
+  // Bank info state — persisted locally (backend has no bank fields yet)
+  const [bankName, setBankName] = useState('');
+  const [bankNumber, setBankNumber] = useState('');
+  const [bankHolder, setBankHolder] = useState('');
 
-  const totalStudents = classes.reduce((a, c) => a + (c.student_count || 0), 0) || 17;
+  // Load locally-saved email + bank info on mount
+  useEffect(() => {
+    (async () => {
+      const [em, bn, bnum, bh] = await Promise.all([
+        storage.get('profile_email'),
+        storage.get('bank_name'),
+        storage.get('bank_number'),
+        storage.get('bank_holder'),
+      ]);
+      if (em) setEditEmail(em);
+      if (bn) setBankName(bn);
+      if (bnum) setBankNumber(bnum);
+      if (bh) setBankHolder(bh);
+    })();
+  }, []);
+
+  const totalStudents = classes.reduce((a, c) => a + (c.student_count || 0), 0);
   const gender = teacher?.gender ?? 'co';
   const title = gender === 'co' ? 'Cô giáo' : 'Thầy giáo';
   const displayName = teacher?.name || title;
+  const hasBank = !!(bankName && bankNumber);
 
   const handleEdit = () => {
     setEditName(teacher?.name || '');
@@ -170,6 +189,13 @@ export function ProfileScreen({ navigation }: any) {
     setSaving(true);
     try {
       await updateProfile(editName.trim(), editGender);
+      // Email + bank are stored locally (no backend fields yet)
+      await Promise.all([
+        storage.set('profile_email', editEmail.trim()),
+        storage.set('bank_name', bankName.trim()),
+        storage.set('bank_number', bankNumber.trim()),
+        storage.set('bank_holder', bankHolder.trim()),
+      ]);
       setEditing(false);
     } finally {
       setSaving(false);
@@ -201,7 +227,7 @@ export function ProfileScreen({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         {/* Profile header */}
         <View style={s.profileHead}>
           <Avatar name={displayName} size={72} />
@@ -220,7 +246,7 @@ export function ProfileScreen({ navigation }: any) {
           ) : (
             <Text style={s.name}>{displayName}</Text>
           )}
-          <Text style={s.role}>{title} · 8 năm kinh nghiệm</Text>
+          <Text style={s.role}>{title}</Text>
 
           {/* Gender picker (always visible) */}
           {editing && (
@@ -242,11 +268,9 @@ export function ProfileScreen({ navigation }: any) {
 
         {/* Stats */}
         <View style={s.statsCard}>
-          <StatItem value={String(classes.length || 2)} label="Lớp đang dạy" />
+          <StatItem value={String(classes.length)} label="Lớp đang dạy" />
           <View style={s.statsDivider} />
           <StatItem value={String(totalStudents)} label="Học sinh" />
-          <View style={s.statsDivider} />
-          <StatItem value="124" label="Buổi đã dạy" />
         </View>
 
         {/* TÀI KHOẢN */}
@@ -285,12 +309,12 @@ export function ProfileScreen({ navigation }: any) {
                   autoCapitalize="none"
                   textAlign="right"
                 />
-              : <Text style={s.rowValue}>{editEmail}</Text>}
+              : <Text style={[s.rowValue, !editEmail && { color: colors.textMuted }]}>{editEmail || 'Chưa thiết lập'}</Text>}
           </View>
-          <TouchableOpacity style={s.row} onPress={() => setShowChangePwd(true)}>
+          <View style={s.row}>
             <Text style={s.rowLabel}>Đổi mật khẩu</Text>
-            <IconChevron size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+            <View style={s.soonBadge}><Text style={s.soonBadgeText}>Sắp có</Text></View>
+          </View>
         </View>
 
         {/* NHẬN HỌC PHÍ */}
@@ -319,10 +343,10 @@ export function ProfileScreen({ navigation }: any) {
                     keyboardType="numeric"
                   />
                 </>
+              ) : hasBank ? (
+                <Text style={s.bankName}>{bankName} · {bankNumber}</Text>
               ) : (
-                <>
-                  <Text style={s.bankName}>{bankName} · {bankNumber}</Text>
-                </>
+                <Text style={[s.bankName, { color: colors.textMuted }]}>Chưa thiết lập tài khoản nhận tiền</Text>
               )}
               {editing ? (
                 <TextInput
@@ -333,29 +357,35 @@ export function ProfileScreen({ navigation }: any) {
                   placeholderTextColor={colors.textMuted}
                   autoCapitalize="characters"
                 />
-              ) : (
+              ) : hasBank && bankHolder ? (
                 <Text style={s.bankSub}>Tên chủ TK: {bankHolder}</Text>
-              )}
+              ) : null}
             </View>
-            {!editing && (
-              <View style={s.qrBadge}>
-                <Text style={s.qrBadgeText}>QR · Đã tạo</Text>
-              </View>
-            )}
           </View>
           <Text style={s.bankNote}>
             Phụ huynh sẽ thấy thông tin này trong tin nhắn nộp tiền
           </Text>
         </View>
 
+        {/* THUẾ */}
+        <SectionHeader>THUẾ THU NHẬP CÁ NHÂN</SectionHeader>
+        <View style={s.card}>
+          <TouchableOpacity style={s.row} onPress={() => navigation.navigate('Tax')}>
+            <Text style={s.rowLabel}>Thuế TNCN & tờ khai 09/KK-TNCN</Text>
+            <IconChevron size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         {/* THÔNG BÁO */}
         <SectionHeader>THÔNG BÁO</SectionHeader>
         <View style={s.card}>
-          <ToggleRow label="Thông báo đẩy" sub="Buổi học, học phí, hồi đáp" value={true} />
-          <View style={s.divider} />
-          <ToggleRow label="Tóm tắt 7h sáng" sub="Liệt kê việc cần làm hôm nay" value={true} />
-          <View style={s.divider} />
-          <ToggleRow label="Không làm phiền" sub="22h – 7h · Không gửi push trong khung giờ này" value={true} />
+          <TouchableOpacity style={s.row} onPress={() => navigation.navigate('NotificationSettings')}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.rowLabel}>Cài đặt thông báo</Text>
+              <Text style={s.rowSub}>Nhắc buổi học, học phí, báo cáo · Không làm phiền</Text>
+            </View>
+            <IconChevron size={16} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* ỨNG DỤNG */}
@@ -370,7 +400,7 @@ export function ProfileScreen({ navigation }: any) {
             <Text style={s.rowLabel}>Phiên bản</Text>
             <Text style={s.rowValue}>1.0.0 · Beta</Text>
           </View>
-          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Liên hệ', 'Email: support@daythem.vn')}>
+          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Liên hệ', 'Email: support@gieo.vn')}>
             <Text style={s.rowLabel}>Liên hệ hỗ trợ</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
@@ -389,11 +419,9 @@ export function ProfileScreen({ navigation }: any) {
         </View>
 
         <Text style={s.footerNote}>
-          Dữ liệu lớp & học sinh được lưu trên máy chủ.{'\n'}Đăng nhập lại sẽ thấy lại toàn bộ.
+          Lớp & học sinh được lưu trên máy chủ.{'\n'}Email & tài khoản ngân hàng lưu trên máy này.
         </Text>
       </ScrollView>
-
-      {showChangePwd && <ChangePasswordModal onClose={() => setShowChangePwd(false)} />}
     </View>
   );
 }
@@ -434,6 +462,9 @@ const s = StyleSheet.create({
     fontSize: 12, fontWeight: '700', color: colors.textSecondary,
     letterSpacing: 0.4, marginBottom: 8, marginHorizontal: 16, marginTop: 4,
   },
+  sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  soonBadge: { backgroundColor: colors.honey100, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8 },
+  soonBadgeText: { fontSize: 10, fontWeight: '700', color: '#8a6d30' },
   card: {
     backgroundColor: 'white', borderRadius: 18,
     borderWidth: 1, borderColor: colors.border,

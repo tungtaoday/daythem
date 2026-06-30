@@ -14,6 +14,8 @@ TestSession = sessionmaker(bind=engine, autocommit=False, autoflush=False, expir
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_db():
+    from daythem.entrypoints import ratelimit
+    ratelimit.reset()  # in-memory limiter persists across tests in one process
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -50,6 +52,14 @@ def client(db):
 def auth_client(client):
     client.post("/api/v1/auth/request-otp", json={"phone": "0901234567"})
     resp = client.post("/api/v1/auth/verify-otp", json={"phone": "0901234567", "code": "123456"})
+    token = resp.json()["token"]
+    client.headers["Authorization"] = f"Bearer {token}"
+    return client, resp.json()["teacher"]
+
+
+@pytest.fixture
+def password_auth_client(client):
+    resp = client.post("/api/v1/auth/login", json={"phone": "0912345678", "password": "test123"})
     token = resp.json()["token"]
     client.headers["Authorization"] = f"Bearer {token}"
     return client, resp.json()["teacher"]
