@@ -8,6 +8,8 @@ import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconSend, IconStar, IconWarn, IconBook, IconZalo, IconCheck } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
+import { listSessions } from '../../api/attendance';
+import { getTuition } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
 
@@ -144,7 +146,7 @@ const hlRow = StyleSheet.create({
 });
 
 // ── Honest guiding empty state (real accounts) ────────────────
-function ReportGuide({ classes, gw, navigation, week }: any) {
+function ReportGuide({ classes, gw, navigation, week, hasAttendance, hasTuition }: any) {
   const firstClass = classes[0];
   const steps = [
     {
@@ -155,18 +157,18 @@ function ReportGuide({ classes, gw, navigation, week }: any) {
       action: null as null | { label: string; onPress: () => void },
     },
     {
-      done: false,
+      done: !!hasAttendance,
       label: 'Điểm danh buổi đầu',
-      doneText: '',
+      doneText: '✓ Đã điểm danh',
       todoText: 'Chưa có buổi nào',
-      action: firstClass
+      action: !hasAttendance && firstClass
         ? { label: 'Điểm danh', onPress: () => navigation.navigate('Attendance', { classId: firstClass.id, className: firstClass.name }) }
         : null,
     },
     {
-      done: false,
+      done: !!hasTuition,
       label: 'Ghi nhận học phí',
-      doneText: '',
+      doneText: '✓ Đã ghi nhận học phí',
       todoText: 'Chưa thu khoản nào',
       action: null as null | { label: string; onPress: () => void },
     },
@@ -256,6 +258,8 @@ export function ReportTabScreen({ navigation, route }: any) {
   const [showZalo, setShowZalo] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
   const [loading, setLoading] = useState(!isDemo);
+  const [hasAttendance, setHasAttendance] = useState(false);
+  const [hasTuition, setHasTuition] = useState(false);
 
   const allClasses = isDemo ? (DEMO_CLASSES as any[]) : classes;
   const validClassIds = new Set(['all', ...allClasses.map((c: any) => c.id)]);
@@ -274,6 +278,24 @@ export function ReportTabScreen({ navigation, route }: any) {
     Promise.resolve(fetchClasses()).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [isDemo]);
+
+  // Tín hiệu thật cho checklist "ĐỂ CÓ BÁO CÁO": đã điểm danh? đã thu học phí?
+  useEffect(() => {
+    if (isDemo || allClasses.length === 0) return;
+    let alive = true;
+    const month = new Date().toISOString().slice(0, 7);
+    (async () => {
+      try {
+        const sess = await Promise.all(allClasses.map((c: any) => listSessions(c.id).catch(() => [])));
+        if (alive && sess.some((arr: any) => Array.isArray(arr) && arr.length > 0)) setHasAttendance(true);
+      } catch {}
+      try {
+        const tui = await Promise.all(allClasses.map((c: any) => getTuition(c.id, month).catch(() => [])));
+        if (alive && tui.some((arr: any) => Array.isArray(arr) && arr.some((t: any) => t.paid))) setHasTuition(true);
+      } catch {}
+    })();
+    return () => { alive = false; };
+  }, [isDemo, allClasses.length]);
 
   const handleConfirmSend = async () => {
     setShowZalo(false);
@@ -425,7 +447,7 @@ export function ReportTabScreen({ navigation, route }: any) {
             </View>
           </>
         ) : (
-          <ReportGuide classes={allClasses} gw={gw} navigation={navigation} week={weekLabel()} />
+          <ReportGuide classes={allClasses} gw={gw} navigation={navigation} week={weekLabel()} hasAttendance={hasAttendance} hasTuition={hasTuition} />
         )}
 
         {/* ── Per-class detail (demo only — số liệu buổi/bài tập chưa có cho lớp thật) ── */}

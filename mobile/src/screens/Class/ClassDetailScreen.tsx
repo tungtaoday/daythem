@@ -9,6 +9,7 @@ import { classColor } from '../../theme/classColors';
 import { useClassesStore } from '../../store/classes';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
+import { listSessions } from '../../api/attendance';
 import {
   IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
 } from '../../components/icons';
@@ -53,6 +54,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
   const classStudents = students[classId] || [];
   const [loaded, setLoaded] = useState(false);
   const [tuition, setTuition] = useState<{ paid: number; total: number } | null>(null);
+  const [attendedToday, setAttendedToday] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
   const [addParentName, setAddParentName] = useState('');
@@ -73,6 +75,15 @@ export function ClassDetailScreen({ route, navigation }: any) {
         if (!Array.isArray(data)) return;
         setTuition({ paid: data.filter(d => d.paid).length, total: data.length });
       })
+      .catch(() => {});
+  }, [classId]);
+
+  // Hôm nay đã điểm danh chưa → đổi nhãn nút cho biết "đã điểm danh".
+  useEffect(() => {
+    const d = new Date();
+    const todayYmd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    listSessions(classId)
+      .then((arr: any[]) => setAttendedToday(Array.isArray(arr) && arr.some(sx => sx.session_date === todayYmd)))
       .catch(() => {});
   }, [classId]);
 
@@ -165,9 +176,10 @@ export function ClassDetailScreen({ route, navigation }: any) {
 
       {/* ── PRIMARY action ── */}
       <Button
-        label="Điểm danh buổi hôm nay"
+        label={attendedToday ? '✓ Đã điểm danh hôm nay — xem/sửa' : 'Điểm danh buổi hôm nay'}
+        variant={attendedToday ? 'secondary' : 'primary'}
         onPress={() => navTo('Attendance')}
-        icon={<IconCheck size={22} color="#fff" />}
+        icon={attendedToday ? undefined : <IconCheck size={22} color="#fff" />}
       />
 
       {/* ── secondary action tiles ── */}
