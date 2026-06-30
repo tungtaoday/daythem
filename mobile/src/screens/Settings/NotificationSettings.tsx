@@ -107,9 +107,9 @@ export function NotificationSettings() {
         <Text style={s.muted}>Không gửi thông báo trong khung giờ này.</Text>
       </View>
 
-      <Text style={s.section}>TỪ GIEO</Text>
+      <Text style={s.section}>TỪ GIEOCHỮ</Text>
       <View style={s.card}>
-        <RuleRow label="📣 Tin & ưu đãi từ Gieo" sub="Mẹo dạy học, ưu đãi, cập nhật"
+        <RuleRow label="📣 Tin & ưu đãi từ GieoChữ" sub="Mẹo dạy học, ưu đãi, cập nhật"
           on={cfg.marketing_opt_in}
           onToggle={v => { setCfg(c => c ? { ...c, marketing_opt_in: v } : c); save({ marketing_opt_in: v }); }} />
       </View>

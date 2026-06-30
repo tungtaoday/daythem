@@ -7,7 +7,7 @@ from daythem.service.handlers import (
     RequestOTPCommand, VerifyOTPCommand, UpdateProfileCommand,
     LoginWithPasswordCommand,
     handle_request_otp, handle_verify_otp, handle_update_profile,
-    handle_login_with_password,
+    handle_login_with_password, handle_delete_account, handle_change_password,
 )
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.adapters.orm import TeacherORM
@@ -28,6 +28,10 @@ class VerifyOTPBody(BaseModel):
 class LoginBody(BaseModel):
     phone: str
     password: str
+
+class ChangePasswordBody(BaseModel):
+    current_password: str
+    new_password: str
 
 class UpdateProfileBody(BaseModel):
     name: str | None = None
@@ -109,6 +113,33 @@ def verify_otp(body: VerifyOTPBody, request: Request, uow: SqlAlchemyUnitOfWork 
 @router.get("/me")
 def me(teacher: TeacherORM = Depends(get_current_teacher)):
     return teacher_out(teacher)
+
+
+@router.put("/password")
+def change_password(
+    body: ChangePasswordBody,
+    teacher: TeacherORM = Depends(get_current_teacher),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    try:
+        handle_change_password(teacher.id, body.current_password, body.new_password, uow)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}
+
+
+@router.delete("/account")
+def delete_account(
+    teacher: TeacherORM = Depends(get_current_teacher),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Permanently delete the current teacher's account and all their data.
+
+    Required by Apple App Store / Google Play for apps with account creation.
+    """
+    with uow:
+        handle_delete_account(teacher.id, uow)
+    return {"ok": True}
 
 
 @router.put("/profile")

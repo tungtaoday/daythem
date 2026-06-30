@@ -78,35 +78,33 @@ function dayPartWord(startTime?: string): string {
 
 // ── Tone presets (match design) ───────────────────────────────
 
+// Hero (primary) card dùng nền xanh đặc — native (iOS/Android) không render
+// CSS `linear-gradient`, nên dùng solid backgroundColor để web và máy khớp nhau.
 const TONES: Record<string, any> = {
   class: {
     label: 'BUỔI HỌC HÔM NAY',
-    heroBg: '#4a9e72',
-    heroBgGrad: 'linear-gradient(160deg, #4a9e72, #2f6849)',
+    heroBg: colors.green500,
     iconBg: '#d8f3e3', iconColor: '#2f6849',
     btnBg: '#4a9e72', btnColor: 'white',
     Icon: IconClock,
   },
   risk: {
     label: 'CẦN QUAN TÂM',
-    heroBg: '#e07a5f',
-    heroBgGrad: 'linear-gradient(160deg, #e07a5f, #b85a42)',
+    heroBg: colors.green600,
     iconBg: '#ffe5da', iconColor: '#b85a42',
     btnBg: '#e07a5f', btnColor: 'white',
     Icon: IconWarn,
   },
   money: {
     label: 'HỌC PHÍ',
-    heroBg: '#c8902a',
-    heroBgGrad: 'linear-gradient(160deg, #d9a23b, #b07a20)',
+    heroBg: colors.green600,
     iconBg: '#fef5e1', iconColor: '#b07a20',
     btnBg: '#c8902a', btnColor: 'white',
     Icon: IconWallet,
   },
   report: {
     label: 'TUẦN NÀY',
-    heroBg: '#5d8aa8',
-    heroBgGrad: 'linear-gradient(160deg, #5d8aa8, #3d6a88)',
+    heroBg: colors.green500,
     iconBg: '#e8f2fa', iconColor: '#3d6a88',
     btnBg: '#5d8aa8', btnColor: 'white',
     Icon: IconChart,
@@ -133,7 +131,7 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
     : IconChevron;
 
   const cardStyle: any = isPrimary
-    ? [nc.card, nc.cardPrimary, { backgroundImage: tone.heroBgGrad, backgroundColor: tone.heroBg }]
+    ? [nc.card, nc.cardPrimary, { backgroundColor: tone.heroBg }]
     : [nc.card];
 
   return (

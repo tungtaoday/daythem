@@ -9,7 +9,6 @@ import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
-const GREEN = '#409858';
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
 function weekLabel(d = new Date()) {
@@ -151,11 +150,11 @@ export function ClassReportScreen({ route }: any) {
           <Text style={s.heroEyebrow}>BÁO CÁO TUẦN · {weekLabel()}</Text>
           <Text style={s.heroTitle}>Tổng kết {className}</Text>
           <View style={s.heroStatsRow}>
-            <HeroStat label="Buổi dạy" value={isDemo ? '1' : '–'} />
+            <HeroStat label="Buổi dạy" value={isDemo ? '1' : 'Chưa có'} />
             <View style={s.heroDivider} />
-            <HeroStat label="Có mặt" value={isDemo ? `${presentCount}/${totalCount}` : '–'} />
+            <HeroStat label="Có mặt" value={isDemo ? `${presentCount}/${totalCount}` : 'Chưa có'} />
             <View style={s.heroDivider} />
-            <HeroStat label="Đã thu" value={isDemo ? VND(demoAmount) : '–'} />
+            <HeroStat label="Đã thu" value={isDemo ? VND(demoAmount) : 'Chưa có'} />
           </View>
         </View>
 
@@ -294,7 +293,7 @@ const s = StyleSheet.create({
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
 
   // Green hero
-  hero: { backgroundColor: GREEN, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20 },
+  hero: { backgroundColor: colors.green500, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20 },
   heroEyebrow: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.5 },
   heroTitle: { fontSize: 24, fontWeight: '700', color: 'white', letterSpacing: -0.4, marginTop: 6 },
   heroStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
@@ -332,7 +331,7 @@ const s = StyleSheet.create({
   previewNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
 
   bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.bg },
-  sendBtn: { height: 56, borderRadius: 16, backgroundColor: GREEN, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  sendBtn: { height: 56, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   sendBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 
   successCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },

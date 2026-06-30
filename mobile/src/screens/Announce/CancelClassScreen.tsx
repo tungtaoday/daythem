@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
@@ -29,7 +29,7 @@ const tog = StyleSheet.create({
 });
 
 function ZaloGroupPreview({ groupName, reason, note, makeup, senderName, titlePrefix }: any) {
-  const opener = senderName ? `${senderName} gửi thông báo` : 'Cô/Thầy gửi thông báo';
+  const opener = `${senderName} gửi thông báo`;
   const msg = `${opener}: Buổi học sẽ tạm nghỉ vì ${reason.toLowerCase()}.${note ? '\n' + note : ''}${makeup ? `\n\n${titlePrefix} sẽ đề xuất lịch học bù, anh/chị vui lòng theo dõi tin tiếp theo nhé 🌿` : '\n\nCảm ơn anh/chị!'}`;
   return (
     <View style={gp.box}>
@@ -106,8 +106,13 @@ export function CancelClassScreen({ route, navigation }: any) {
         propose_makeup: makeup,
       });
       setAnnId(ann.id);
-    } catch {}
-    setTimeout(() => { setSending(false); setSent(true); }, 400);
+      // Only confirm success once the API actually accepted the cancel.
+      setTimeout(() => { setSending(false); setSent(true); }, 400);
+    } catch {
+      // Failed to save — do NOT show a false "Đã báo nghỉ" confirmation.
+      setSending(false);
+      Alert.alert('Chưa gửi được', 'Kiểm tra mạng và thử lại.');
+    }
   };
 
   const handleMakeup = async () => {

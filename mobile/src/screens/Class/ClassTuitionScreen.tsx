@@ -8,8 +8,6 @@ import { getTuition, recordPayment } from '../../api/tuition';
 import { exportTuitionExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
-const GREEN = '#409858';
-
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
 const buildZaloTemplates = (gw: string) => {
@@ -17,7 +15,7 @@ const buildZaloTemplates = (gw: string) => {
   return [
     { tone: 'Nhẹ nhàng', body: `Chào anh/chị! ${Gw} nhắc nhẹ là tháng này con vẫn còn thiếu học phí. Anh/chị tiện thì gửi ${gw} trong tuần này nhé 🌿` },
     { tone: 'Trực tiếp', body: `Anh/chị ơi, con đang nợ học phí tháng này. Tuần này nhớ gửi cho ${gw} nhé. Cảm ơn anh/chị.` },
-    { tone: 'Có chuyển khoản', body: 'Chào anh/chị, học phí con tháng này. Anh/chị có thể chuyển khoản: Vietcombank · 0123 456 789 · Ng. T. Mai. Cảm ơn!' },
+    { tone: 'Có chuyển khoản', body: `Chào anh/chị, học phí con tháng này. Anh/chị chuyển khoản giúp ${gw} theo số tài khoản ${gw} đã gửi nhé. Cảm ơn anh/chị! 🌿` },
   ];
 };
 
@@ -124,7 +122,7 @@ export function ClassTuitionScreen({ route }: any) {
                 style={s.exportBtn}
                 onPress={() => exportTuitionExcel(items, className, monthLabel)}
               >
-                <IconDownload size={13} color={GREEN} />
+                <IconDownload size={13} color={colors.green500} />
                 <Text style={s.exportBtnText}>Excel</Text>
               </TouchableOpacity>
             )}
@@ -223,13 +221,13 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   hero: {
-    backgroundColor: GREEN, margin: 16, borderRadius: 24,
+    backgroundColor: colors.green500, margin: 16, borderRadius: 24,
     padding: 22, paddingTop: 18,
   },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   heroLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.82)', letterSpacing: 0.5, flex: 1, marginRight: 8 },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, backgroundColor: 'white' },
-  exportBtnText: { fontSize: 11, fontWeight: '700', color: GREEN },
+  exportBtnText: { fontSize: 11, fontWeight: '700', color: colors.green500 },
   heroAmt: { fontSize: 44, fontWeight: '800', color: 'white', letterSpacing: -1.2, lineHeight: 50 },
   heroSub: { fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: '600', marginTop: 4, marginBottom: 14 },
   heroPct: { fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginTop: 8 },
@@ -241,9 +239,9 @@ const s = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   stuName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   stuSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
-  tickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 11, backgroundColor: GREEN },
+  tickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 11, backgroundColor: colors.green500 },
   tickBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
-  paidBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: GREEN, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
+  paidBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.green500, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
   paidText: { fontSize: 12, fontWeight: '700', color: 'white' },
   zaloPrompt: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

@@ -503,10 +503,16 @@ export function ReportTabScreen({ navigation, route }: any) {
       {/* Bottom bar */}
       {!sending ? (
         <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32), backgroundImage: 'linear-gradient(to top, #f7f5f0 60%, transparent)' } as any]}>
-          <TouchableOpacity style={s.btnPrimary} onPress={() => setShowZalo(true)}>
-            <IconZalo size={20} color="white" />
-            <Text style={s.btnPrimaryText}>Soạn báo cáo Zalo · {totalStudents} phụ huynh</Text>
-          </TouchableOpacity>
+          {totalStudents > 0 ? (
+            <TouchableOpacity style={s.btnPrimary} onPress={() => setShowZalo(true)}>
+              <IconZalo size={20} color="white" />
+              <Text style={s.btnPrimaryText}>Soạn báo cáo Zalo · {totalStudents} phụ huynh</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={s.hintBar}>
+              <Text style={s.hintText}>Thêm học sinh để gửi báo cáo</Text>
+            </View>
+          )}
         </View>
       ) : (
         <View style={[s.sendingBar, { paddingBottom: Math.max(insets.bottom + 16, 36) }]}>
@@ -557,6 +563,8 @@ const s = StyleSheet.create({
   progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.green500 },
   btnPrimary: { height: 56, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   btnPrimaryText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  hintBar: { height: 56, borderRadius: 16, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  hintText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
   successCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
   successTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 6 },
   successSub: { fontSize: 14, color: colors.textSecondary, maxWidth: 280, textAlign: 'center', lineHeight: 22, marginBottom: 28 },

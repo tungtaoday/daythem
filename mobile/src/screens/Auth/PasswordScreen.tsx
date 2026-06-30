@@ -87,7 +87,7 @@ export function PasswordScreen({ route, navigation }: any) {
             ? <ActivityIndicator color="white" />
             : <Text style={s.btnText}>Đăng nhập</Text>}
         </TouchableOpacity>
-        <Text style={s.forgotText}>Quên mật khẩu? Nhắn Zalo hỗ trợ: 0900 000 000</Text>
+        <Text style={s.forgotText}>Quên mật khẩu? Liên hệ hỗ trợ: support@gieochu.vn</Text>
       </View>
     </KeyboardAvoidingView>
   );

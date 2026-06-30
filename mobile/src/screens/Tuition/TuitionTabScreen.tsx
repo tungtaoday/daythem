@@ -18,7 +18,7 @@ const buildZaloTemplates = (gw: string) => {
   return [
     { tone: 'Nhẹ nhàng', body: `Chào anh/chị! ${Gw} nhắc nhẹ là tháng này con vẫn còn thiếu học phí. Anh/chị tiện thì gửi ${gw} trong tuần này nhé 🌿` },
     { tone: 'Trực tiếp', body: `Anh/chị ơi, con đang nợ học phí tháng này. Tuần này nhớ gửi cho ${gw} nhé. Cảm ơn anh/chị.` },
-    { tone: 'Có chuyển khoản', body: 'Chào anh/chị, học phí con tháng này. Anh/chị có thể chuyển khoản: Vietcombank · 0123 456 789 · Ng. T. Mai. Cảm ơn!' },
+    { tone: 'Có chuyển khoản', body: `Chào anh/chị, học phí con tháng này. Anh/chị chuyển khoản giúp ${gw} theo số tài khoản ${gw} đã gửi nhé. Cảm ơn anh/chị! 🌿` },
   ];
 };
 

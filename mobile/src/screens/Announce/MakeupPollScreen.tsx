@@ -35,12 +35,20 @@ export function MakeupPollScreen({ route, navigation }: any) {
   const titlePrefix = teacher?.gender === 'thay' ? 'Thầy' : 'Cô';
   const senderName = teacher?.name ? `${titlePrefix} ${teacher.name}` : titlePrefix;
   const [step, setStep] = useState<Step>('compose');
-  const [slots, setSlots] = useState<Slot[]>([
-    { id: 's1', day: 'Thứ 7 · 24/05', time: '18:30 – 20:00' },
-    { id: 's2', day: 'Chủ nhật · 25/05', time: '09:00 – 10:30' },
-    { id: 's3', day: 'Thứ 2 · 26/05', time: '18:30 – 20:00' },
-  ]);
-  const [votes, setVotes] = useState<Record<string, Voter[]>>({ s1: [], s2: [], s3: [] });
+  // DEMO accounts get pre-filled demo slots (with simulated votes). Real accounts
+  // start EMPTY and add real future slots via "Thêm khung giờ" — never fabricated dates.
+  const [slots, setSlots] = useState<Slot[]>(
+    isDemo
+      ? [
+          { id: 's1', day: 'Thứ 7 · 24/05', time: '18:30 – 20:00' },
+          { id: 's2', day: 'Chủ nhật · 25/05', time: '09:00 – 10:30' },
+          { id: 's3', day: 'Thứ 2 · 26/05', time: '18:30 – 20:00' },
+        ]
+      : []
+  );
+  const [votes, setVotes] = useState<Record<string, Voter[]>>(
+    isDemo ? { s1: [], s2: [], s3: [] } : {}
+  );
   const [picked, setPicked] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
@@ -135,7 +143,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
           <Text style={[s.sectionLabel, { marginBottom: 8 }]}>TIN CHỐT LỊCH · gửi vào nhóm Zalo</Text>
           <View style={s.zaloPreviewBox}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, color: '#6b7d99', fontWeight: '600' }}>NHÓM ZALO · LỚP HỌC</Text>
+              <Text style={{ fontSize: 11, color: '#6b7d99', fontWeight: '600' }}>NHÓM ZALO · {className.toUpperCase()}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
               <Avatar name={senderName} size={26} />
@@ -268,6 +276,14 @@ export function MakeupPollScreen({ route, navigation }: any) {
 
         <Text style={s.sectionLabel}>CÁC KHUNG GIỜ ĐỀ XUẤT</Text>
 
+        {slots.length === 0 && (
+          <View style={s.emptyHint}>
+            <Text style={s.emptyHintText}>
+              Chưa có khung giờ nào. Bấm “Thêm khung giờ” để đề xuất 2-3 khung giờ học bù cho phụ huynh chọn.
+            </Text>
+          </View>
+        )}
+
         {slots.map((slot, i) => (
           <View key={slot.id} style={s.slotRow}>
             <View style={s.slotNum}>
@@ -305,36 +321,41 @@ export function MakeupPollScreen({ route, navigation }: any) {
           </TouchableOpacity>
         )}
 
-        <Text style={[s.sectionLabel, { marginTop: 20 }]}>XEM TRƯỚC POLL</Text>
-        <View style={s.zaloPreviewBox}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-            <Text style={{ fontSize: 11, color: '#6b7d99', fontWeight: '600' }}>NHÓM ZALO · LỚP HỌC</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
-            <Avatar name={senderName} size={28} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
-              <View style={s.groupBubble}>
-                <Text style={{ fontSize: 13, lineHeight: 20, color: colors.textPrimary, marginBottom: 10 }}>
-                  Anh/chị ơi, {titlePrefix.toLowerCase()} đề xuất {slots.length} khung giờ học bù. Anh/chị tick slot con đi được nhé 🌿
-                </Text>
-                {slots.map((slot, i) => (
-                  <View key={slot.id} style={s.pollOption}>
-                    <View style={s.pollCheckbox} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textPrimary }}>
-                      {slot.day} · {slot.time}
+        {slots.length > 0 && (
+          <>
+            <Text style={[s.sectionLabel, { marginTop: 20 }]}>XEM TRƯỚC POLL</Text>
+            <View style={s.zaloPreviewBox}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, color: '#6b7d99', fontWeight: '600' }}>NHÓM ZALO · {className.toUpperCase()}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                <Avatar name={senderName} size={28} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
+                  <View style={s.groupBubble}>
+                    <Text style={{ fontSize: 13, lineHeight: 20, color: colors.textPrimary, marginBottom: 10 }}>
+                      Anh/chị ơi, {titlePrefix.toLowerCase()} đề xuất {slots.length} khung giờ học bù. Anh/chị tick slot con đi được nhé 🌿
                     </Text>
+                    {slots.map((slot, i) => (
+                      <View key={slot.id} style={s.pollOption}>
+                        <View style={s.pollCheckbox} />
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textPrimary }}>
+                          {slot.day} · {slot.time}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
-                ))}
+                </View>
               </View>
             </View>
-          </View>
-        </View>
+          </>
+        )}
       </ScrollView>
 
       <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
         <TouchableOpacity
-          style={s.btnPrimary}
+          style={[s.btnPrimary, slots.length === 0 && { opacity: 0.4 }]}
+          disabled={slots.length === 0}
           onPress={() => { if (isDemo) setStep('live'); else setShowZalo(true); }}
         >
           <IconSend size={20} color="white" />
@@ -385,6 +406,11 @@ const s = StyleSheet.create({
     borderRadius: 16, padding: 14, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: 6,
   },
+  emptyHint: {
+    backgroundColor: colors.honey100, borderRadius: 14,
+    padding: 14, marginBottom: 8,
+  },
+  emptyHintText: { fontSize: 13, color: '#8a6d30', lineHeight: 20 },
   zaloPreviewBox: { backgroundColor: '#f0f3f9', borderRadius: 18, padding: 14, marginBottom: 12 },
   groupBubble: {
     backgroundColor: 'white', borderRadius: 4, borderTopRightRadius: 16,

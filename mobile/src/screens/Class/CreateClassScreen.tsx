@@ -35,7 +35,7 @@ export function CreateClassScreen({ navigation }: any) {
         subject,
         grade,
         default_fee: parseFloat(fee) || 0,
-        fee_type: 'monthly',
+        fee_type: 'month',
         schedule: { day, start_time: time, duration: 90, location: place },
       });
       navigation.goBack();

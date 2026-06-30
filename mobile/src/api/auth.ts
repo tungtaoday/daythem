@@ -19,3 +19,9 @@ export type TaxProfileFields = {
 
 export const updateTaxProfile = (fields: TaxProfileFields) =>
   api.put('/auth/profile', fields).then(r => r.data);
+
+export const deleteAccount = () =>
+  api.delete('/auth/account').then(r => r.data);
+
+export const changePassword = (current_password: string, new_password: string) =>
+  api.put('/auth/password', { current_password, new_password }).then(r => r.data);

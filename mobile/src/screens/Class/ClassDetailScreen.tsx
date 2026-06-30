@@ -216,7 +216,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
             <TouchableOpacity
               key={s.id}
               style={[styles.studentRow, i > 0 && styles.divider]}
-              onPress={() => navigation.navigate('MainTabs', { screen: 'Students', params: { filterClassId: classId } })}
+              onPress={() => navigation.navigate('ClassStudents', { classId, className: klass.name, openStudentId: s.id })}
               activeOpacity={0.7}
             >
               <Avatar name={s.name} size={36} />

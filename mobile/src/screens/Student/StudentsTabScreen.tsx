@@ -432,10 +432,16 @@ export function StudentsTabScreen({ navigation, route }: any) {
     );
   }
 
+  // "Chưa nộp" / "Cần quan tâm" chỉ lọc được trên dữ liệu demo. Tài khoản thật
+  // chưa có học phí / chuyên cần → ẩn 2 chip này, chỉ giữ "Tất cả" + lọc theo lớp.
   const filterChips = [
     { id: 'all', label: `Tất cả ${totalCount}` },
-    { id: 'unpaid', label: `Chưa nộp ${unpaidCount}` },
-    { id: 'risk', label: `Cần quan tâm ${riskCount}` },
+    ...(isDemo
+      ? [
+          { id: 'unpaid', label: `Chưa nộp ${unpaidCount}` },
+          { id: 'risk', label: `Cần quan tâm ${riskCount}` },
+        ]
+      : []),
     ...displayGroups.map(g => ({ id: g.id, label: g.name })),
   ];
 
@@ -467,22 +473,27 @@ export function StudentsTabScreen({ navigation, route }: any) {
         </TouchableOpacity>
       )}
 
-      {/* Stat band — dải thống kê màu */}
+      {/* Stat band — dải thống kê màu.
+          Tài khoản thật chưa có dữ liệu chuyên cần / "cần quan tâm" → chỉ hiện "Đang học". */}
       <View style={s.statBand}>
         <View style={[s.statPill, { backgroundColor: colors.green100 }]}>
           <Text style={[s.statValue, { color: colors.green700 }]}>{totalCount}</Text>
           <Text style={[s.statLabel, { color: colors.green700 }]}>Đang học</Text>
         </View>
-        <View style={[s.statPill, { backgroundColor: colors.coral100 }]}>
-          <Text style={[s.statValue, { color: colors.coral700 }]}>{riskCount}</Text>
-          <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
-        </View>
-        <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
-          <Text style={[s.statValue, { color: '#8a6d30' }]}>
-            {avgAttend !== null ? `${avgAttend}%` : '–'}
-          </Text>
-          <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
-        </View>
+        {isDemo && (
+          <View style={[s.statPill, { backgroundColor: colors.coral100 }]}>
+            <Text style={[s.statValue, { color: colors.coral700 }]}>{riskCount}</Text>
+            <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
+          </View>
+        )}
+        {isDemo && (
+          <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
+            <Text style={[s.statValue, { color: '#8a6d30' }]}>
+              {avgAttend !== null ? `${avgAttend}%` : '–'}
+            </Text>
+            <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
+          </View>
+        )}
       </View>
 
       {/* Filter chips */}

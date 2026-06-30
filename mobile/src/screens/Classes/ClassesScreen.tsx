@@ -70,10 +70,8 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
 
   const cardStyle: any[] = [cc.card];
   if (highlighted) {
-    cardStyle.push(cc.cardHighlighted, {
-      backgroundImage: 'linear-gradient(160deg, #4a9e72, #2f6849)',
-      backgroundColor: '#4a9e72',
-    } as any);
+    // Native không render CSS gradient → dùng solid green (web & máy khớp nhau).
+    cardStyle.push(cc.cardHighlighted, { backgroundColor: colors.green500 } as any);
   }
 
   const labelColor = highlighted ? 'rgba(255,255,255,0.8)' : '#888';
@@ -235,9 +233,7 @@ function HeroCard({ klass, delta, studentNames, onPress }: any) {
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <View
-        style={[hc.card, { backgroundImage: 'linear-gradient(155deg, #4a9e72, #2f6849)' } as any]}
-      >
+      <View style={hc.card}>
         {/* decorative blobs */}
         <View style={hc.blob1} />
         <View style={hc.blob2} />
@@ -276,7 +272,7 @@ function HeroCard({ klass, delta, studentNames, onPress }: any) {
 
 const hc = StyleSheet.create({
   card: {
-    backgroundColor: '#4a9e72', borderRadius: 26, padding: 22, overflow: 'hidden',
+    backgroundColor: colors.green500, borderRadius: 26, padding: 22, overflow: 'hidden',
     position: 'relative', shadowColor: '#2f6849', shadowOpacity: 0.32, shadowRadius: 22,
     shadowOffset: { width: 0, height: 10 }, elevation: 10,
   },

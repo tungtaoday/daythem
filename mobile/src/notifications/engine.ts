@@ -66,7 +66,7 @@ async function ensurePermission(): Promise<boolean> {
   }
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
-      name: 'Gieo', importance: Notifications.AndroidImportance.DEFAULT,
+      name: 'GieoChữ', importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
   return status === 'granted';
@@ -122,7 +122,7 @@ export async function syncNotifications(classes: ClassLite[], genderWord: string
     const hm = parseHM(r.morning_summary?.at) || { hour: 7, minute: 0 };
     if (!inQuiet(hm.hour, hm.minute, quiet)) {
       await sched(
-        { title: 'Chào buổi sáng 🌿', body: `Mở Gieo xem lịch dạy & việc cần làm hôm nay nhé ${genderWord}.`, data: { channel: 'utility', rule: 'morning_summary' } },
+        { title: 'Chào buổi sáng 🌿', body: `Mở GieoChữ xem lịch dạy & việc cần làm hôm nay nhé ${genderWord}.`, data: { channel: 'utility', rule: 'morning_summary' } },
         { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour: hm.hour, minute: hm.minute },
       );
     }
@@ -147,7 +147,7 @@ export async function syncNotifications(classes: ClassLite[], genderWord: string
     const wd = r.report_reminder?.weekday ?? 7; // 1=Mon..7=Sun
     if (!inQuiet(hm.hour, hm.minute, quiet)) {
       await sched(
-        { title: 'Gửi báo cáo tuần 📊', body: 'Tổng kết tuần cho phụ huynh chỉ mất 1 phút — mở Gieo nhé.', data: { channel: 'utility', rule: 'report_reminder' } },
+        { title: 'Gửi báo cáo tuần 📊', body: 'Tổng kết tuần cho phụ huynh chỉ mất 1 phút — mở GieoChữ nhé.', data: { channel: 'utility', rule: 'report_reminder' } },
         { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: toExpoWeekday(wd), hour: hm.hour, minute: hm.minute },
       );
     }

@@ -33,11 +33,12 @@ def _verify_password(password: str, stored: str) -> bool:
         return secrets.compare_digest(key.hex(), key_hex)
     except Exception:
         return False
+from sqlalchemy import delete, select
 from daythem.adapters.orm import (
     TeacherORM, ClassORM, StudentORM, StudentFeeORM,
     AttendanceSessionORM, AttendanceRecordORM,
     TuitionORM, AnnouncementORM, MakeupORM, MakeupVoteORM,
-    ReportORM, OTPORM,
+    ReportORM, OTPORM, NotifEventORM,
 )
 from daythem.config import settings
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
@@ -87,7 +88,7 @@ class CreateClassCommand(BaseModel):
     grade: str
     schedule: Optional[dict] = None
     default_fee: float = 0
-    fee_type: str = "monthly"
+    fee_type: str = "month"
 
 class UpdateClassCommand(BaseModel):
     class_id: str
@@ -621,3 +622,57 @@ def handle_generate_report(cmd: GenerateReportCommand, uow: SqlAlchemyUnitOfWork
         uow.commit()
         uow._session.refresh(report)
         return report
+
+
+def handle_delete_account(teacher_id: str, uow: SqlAlchemyUnitOfWork) -> None:
+    """Permanently delete a teacher and ALL their data (store-required account deletion).
+
+    Children are removed before parents to satisfy foreign-key constraints.
+    """
+    s = uow._session
+    teacher = s.get(TeacherORM, teacher_id)
+    if teacher is None:
+        return
+
+    class_ids = list(s.scalars(select(ClassORM.id).where(ClassORM.teacher_id == teacher_id)))
+    student_ids = list(s.scalars(select(StudentORM.id).where(StudentORM.class_id.in_(class_ids)))) if class_ids else []
+    session_ids = list(s.scalars(select(AttendanceSessionORM.id).where(AttendanceSessionORM.class_id.in_(class_ids)))) if class_ids else []
+    ann_ids = list(s.scalars(select(AnnouncementORM.id).where(AnnouncementORM.class_id.in_(class_ids)))) if class_ids else []
+    makeup_ids = list(s.scalars(select(MakeupORM.id).where(MakeupORM.announcement_id.in_(ann_ids)))) if ann_ids else []
+
+    if makeup_ids:
+        s.execute(delete(MakeupVoteORM).where(MakeupVoteORM.makeup_id.in_(makeup_ids)))
+        s.execute(delete(MakeupORM).where(MakeupORM.id.in_(makeup_ids)))
+    if ann_ids:
+        s.execute(delete(AnnouncementORM).where(AnnouncementORM.id.in_(ann_ids)))
+    if session_ids or student_ids:
+        s.execute(delete(AttendanceRecordORM).where(
+            (AttendanceRecordORM.session_id.in_(session_ids)) | (AttendanceRecordORM.student_id.in_(student_ids))
+        ))
+    if class_ids:
+        s.execute(delete(AttendanceSessionORM).where(AttendanceSessionORM.class_id.in_(class_ids)))
+        s.execute(delete(TuitionORM).where(TuitionORM.class_id.in_(class_ids)))
+        s.execute(delete(ReportORM).where(ReportORM.class_id.in_(class_ids)))
+    if student_ids:
+        s.execute(delete(StudentFeeORM).where(StudentFeeORM.student_id.in_(student_ids)))
+        s.execute(delete(StudentORM).where(StudentORM.id.in_(student_ids)))
+    if class_ids:
+        s.execute(delete(ClassORM).where(ClassORM.id.in_(class_ids)))
+    s.execute(delete(NotifEventORM).where(NotifEventORM.teacher_id == teacher_id))
+    s.execute(delete(OTPORM).where(OTPORM.phone == teacher.phone))
+    s.delete(teacher)
+    uow.commit()
+
+
+def handle_change_password(teacher_id: str, current: str, new: str, uow: SqlAlchemyUnitOfWork) -> None:
+    """Change the teacher's password after verifying the current one."""
+    if len(new) < 6:
+        raise ValueError("Mật khẩu mới phải có ít nhất 6 ký tự")
+    with uow:
+        teacher = uow.teachers.get(teacher_id)
+        if not teacher:
+            raise ValueError("Không tìm thấy tài khoản")
+        if teacher.password_hash and not _verify_password(current, teacher.password_hash):
+            raise ValueError("Mật khẩu hiện tại không đúng")
+        teacher.password_hash = _hash_password(new)
+        uow.commit()

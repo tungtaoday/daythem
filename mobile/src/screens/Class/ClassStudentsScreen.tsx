@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Modal, Alert, Linking, ActivityIndicator,
+  TextInput, Modal, Alert, Linking, ActivityIndicator, BackHandler,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
@@ -105,6 +106,7 @@ const HERO = {
 } as const;
 
 function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; className?: string; subject?: string }) {
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
   const teacher = useAuthStore(s => s.teacher);
@@ -154,7 +156,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
     <View style={pp.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* ── HERO (đổi màu theo trạng thái) ── */}
-        <View style={[pp.hero, { backgroundColor: hero.bg }]}>
+        <View style={[pp.hero, { backgroundColor: hero.bg, paddingTop: insets.top + 14 }]}>
           <TouchableOpacity style={[pp.backBtn, { backgroundColor: hero.chipBg }]} onPress={onClose}>
             <View style={{ transform: [{ rotate: '180deg' }] }}><IconChevron size={18} color={hero.fg} /></View>
           </TouchableOpacity>
@@ -451,8 +453,9 @@ const fe = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────
 
-export function ClassStudentsScreen({ route }: any) {
+export function ClassStudentsScreen({ route, navigation }: any) {
   const { classId, className } = route.params;
+  const openStudentId: string | undefined = route.params?.openStudentId;
   const { classes, students, fetchStudents, addStudent, setStudentFee } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
 
@@ -505,6 +508,24 @@ export function ClassStudentsScreen({ route }: any) {
     Promise.resolve(fetchStudents(classId)).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [classId, isDemo]);
+
+  // Mở thẳng hồ sơ 1 em khi điều hướng kèm openStudentId (từ Chi tiết lớp).
+  useEffect(() => {
+    if (!openStudentId) return;
+    const target = displayStus.find(st => st.id === openStudentId);
+    if (target) {
+      setProfileStu(target);
+      navigation.setParams({ openStudentId: undefined });
+    }
+  }, [openStudentId, displayStus.length]);
+
+  // Đang xem hồ sơ → ẩn header gốc + nút back Android đóng hồ sơ (không thoát lớp).
+  useEffect(() => {
+    navigation.setOptions({ headerShown: !profileStu });
+    if (!profileStu) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { setProfileStu(null); return true; });
+    return () => sub.remove();
+  }, [profileStu]);
 
   const handleAdd = async () => {
     if (!addName.trim()) return;

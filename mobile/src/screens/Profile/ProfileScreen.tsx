@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuthStore, Gender } from '../../store/auth';
+import { changePassword, deleteAccount } from '../../api/auth';
 import { useClassesStore } from '../../store/classes';
 import { storage } from '../../store/storage';
 import { IconChevron, IconWallet } from '../../components/icons';
@@ -80,14 +81,24 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [next, setNext] = useState('');
   const [confirm, setConfirm] = useState('');
   const [done, setDone] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const valid = current.length >= 4 && next.length >= 6 && next === confirm;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (next !== confirm) { Alert.alert('Mật khẩu không khớp', 'Mật khẩu mới và xác nhận phải giống nhau.'); return; }
     if (next.length < 6) { Alert.alert('Quá ngắn', 'Mật khẩu mới phải có ít nhất 6 ký tự.'); return; }
-    setDone(true);
-    setTimeout(onClose, 1400);
+    setSaving(true);
+    try {
+      await changePassword(current, next);
+      setDone(true);
+      setTimeout(onClose, 1400);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Không đổi được mật khẩu. Kiểm tra mạng và thử lại.';
+      Alert.alert('Chưa đổi được', msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -115,8 +126,8 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
             {confirm.length > 0 && next !== confirm && (
               <Text style={{ fontSize: 12, color: colors.coral700, marginTop: -10, marginBottom: 10 }}>Mật khẩu không khớp</Text>
             )}
-            <TouchableOpacity style={[cp.btn, !valid && cp.btnDisabled]} onPress={handleSave} disabled={!valid}>
-              <Text style={cp.btnText}>Lưu mật khẩu mới</Text>
+            <TouchableOpacity style={[cp.btn, (!valid || saving) && cp.btnDisabled]} onPress={handleSave} disabled={!valid || saving}>
+              <Text style={cp.btnText}>{saving ? 'Đang lưu…' : 'Lưu mật khẩu mới'}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -149,6 +160,7 @@ export function ProfileScreen({ navigation }: any) {
   const [editEmail, setEditEmail] = useState('');
   const [editGender, setEditGender] = useState<Gender>(teacher?.gender ?? 'co');
   const [saving, setSaving] = useState(false);
+  const [showPwd, setShowPwd] = useState(false);
 
   // Bank info state — persisted locally (backend has no bank fields yet)
   const [bankName, setBankName] = useState('');
@@ -202,8 +214,41 @@ export function ProfileScreen({ navigation }: any) {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    Alert.alert('Đăng xuất', 'Bạn chắc chắn muốn đăng xuất?', [
+      { text: 'Huỷ', style: 'cancel' },
+      { text: 'Đăng xuất', style: 'destructive', onPress: () => { logout(); } },
+    ]);
+  };
+
+  const isDemo = !teacher || teacher.id === 'demo';
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Xoá tài khoản',
+      'Toàn bộ lớp, học sinh, điểm danh, học phí của bạn sẽ bị xoá vĩnh viễn và KHÔNG thể khôi phục. Bạn chắc chắn?',
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Xoá vĩnh viễn', style: 'destructive',
+          onPress: () => {
+            Alert.alert('Xác nhận lần cuối', 'Nhấn "Xoá" để xoá tài khoản ngay.', [
+              { text: 'Huỷ', style: 'cancel' },
+              {
+                text: 'Xoá', style: 'destructive',
+                onPress: async () => {
+                  try {
+                    if (!isDemo) await deleteAccount();
+                    await logout();
+                  } catch {
+                    Alert.alert('Chưa xoá được', 'Kiểm tra mạng và thử lại.');
+                  }
+                },
+              },
+            ]);
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -294,7 +339,7 @@ export function ProfileScreen({ navigation }: any) {
                   placeholderTextColor={colors.textMuted}
                   textAlign="right"
                 />
-              : <Text style={s.rowValue}>{teacher?.phone || editPhone || '091 234 5678'}</Text>}
+              : <Text style={[s.rowValue, !(teacher?.phone || editPhone) && { color: colors.textMuted }]}>{teacher?.phone || editPhone || 'Chưa thiết lập'}</Text>}
           </View>
           <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             <Text style={s.rowLabel}>Email</Text>
@@ -311,10 +356,10 @@ export function ProfileScreen({ navigation }: any) {
                 />
               : <Text style={[s.rowValue, !editEmail && { color: colors.textMuted }]}>{editEmail || 'Chưa thiết lập'}</Text>}
           </View>
-          <View style={s.row}>
+          <TouchableOpacity style={s.row} onPress={() => setShowPwd(true)}>
             <Text style={s.rowLabel}>Đổi mật khẩu</Text>
-            <View style={s.soonBadge}><Text style={s.soonBadgeText}>Sắp có</Text></View>
-          </View>
+            <IconChevron size={16} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* NHẬN HỌC PHÍ */}
@@ -400,7 +445,7 @@ export function ProfileScreen({ navigation }: any) {
             <Text style={s.rowLabel}>Phiên bản</Text>
             <Text style={s.rowValue}>1.0.0 · Beta</Text>
           </View>
-          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Liên hệ', 'Email: support@gieo.vn')}>
+          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Liên hệ', 'Email: support@gieochu.vn')}>
             <Text style={s.rowLabel}>Liên hệ hỗ trợ</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
@@ -413,8 +458,14 @@ export function ProfileScreen({ navigation }: any) {
             <Text style={s.rowLabel}>Điều khoản & bảo mật</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.row} onPress={handleLogout}>
+          <TouchableOpacity style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]} onPress={handleLogout}>
             <Text style={[s.rowLabel, { color: colors.coral700 }]}>Đăng xuất</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.row} onPress={handleDeleteAccount}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.rowLabel, { color: colors.coral700 }]}>Xoá tài khoản</Text>
+              <Text style={s.rowSub}>Xoá vĩnh viễn mọi dữ liệu</Text>
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -422,6 +473,8 @@ export function ProfileScreen({ navigation }: any) {
           Lớp & học sinh được lưu trên máy chủ.{'\n'}Email & tài khoản ngân hàng lưu trên máy này.
         </Text>
       </ScrollView>
+
+      {showPwd && <ChangePasswordModal onClose={() => setShowPwd(false)} />}
     </View>
   );
 }
