@@ -6,6 +6,7 @@ type Class = {
   id: string; name: string; subject: string; grade: string;
   default_fee: number; fee_type: string; student_count: number;
   schedule: any; zalo_group_id: string | null;
+  color?: string | null; archived?: boolean;
 };
 
 type Student = {
@@ -15,11 +16,15 @@ type Student = {
 
 type ClassesState = {
   classes: Class[];
+  archivedClasses: Class[];
   students: Record<string, Student[]>;
   isLoading: boolean;
   fetchClasses: () => Promise<void>;
+  fetchArchived: () => Promise<void>;
   createClass: (body: classApi.ClassBody) => Promise<Class>;
   updateClass: (id: string, body: any) => Promise<void>;
+  archiveClass: (id: string) => Promise<void>;
+  restoreClass: (id: string) => Promise<void>;
   fetchStudents: (classId: string) => Promise<void>;
   addStudent: (classId: string, body: any) => Promise<Student>;
   setStudentFee: (studentId: string, body: any) => Promise<void>;
@@ -27,6 +32,7 @@ type ClassesState = {
 
 export const useClassesStore = create<ClassesState>((set, get) => ({
   classes: [],
+  archivedClasses: [],
   students: {},
   isLoading: false,
 
@@ -40,6 +46,28 @@ export const useClassesStore = create<ClassesState>((set, get) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  fetchArchived: async () => {
+    try {
+      const archivedClasses = await classApi.listClasses(true);
+      set({ archivedClasses });
+    } catch {
+      // giữ nguyên nếu lỗi
+    }
+  },
+
+  archiveClass: async (id) => {
+    await classApi.archiveClass(id);
+    set(s => ({ classes: s.classes.filter(c => c.id !== id) }));
+  },
+
+  restoreClass: async (id) => {
+    const restored = await classApi.restoreClass(id);
+    set(s => ({
+      archivedClasses: s.archivedClasses.filter(c => c.id !== id),
+      classes: [...s.classes, restored],
+    }));
   },
 
   createClass: async (body) => {

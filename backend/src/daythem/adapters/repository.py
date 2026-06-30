@@ -33,10 +33,10 @@ class ClassRepository:
     def get(self, id: str) -> Optional[ClassORM]:
         return self.session.get(ClassORM, id)
 
-    def list_by_teacher(self, teacher_id: str) -> list[ClassORM]:
+    def list_by_teacher(self, teacher_id: str, archived: bool = False) -> list[ClassORM]:
         return list(self.session.scalars(
             select(ClassORM)
-            .where(and_(ClassORM.teacher_id == teacher_id, ClassORM.archived == False))
+            .where(and_(ClassORM.teacher_id == teacher_id, ClassORM.archived == archived))
             .order_by(ClassORM.created_at)
         ))
 

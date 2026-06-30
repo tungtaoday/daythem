@@ -5,10 +5,9 @@ import {
 import { colors } from '../../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/ui/Avatar';
+import { classColor } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
-// Gradient xanh cho thẻ hero (chuyển màu, hiện đúng trên máy thật).
-const HERO_GRAD: [string, string] = ['#55b083', '#2f6849'];
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
 import { getTuition } from '../../api/tuition';
@@ -88,7 +87,7 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
         {/* gradient nền + blobs */}
         {highlighted && (
           <>
-            <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={classColor(klass?.color).grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={cc.blob1} />
             <View style={cc.blob2} />
           </>
@@ -100,9 +99,12 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
             <Text style={[cc.dayLabel, { color: labelColor }]}>
               {highlighted ? '· HÔM NAY' : `${dayLabel.toUpperCase()}${timeStr ? ' · ' + timeStr : ''}`}
             </Text>
-            <Text style={[cc.title, { color: titleColor }]}>
-              {klass.name} · {klass.subject}
-            </Text>
+            <View style={cc.titleRow}>
+              {!highlighted && <View style={[cc.colorDot, { backgroundColor: classColor(klass.color).dot }]} />}
+              <Text style={[cc.title, { color: titleColor, flex: 1 }]}>
+                {klass.name} · {klass.subject}
+              </Text>
+            </View>
             {(timeStr || loc) ? (
               <Text style={[cc.meta, { color: metaColor }]}>
                 {[timeStr, loc].filter(Boolean).join(' · ')}
@@ -172,6 +174,8 @@ const cc = StyleSheet.create({
 
   header: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14, gap: 8 },
   dayLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  colorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   title: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
   meta: { fontSize: 13, marginTop: 2 },
 
@@ -240,7 +244,7 @@ function HeroCard({ klass, delta, studentNames, onPress }: any) {
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <View style={hc.card}>
         {/* gradient nền + decorative blobs */}
-        <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={classColor(klass?.color).grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={hc.blob1} />
         <View style={hc.blob2} />
 
@@ -451,6 +455,12 @@ export function ClassesScreen({ navigation }: any) {
           </>
         )}
 
+        {!isDemo && (
+          <TouchableOpacity style={s.archivedLink} onPress={() => navigation.navigate('ArchivedClasses')} activeOpacity={0.7}>
+            <Text style={s.archivedLinkText}>📦 Lớp đã lưu trữ</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: 32 }} />
       </ScrollView>
     </View>
@@ -478,6 +488,8 @@ const s = StyleSheet.create({
 
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 18, borderRadius: 22, borderWidth: 1.5, borderColor: '#c8c4bc', borderStyle: 'dashed' },
   addBtnText: { fontSize: 14, fontWeight: '600', color: '#888' },
+  archivedLink: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
+  archivedLinkText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
 
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 8, marginBottom: 4 },
   activityCard: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#eeece6', overflow: 'hidden' },

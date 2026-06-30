@@ -22,6 +22,8 @@ def class_out(c: ClassORM, student_count: int = 0) -> dict:
         "default_fee": c.default_fee,
         "fee_type": c.fee_type,
         "zalo_group_id": c.zalo_group_id,
+        "color": c.color,
+        "archived": c.archived,
         "student_count": student_count,
         "created_at": c.created_at.isoformat(),
     }
@@ -33,7 +35,8 @@ class CreateClassBody(BaseModel):
     grade: str
     schedule: Optional[dict] = None
     default_fee: float = 0
-    fee_type: str = "monthly"
+    fee_type: str = "month"
+    color: Optional[str] = None
 
 
 class UpdateClassBody(BaseModel):
@@ -44,15 +47,18 @@ class UpdateClassBody(BaseModel):
     default_fee: Optional[float] = None
     fee_type: Optional[str] = None
     zalo_group_id: Optional[str] = None
+    color: Optional[str] = None
+    archived: Optional[bool] = None
 
 
 @router.get("")
 def list_classes(
+    archived: bool = False,
     teacher: TeacherORM = Depends(get_current_teacher),
     uow: SqlAlchemyUnitOfWork = Depends(get_uow),
 ):
     with uow:
-        classes = uow.classes.list_by_teacher(teacher.id)
+        classes = uow.classes.list_by_teacher(teacher.id, archived=archived)
         return [
             class_out(c, len(uow.students.list_by_class(c.id)))
             for c in classes

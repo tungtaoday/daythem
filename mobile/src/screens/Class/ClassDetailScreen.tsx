@@ -5,6 +5,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
 import { Hero } from '../../components/ui/Hero';
 import { Button } from '../../components/ui/Button';
+import { classColor } from '../../theme/classColors';
 import { useClassesStore } from '../../store/classes';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
@@ -141,6 +142,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
       {/* ── HERO (design-system component) ── */}
       <Hero
         variant="green"
+        grad={classColor(klass.color).grad}
         eyebrow={countdownLine || 'Chưa đặt lịch học'}
         title={`${klass.name} · ${klass.subject}`}
         sub={loc || undefined}

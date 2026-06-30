@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { colors } from '../../theme';
 import { useClassesStore } from '../../store/classes';
+import { classColor } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -165,7 +166,10 @@ export function CalendarScreen({ navigation }: any) {
                 <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
                   <View style={s.classBar} />
                   <View style={{ flex: 1 }}>
-                    <Text style={s.className}>{cls.name} · {cls.subject}</Text>
+                    <View style={s.nameRow}>
+                      <View style={[s.colorDot, { backgroundColor: classColor(cls.color).dot }]} />
+                      <Text style={s.className}>{cls.name} · {cls.subject}</Text>
+                    </View>
                     <Text style={s.classSub}>
                       {cls.schedule?.start_time ? `${cls.schedule.start_time} · ` : ''}
                       {cls.student_count || 0} học sinh
@@ -210,7 +214,10 @@ export function CalendarScreen({ navigation }: any) {
                   <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
                     <View style={s.classBar} />
                     <View style={{ flex: 1 }}>
+                      <View style={s.nameRow}>
+                      <View style={[s.colorDot, { backgroundColor: classColor(cls.color).dot }]} />
                       <Text style={s.className}>{cls.name} · {cls.subject}</Text>
+                    </View>
                       <Text style={s.classSub}>
                         {dayName}{cls.schedule?.start_time ? ` · ${cls.schedule.start_time}` : ''} · {cls.student_count || 0} học sinh
                       </Text>
@@ -306,6 +313,8 @@ const s = StyleSheet.create({
   classRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   classBar: { width: 4, height: 36, borderRadius: 2, backgroundColor: colors.green500 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  colorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   className: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   classSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   openBtn: {

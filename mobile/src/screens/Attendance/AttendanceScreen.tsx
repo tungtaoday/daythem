@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
@@ -22,9 +23,9 @@ function HeroRing({ present, total }: { present: number; total: number }) {
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
-        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.green100} strokeWidth={stroke} />
+        <Circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={stroke} />
         <Circle
-          cx={size / 2} cy={size / 2} r={r} fill="none" stroke={colors.green500} strokeWidth={stroke}
+          cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ffffff" strokeWidth={stroke}
           strokeDasharray={`${pct * circ} ${circ}`}
           strokeLinecap="round"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
@@ -159,6 +160,12 @@ export function AttendanceScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         {/* Hero — counter ring */}
         <View style={[s.hero, { paddingTop: insets.top + 18 }]}>
+          <LinearGradient
+            colors={['#55b083', '#2f6849']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <Text style={s.heroEyebrow}>
             ĐIỂM DANH · {className.toUpperCase()}{subject ? ` · ${subject.toUpperCase()}` : ''}
           </Text>
@@ -290,17 +297,17 @@ const s = StyleSheet.create({
   ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
   hero: {
     alignItems: 'center',
-    backgroundColor: colors.green50,
+    backgroundColor: colors.green600,
+    overflow: 'hidden',
     borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
-    borderBottomWidth: 1, borderColor: colors.green100,
     paddingHorizontal: 24, paddingBottom: 24,
   },
   heroEyebrow: {
     fontSize: 12, fontWeight: '700', letterSpacing: 0.6,
-    color: colors.green700, textAlign: 'center',
+    color: 'rgba(255,255,255,0.92)', textAlign: 'center',
   },
   heroDate: {
-    fontSize: 13, fontWeight: '500', color: colors.green600,
+    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.8)',
     marginTop: 4, textAlign: 'center',
   },
   ringWrap: { marginTop: 18, marginBottom: 6 },
@@ -308,15 +315,15 @@ const s = StyleSheet.create({
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center', justifyContent: 'center',
   },
-  ringNumber: { fontSize: 44, fontWeight: '800', color: colors.green900, letterSpacing: -1 },
-  ringTotal: { fontSize: 24, fontWeight: '700', color: colors.green600 },
-  ringLabel: { fontSize: 13, fontWeight: '600', color: colors.green600, marginTop: -2 },
+  ringNumber: { fontSize: 44, fontWeight: '800', color: '#ffffff', letterSpacing: -1 },
+  ringTotal: { fontSize: 24, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
+  ringLabel: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginTop: -2 },
   heroCaption: {
-    fontSize: 17, fontWeight: '700', color: colors.green900,
+    fontSize: 17, fontWeight: '700', color: '#ffffff',
     marginTop: 10, textAlign: 'center',
   },
   heroHint: {
-    fontSize: 13, fontWeight: '500', color: colors.green600,
+    fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.8)',
     marginTop: 4, textAlign: 'center',
   },
   card: {

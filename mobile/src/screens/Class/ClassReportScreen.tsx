@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
+import { classColor } from '../../theme/classColors';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconZalo, IconStar, IconWarn, IconBook } from '../../components/icons';
@@ -147,6 +149,7 @@ export function ClassReportScreen({ route }: any) {
 
         {/* Green hero — tổng kết tuần */}
         <View style={s.hero}>
+          <LinearGradient colors={classColor(klass?.color).grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
           <Text style={s.heroEyebrow}>BÁO CÁO TUẦN · {weekLabel()}</Text>
           <Text style={s.heroTitle}>Tổng kết {className}</Text>
           <View style={s.heroStatsRow}>
@@ -293,7 +296,7 @@ const s = StyleSheet.create({
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
 
   // Green hero
-  hero: { backgroundColor: colors.green500, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20 },
+  hero: { backgroundColor: colors.green500, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20, overflow: 'hidden' },
   heroEyebrow: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.5 },
   heroTitle: { fontSize: 24, fontWeight: '700', color: 'white', letterSpacing: -0.4, marginTop: 6 },
   heroStatsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },

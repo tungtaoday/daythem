@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Modal, Alert, Linking, ActivityIndicator, BackHandler,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
@@ -100,9 +101,9 @@ const sr = StyleSheet.create({
 
 // Hero theme — màu đổi theo trạng thái (demo); tài khoản thật mặc định xanh.
 const HERO = {
-  ok:   { bg: colors.green600, fg: '#ffffff', fgDim: 'rgba(255,255,255,0.78)', chipBg: 'rgba(255,255,255,0.18)', statBg: 'rgba(255,255,255,0.12)', btnBg: 'rgba(255,255,255,0.20)', label: 'Đi học đều 🌿' },
-  risk: { bg: colors.coral500, fg: '#ffffff', fgDim: 'rgba(255,255,255,0.82)', chipBg: 'rgba(255,255,255,0.20)', statBg: 'rgba(255,255,255,0.14)', btnBg: 'rgba(255,255,255,0.22)', label: 'Vắng nhiều' },
-  star: { bg: colors.honey500, fg: '#5e4715', fgDim: 'rgba(94,71,21,0.72)', chipBg: 'rgba(94,71,21,0.10)', statBg: 'rgba(255,255,255,0.42)', btnBg: 'rgba(94,71,21,0.10)', label: 'Xuất sắc ★' },
+  ok:   { bg: colors.green600, grad: ['#55b083', '#2f6849'] as const, fg: '#ffffff', fgDim: 'rgba(255,255,255,0.78)', chipBg: 'rgba(255,255,255,0.18)', statBg: 'rgba(255,255,255,0.12)', btnBg: 'rgba(255,255,255,0.20)', label: 'Đi học đều 🌿' },
+  risk: { bg: colors.coral500, grad: ['#ec8b73', '#c2593f'] as const, fg: '#ffffff', fgDim: 'rgba(255,255,255,0.82)', chipBg: 'rgba(255,255,255,0.20)', statBg: 'rgba(255,255,255,0.14)', btnBg: 'rgba(255,255,255,0.22)', label: 'Vắng nhiều' },
+  star: { bg: colors.honey500, grad: ['#e9b84d', '#c8902a'] as const, fg: '#5e4715', fgDim: 'rgba(94,71,21,0.72)', chipBg: 'rgba(94,71,21,0.10)', statBg: 'rgba(255,255,255,0.42)', btnBg: 'rgba(94,71,21,0.10)', label: 'Xuất sắc ★' },
 } as const;
 
 function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; className?: string; subject?: string }) {
@@ -157,6 +158,12 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* ── HERO (đổi màu theo trạng thái) ── */}
         <View style={[pp.hero, { backgroundColor: hero.bg, paddingTop: insets.top + 14 }]}>
+          <LinearGradient
+            colors={hero.grad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <TouchableOpacity style={[pp.backBtn, { backgroundColor: hero.chipBg }]} onPress={onClose}>
             <View style={{ transform: [{ rotate: '180deg' }] }}><IconChevron size={18} color={hero.fg} /></View>
           </TouchableOpacity>
@@ -394,7 +401,7 @@ function HeroStat({ label, value, fg, fgDim }: { label: string; value: string; f
 
 const pp = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  hero: { paddingTop: 24, paddingBottom: 22, paddingHorizontal: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },
+  hero: { paddingTop: 24, paddingBottom: 22, paddingHorizontal: 20, borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden' },
   backBtn: {
     position: 'absolute', top: 16, left: 16, zIndex: 2,
     width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',

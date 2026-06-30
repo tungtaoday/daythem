@@ -7,9 +7,6 @@ import { Avatar } from '../../components/ui/Avatar';
 import { PromoBanner } from '../../components/ui/PromoBanner';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
-
-// Gradient xanh dùng cho các thẻ "hero" (chuyển màu mượt, hiện đúng trên máy thật).
-const HERO_GRAD: [string, string] = ['#55b083', '#2f6849'];
 import { syncNotifications } from '../../notifications/engine';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
@@ -84,31 +81,32 @@ function dayPartWord(startTime?: string): string {
 
 // Hero (primary) card dùng nền xanh đặc — native (iOS/Android) không render
 // CSS `linear-gradient`, nên dùng solid backgroundColor để web và máy khớp nhau.
+// Mỗi loại việc 1 màu hero riêng → nhiều việc thì Home hiện nhiều màu khác nhau.
 const TONES: Record<string, any> = {
   class: {
     label: 'BUỔI HỌC HÔM NAY',
-    heroBg: colors.green500,
+    grad: ['#55b083', '#2f6849'] as [string, string], heroBg: '#2f6849',
     iconBg: '#d8f3e3', iconColor: '#2f6849',
     btnBg: '#4a9e72', btnColor: 'white',
     Icon: IconClock,
   },
   risk: {
     label: 'CẦN QUAN TÂM',
-    heroBg: colors.green600,
+    grad: ['#ec8b73', '#c2593f'] as [string, string], heroBg: '#c2593f',
     iconBg: '#ffe5da', iconColor: '#b85a42',
     btnBg: '#e07a5f', btnColor: 'white',
     Icon: IconWarn,
   },
   money: {
     label: 'HỌC PHÍ',
-    heroBg: colors.green600,
+    grad: ['#e9b84d', '#c8902a'] as [string, string], heroBg: '#c8902a',
     iconBg: '#fef5e1', iconColor: '#b07a20',
     btnBg: '#c8902a', btnColor: 'white',
     Icon: IconWallet,
   },
   report: {
     label: 'TUẦN NÀY',
-    heroBg: colors.green500,
+    grad: ['#5b9bd5', '#2f6aa0'] as [string, string], heroBg: '#2f6aa0',
     iconBg: '#e8f2fa', iconColor: '#3d6a88',
     btnBg: '#5d8aa8', btnColor: 'white',
     Icon: IconChart,
@@ -144,7 +142,7 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
         {/* gradient nền + decorative blobs on primary */}
         {isPrimary && (
           <>
-            <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={tone.grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={nc.blob1} />
             <View style={nc.blob2} />
           </>

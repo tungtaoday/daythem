@@ -89,6 +89,7 @@ class CreateClassCommand(BaseModel):
     schedule: Optional[dict] = None
     default_fee: float = 0
     fee_type: str = "month"
+    color: Optional[str] = None
 
 class UpdateClassCommand(BaseModel):
     class_id: str
@@ -100,6 +101,8 @@ class UpdateClassCommand(BaseModel):
     default_fee: Optional[float] = None
     fee_type: Optional[str] = None
     zalo_group_id: Optional[str] = None
+    color: Optional[str] = None
+    archived: Optional[bool] = None
 
 class AddStudentCommand(BaseModel):
     class_id: str
@@ -362,6 +365,7 @@ def handle_create_class(cmd: CreateClassCommand, uow: SqlAlchemyUnitOfWork) -> C
         schedule=cmd.schedule,
         default_fee=cmd.default_fee,
         fee_type=cmd.fee_type,
+        color=cmd.color,
     )
     with uow:
         uow.classes.add(klass)
@@ -382,6 +386,8 @@ def handle_update_class(cmd: UpdateClassCommand, uow: SqlAlchemyUnitOfWork) -> C
         if cmd.default_fee is not None: klass.default_fee = cmd.default_fee
         if cmd.fee_type is not None: klass.fee_type = cmd.fee_type
         if cmd.zalo_group_id is not None: klass.zalo_group_id = cmd.zalo_group_id
+        if cmd.color is not None: klass.color = cmd.color
+        if cmd.archived is not None: klass.archived = cmd.archived
         uow.commit()
         uow._session.refresh(klass)
         return klass

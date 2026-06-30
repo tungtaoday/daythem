@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
+import { classColor } from '../../theme/classColors';
+import { useClassesStore } from '../../store/classes';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconZalo, IconCheck, IconDownload } from '../../components/icons';
@@ -33,6 +36,7 @@ const DEMO_ITEMS: Item[] = [
 
 export function ClassTuitionScreen({ route }: any) {
   const { classId, className } = route.params;
+  const klass = useClassesStore(st => st.classes).find(c => c.id === classId);
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const teacher = useAuthStore(st => st.teacher);
   const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
@@ -115,6 +119,7 @@ export function ClassTuitionScreen({ route }: any) {
 
         {/* Hero — số tiền là tâm điểm */}
         <View style={s.hero}>
+          <LinearGradient colors={classColor(klass?.color).grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
           <View style={s.heroTopRow}>
             <Text style={s.heroLabel} numberOfLines={1}>THU HỌC PHÍ · {className} · {monthLabel}</Text>
             {items.length > 0 && (
@@ -222,7 +227,7 @@ const s = StyleSheet.create({
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   hero: {
     backgroundColor: colors.green500, margin: 16, borderRadius: 24,
-    padding: 22, paddingTop: 18,
+    padding: 22, paddingTop: 18, overflow: 'hidden',
   },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
   heroLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.82)', letterSpacing: 0.5, flex: 1, marginRight: 8 },

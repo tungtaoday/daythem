@@ -50,6 +50,7 @@ class ClassORM(Base):
     default_fee: Mapped[float] = mapped_column(Float, default=0)
     fee_type: Mapped[str] = mapped_column(String(20), default="monthly")
     zalo_group_id: Mapped[Optional[str]] = mapped_column(String(100))
+    color: Mapped[Optional[str]] = mapped_column(String(20))  # khoá màu nhận diện lớp (vd 'green')
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 

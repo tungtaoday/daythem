@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
@@ -174,6 +175,12 @@ export function MakeupPollScreen({ route, navigation }: any) {
       <View style={s.container}>
         {/* Honey hero */}
         <View style={s.hero}>
+          <LinearGradient
+            colors={['#fef1d2', '#f7e1ab']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={s.heroBadgeRow}>
             <View style={s.liveDot} />
             <Text style={s.heroEyebrow}>
@@ -436,6 +443,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.honey100,
     paddingHorizontal: 18, paddingTop: 18, paddingBottom: 20,
     borderBottomWidth: 1, borderBottomColor: '#f0e3c4',
+    overflow: 'hidden',
   },
   heroBadgeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   heroEyebrow: {

@@ -57,6 +57,8 @@ export function SetupScreen() {
         subject: subjects[0] || 'Toán',
         grade: String(grades[0] || 9),
         default_fee: fee,
+        fee_type: 'month',
+        color: 'green',
         schedule: { day, start_time: time, duration, location: place },
       }).catch(() => {});
     }
@@ -295,6 +297,18 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
             </TouchableOpacity>
           ))}
         </View>
+        <View style={s.customFeeRow}>
+          <Text style={s.customFeeLabel}>Hoặc nhập:</Text>
+          <TextInput
+            style={s.customFeeInput}
+            keyboardType="number-pad"
+            value={FEE_PRESETS.includes(fee) ? '' : String(Math.round(fee / 1000))}
+            onChangeText={t => setFee((parseInt(t.replace(/\D/g, ''), 10) || 0) * 1000)}
+            placeholder="vd 450"
+            placeholderTextColor={colors.textMuted}
+          />
+          <Text style={s.customFeeUnit}>k/tháng</Text>
+        </View>
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
@@ -371,6 +385,10 @@ const s = StyleSheet.create({
   sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 20 },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.3, marginBottom: 10 },
   sectionHint: { fontSize: 12, color: colors.textMuted, marginBottom: 8 },
+  customFeeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  customFeeLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  customFeeInput: { flex: 1, height: 44, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, fontSize: 15, color: colors.textPrimary, backgroundColor: 'white' },
+  customFeeUnit: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
 
   input: {
     height: 52, borderWidth: 1.5, borderColor: colors.border,

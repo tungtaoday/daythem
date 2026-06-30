@@ -22,6 +22,7 @@ import { ReportTabScreen } from '../screens/Report/ReportTabScreen';
 // Stack screens
 import { ClassDetailScreen } from '../screens/Class/ClassDetailScreen';
 import { CreateClassScreen } from '../screens/Class/CreateClassScreen';
+import { ArchivedClassesScreen } from '../screens/Class/ArchivedClassesScreen';
 import { AttendanceScreen } from '../screens/Attendance/AttendanceScreen';
 import { CancelClassScreen } from '../screens/Announce/CancelClassScreen';
 import { MakeupPollScreen } from '../screens/Announce/MakeupPollScreen';
@@ -180,6 +181,11 @@ export function AppNavigator() {
               name="NotificationSettings"
               component={NotificationSettings}
               options={{ headerShown: true, title: 'Cài đặt thông báo', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
+            />
+            <Stack.Screen
+              name="ArchivedClasses"
+              component={ArchivedClassesScreen}
+              options={{ headerShown: true, title: 'Lớp đã lưu trữ', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
             />
             <Stack.Screen
               name="ClassSettings"

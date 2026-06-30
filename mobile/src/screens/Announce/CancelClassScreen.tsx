@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
@@ -175,6 +176,12 @@ export function CancelClassScreen({ route, navigation }: any) {
       <ScrollView contentContainerStyle={{ paddingBottom: (sending ? 24 : 110) + insets.bottom }}>
         {/* Coral hero */}
         <View style={[s.hero, { paddingTop: insets.top + 18 }]}>
+          <LinearGradient
+            colors={['#ec8b73', '#c2593f']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <Text style={s.heroEyebrow}>BÁO NGHỈ BUỔI HỌC</Text>
           <Text style={s.heroTitle}>{heroTitle}</Text>
           {!!heroLine && <Text style={s.heroLine}>{heroLine}</Text>}
@@ -311,17 +318,18 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderColor: colors.coral100,
     paddingHorizontal: 24, paddingBottom: 22,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   heroEyebrow: {
     fontSize: 12, fontWeight: '700', letterSpacing: 0.6,
-    color: colors.coral700, textAlign: 'center',
+    color: 'white', textAlign: 'center',
   },
   heroTitle: {
     fontSize: 22, fontWeight: '800', letterSpacing: -0.3,
-    color: colors.coral700, textAlign: 'center', marginTop: 6,
+    color: 'white', textAlign: 'center', marginTop: 6,
   },
   heroLine: {
-    fontSize: 13, fontWeight: '600', color: colors.coral500,
+    fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.9)',
     marginTop: 6, textAlign: 'center',
   },
   sectionLabel: {

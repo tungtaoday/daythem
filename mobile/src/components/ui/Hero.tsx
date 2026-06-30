@@ -8,6 +8,8 @@ export type HeroVariant = 'green' | 'coral' | 'honey';
 
 type Props = {
   variant?: HeroVariant;
+  /** Gradient tuỳ chỉnh (vd theo màu lớp) — ghi đè màu của variant, chữ trắng. */
+  grad?: [string, string];
   eyebrow?: string;
   title?: string;
   sub?: string;
@@ -30,11 +32,12 @@ const V: Record<HeroVariant, { grad: [string, string]; base: string; fg: string;
   honey: { grad: ['#fef1d2', '#f7e1ab'], base: colors.honey100, fg: colors.honey700, dim: 'rgba(94,71,21,0.72)', panel: 'rgba(255,255,255,0.5)', divider: 'rgba(94,71,21,0.18)' },
 };
 
-export function Hero({ variant = 'green', eyebrow, title, sub, stats, right, topInset = 0, flushTop, children, style }: Props) {
+export function Hero({ variant = 'green', grad, eyebrow, title, sub, stats, right, topInset = 0, flushTop, children, style }: Props) {
   const c = V[variant];
+  const gradColors = grad || c.grad;
   return (
     <LinearGradient
-      colors={c.grad}
+      colors={gradColors}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[

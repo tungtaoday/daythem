@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { Button } from '../../components/ui/Button';
 import { colors, spacing, typography, radius } from '../../theme';
+import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useClassesStore } from '../../store/classes';
 
 const SUBJECTS = ['Toán', 'Văn', 'Anh', 'Lý', 'Hóa', 'Sinh', 'Sử', 'Địa'];
@@ -22,6 +23,7 @@ export function CreateClassScreen({ navigation }: any) {
   const [day, setDay] = useState(3);
   const [time, setTime] = useState('18:30');
   const [place, setPlace] = useState('Tại nhà');
+  const [color, setColor] = useState<ClassColorKey>('green');
   const { createClass } = useClassesStore();
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +38,7 @@ export function CreateClassScreen({ navigation }: any) {
         grade,
         default_fee: parseFloat(fee) || 0,
         fee_type: 'month',
+        color,
         schedule: { day, start_time: time, duration: 90, location: place },
       });
       navigation.goBack();
@@ -117,6 +120,20 @@ export function CreateClassScreen({ navigation }: any) {
         ))}
       </View>
 
+      <Text style={styles.label}>Màu nhận diện lớp</Text>
+      <View style={styles.swatchRow}>
+        {CLASS_COLOR_KEYS.map(k => (
+          <TouchableOpacity
+            key={k}
+            onPress={() => setColor(k)}
+            style={[styles.swatch, { backgroundColor: CLASS_COLORS[k].dot }, color === k && styles.swatchActive]}
+            activeOpacity={0.8}
+          >
+            {color === k && <Text style={styles.swatchCheck}>✓</Text>}
+          </TouchableOpacity>
+        ))}
+      </View>
+
       <Button label="Tạo lớp" onPress={handleCreate} loading={loading} style={styles.btn} />
     </ScrollView>
   );
@@ -134,4 +151,8 @@ const styles = StyleSheet.create({
     ...typography.body, backgroundColor: colors.surface,
   },
   btn: { marginTop: spacing.md },
+  swatchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  swatch: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  swatchActive: { borderColor: colors.textPrimary },
+  swatchCheck: { color: 'white', fontSize: 18, fontWeight: '800' },
 });

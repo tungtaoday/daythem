@@ -7,6 +7,7 @@ import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
+import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Types ─────────────────────────────────────────────────────
@@ -154,6 +155,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   const [defaultFee, setDefaultFee] = useState(klass?.default_fee ?? 500000);
   const [feeInput, setFeeInput] = useState(String(Math.round((klass?.default_fee ?? 500000) / 1000)));
   const [feeMode, setFeeMode] = useState<FeeMode>((klass?.fee_type as FeeMode) ?? 'month');
+  const [color, setColor] = useState<ClassColorKey>(((klass?.color as ClassColorKey) ?? 'green'));
   const [stus, setStus] = useState<StuFee[]>(isDemo ? DEMO_STUS : []);
   const [editingStu, setEditingStu] = useState<StuFee | null>(null);
   const [saved, setSaved] = useState(false);
@@ -253,6 +255,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         subject,
         default_fee: defaultFee,
         fee_type: feeMode,
+        color,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -261,8 +264,27 @@ export function ClassSettingsScreen({ route, navigation }: any) {
     }
   };
 
+  const { archiveClass } = useClassesStore();
   const handleArchive = () => {
-    Alert.alert('Lưu trữ lớp', 'Tính năng đang được hoàn thiện, sắp có nhé!');
+    if (isDemo) { Alert.alert('Bản demo', 'Đăng nhập tài khoản thật để lưu trữ lớp.'); return; }
+    Alert.alert(
+      'Lưu trữ lớp',
+      `Lớp "${className}" sẽ được cất vào "Lớp đã lưu trữ" — không hiện ở danh sách chính nữa, nhưng dữ liệu vẫn còn và có thể khôi phục.`,
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Lưu trữ', style: 'destructive',
+          onPress: async () => {
+            try {
+              await archiveClass(classId);
+              navigation.navigate('MainTabs', { screen: 'Classes' });
+            } catch {
+              Alert.alert('Lỗi', 'Không lưu trữ được. Kiểm tra mạng và thử lại.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (loadingStus) {
@@ -304,14 +326,19 @@ export function ClassSettingsScreen({ route, navigation }: any) {
               editable={!isDemo}
             />
           </View>
-          <View style={s.row}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
-              <Text style={[s.rowLabel, { flex: 0 }]}>Màu sắc</Text>
-              <SoonBadge />
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8, opacity: 0.5 }}>
-              {['#4a9e72', '#e07a5f', '#6b7fd7', '#e8a838', '#9b6bb5'].map(col => (
-                <View key={col} style={[s.colorDot, { backgroundColor: col }]} />
+          <View style={[s.row, { alignItems: 'flex-start' }]}>
+            <Text style={[s.rowLabel, { flex: 0, marginTop: 6 }]}>Màu sắc</Text>
+            <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'flex-end' }}>
+              {CLASS_COLOR_KEYS.map(k => (
+                <TouchableOpacity
+                  key={k}
+                  onPress={() => !isDemo && setColor(k)}
+                  disabled={isDemo}
+                  style={[s.colorDot, { backgroundColor: CLASS_COLORS[k].dot, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color === k ? colors.textPrimary : 'transparent' }]}
+                  activeOpacity={0.8}
+                >
+                  {color === k && <Text style={{ color: 'white', fontSize: 16, fontWeight: '800' }}>✓</Text>}
+                </TouchableOpacity>
               ))}
             </View>
           </View>
@@ -471,9 +498,8 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
         {/* ── Danger zone ── */}
         <View style={[s.card, { marginTop: 8 }]}>
-          <TouchableOpacity style={[s.row, { justifyContent: 'center', gap: 8 }]} onPress={handleArchive}>
+          <TouchableOpacity style={[s.row, { justifyContent: 'center' }]} onPress={handleArchive}>
             <Text style={[s.rowLabel, { color: colors.coral700, textAlign: 'center', flex: 0 }]}>Lưu trữ lớp này</Text>
-            <SoonBadge />
           </TouchableOpacity>
         </View>
       </ScrollView>
