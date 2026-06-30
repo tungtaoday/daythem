@@ -10,6 +10,7 @@ import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevro
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useClassesStore } from '../../store/classes';
+import { listSessions } from '../../api/attendance';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Demo data ─────────────────────────────────────────────────
@@ -120,13 +121,26 @@ const DEMO_MONEY = [
 ];
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
-function StudentProfile({ student, clsName, isDemo, onClose }: any) {
+function StudentProfile({ student, clsName, isDemo, onClose, sessions }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
   const teacher = useAuthStore(s => s.teacher);
   const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
   const isRisk = isDemo && student.status === 'risk';
+
+  // Điểm danh thật của em này (từ các buổi đã điểm danh của lớp).
+  const realHistory = (!isDemo && sessions ? sessions : [])
+    .map((s: any) => {
+      const r = s.records?.find((x: any) => x.student_id === student.id);
+      return r ? { date: s.session_date as string, present: !!r.present, reason: r.absence_reason as string | null } : null;
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => (a.date < b.date ? 1 : -1)) as { date: string; present: boolean; reason: string | null }[];
+  const rPresent = realHistory.filter(h => h.present).length;
+  const rAbsent = realHistory.length - rPresent;
+  const hasReal = realHistory.length > 0;
+  const fmtDate = (s: string) => { const p = s.split('-'); return `${p[2]}/${p[1]}`; };
 
   return (
     <View style={pp.container}>
@@ -155,8 +169,8 @@ function StudentProfile({ student, clsName, isDemo, onClose }: any) {
             </View>
           ) : (
             <View style={pp.statsRow}>
-              <MiniStat label="Đã học" value="–" sub="buổi" />
-              <MiniStat label="Vắng" value="–" sub="buổi" />
+              <MiniStat label="Đã học" value={hasReal ? String(rPresent) : '–'} sub="buổi" />
+              <MiniStat label="Vắng" value={hasReal ? String(rAbsent) : '–'} sub="buổi" warn={rAbsent > 0} />
               <MiniStat label="Còn nợ" value="–" />
             </View>
           )}
@@ -244,10 +258,25 @@ function StudentProfile({ student, clsName, isDemo, onClose }: any) {
         {tab === 'attend' && (
           <View style={pp.content}>
             {!isDemo ? (
-              <View style={pp.emptyTab}>
-                <Text style={pp.emptyTabTitle}>Chưa có dữ liệu điểm danh</Text>
-                <Text style={pp.emptyTabSub}>Điểm danh các buổi học để xem lịch sử ở đây.</Text>
-              </View>
+              hasReal ? realHistory.map((r, i) => (
+                <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <View style={[pp.histIcon, r.present ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
+                    {r.present ? <IconCheck size={16} color={colors.green700} /> : <IconX size={16} color={colors.coral700} />}
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Buổi {fmtDate(r.date)}</Text>
+                    {r.reason ? <Text style={{ fontSize: 12, color: colors.textSecondary }}>{r.reason}</Text> : null}
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: r.present ? colors.green700 : colors.coral700 }}>
+                    {r.present ? 'Có mặt' : 'Vắng'}
+                  </Text>
+                </View>
+              )) : (
+                <View style={pp.emptyTab}>
+                  <Text style={pp.emptyTabTitle}>Chưa có dữ liệu điểm danh</Text>
+                  <Text style={pp.emptyTabSub}>Điểm danh các buổi học để xem lịch sử ở đây.</Text>
+                </View>
+              )
             ) : DEMO_ATTEND.map((r, i) => (
               <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={[pp.histIcon, r.ok ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
@@ -367,6 +396,8 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const originClass = originClassId ? classes.find(c => c.id === originClassId) : undefined;
   const [profileStu, setProfileStu] = useState<any>(null);
   const [profileCls, setProfileCls] = useState<string>('');
+  const [profileClsId, setProfileClsId] = useState<string>('');
+  const [profileSessions, setProfileSessions] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addClsId, setAddClsId] = useState('');
   const [name, setName] = useState('');
@@ -381,6 +412,12 @@ export function StudentsTabScreen({ navigation, route }: any) {
     return () => { alive = false; };
   }, [isDemo]);
   useEffect(() => { classes.forEach(c => fetchStudents(c.id)); }, [classes.length]);
+
+  // Khi mở hồ sơ 1 em → tải lịch sử điểm danh của lớp em đó để hiển thị.
+  useEffect(() => {
+    if (isDemo || !profileClsId) { setProfileSessions([]); return; }
+    listSessions(profileClsId).then(setProfileSessions).catch(() => setProfileSessions([]));
+  }, [profileClsId, isDemo]);
 
   const displayGroups: DemoClsGroup[] = isDemo
     ? DEMO_GROUPS
@@ -430,6 +467,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
         student={profileStu}
         clsName={profileCls}
         isDemo={isDemo}
+        sessions={profileSessions}
         onClose={() => setProfileStu(null)}
       />
     );
@@ -548,7 +586,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
                   stu={stu}
                   isDemo={isDemo}
                   last={i === group.students.length - 1}
-                  onPress={() => { setProfileStu(stu); setProfileCls(group.name); }}
+                  onPress={() => { setProfileStu(stu); setProfileCls(group.name); setProfileClsId(group.id); }}
                 />
               ))}
             </View>
