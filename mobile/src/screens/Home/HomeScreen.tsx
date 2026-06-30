@@ -5,7 +5,11 @@ import {
 } from 'react-native';
 import { Avatar } from '../../components/ui/Avatar';
 import { PromoBanner } from '../../components/ui/PromoBanner';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
+
+// Gradient xanh dùng cho các thẻ "hero" (chuyển màu mượt, hiện đúng trên máy thật).
+const HERO_GRAD: [string, string] = ['#55b083', '#2f6849'];
 import { syncNotifications } from '../../notifications/engine';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
@@ -131,15 +135,16 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
     : IconChevron;
 
   const cardStyle: any = isPrimary
-    ? [nc.card, nc.cardPrimary, { backgroundColor: tone.heroBg }]
+    ? [nc.card, nc.cardPrimary, { backgroundColor: tone.heroBg, overflow: 'hidden' }]
     : [nc.card];
 
   return (
     <Animated.View style={{ transform: [{ translateX }], opacity }}>
       <View style={cardStyle}>
-        {/* decorative blobs on primary */}
+        {/* gradient nền + decorative blobs on primary */}
         {isPrimary && (
           <>
+            <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={nc.blob1} />
             <View style={nc.blob2} />
           </>

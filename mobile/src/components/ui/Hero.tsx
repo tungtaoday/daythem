@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing, shadow } from '../../theme';
 
 export type HeroStat = { value: string; label: string };
@@ -21,20 +22,24 @@ type Props = {
   style?: ViewStyle;
 };
 
-// Mỗi variant: nền đặc (KHÔNG gradient — hiện đúng trên iOS/Android).
-const V: Record<HeroVariant, { bg: string; fg: string; dim: string; panel: string; divider: string }> = {
-  green: { bg: colors.green500, fg: '#ffffff', dim: 'rgba(255,255,255,0.85)', panel: 'rgba(255,255,255,0.14)', divider: 'rgba(255,255,255,0.22)' },
-  coral: { bg: colors.coral500, fg: '#ffffff', dim: 'rgba(255,255,255,0.88)', panel: 'rgba(255,255,255,0.16)', divider: 'rgba(255,255,255,0.24)' },
-  honey: { bg: colors.honey100, fg: colors.honey700, dim: 'rgba(94,71,21,0.72)', panel: 'rgba(255,255,255,0.5)', divider: 'rgba(94,71,21,0.18)' },
+// Mỗi variant: gradient 2 màu (chuyển màu mượt) — dùng expo-linear-gradient nên
+// hiện đúng trên cả iOS/Android (không phải CSS web-only).
+const V: Record<HeroVariant, { grad: [string, string]; base: string; fg: string; dim: string; panel: string; divider: string }> = {
+  green: { grad: ['#55b083', '#2f6849'], base: colors.green600, fg: '#ffffff', dim: 'rgba(255,255,255,0.85)', panel: 'rgba(255,255,255,0.16)', divider: 'rgba(255,255,255,0.24)' },
+  coral: { grad: ['#ec8b73', '#c2593f'], base: colors.coral500, fg: '#ffffff', dim: 'rgba(255,255,255,0.88)', panel: 'rgba(255,255,255,0.18)', divider: 'rgba(255,255,255,0.26)' },
+  honey: { grad: ['#fef1d2', '#f7e1ab'], base: colors.honey100, fg: colors.honey700, dim: 'rgba(94,71,21,0.72)', panel: 'rgba(255,255,255,0.5)', divider: 'rgba(94,71,21,0.18)' },
 };
 
 export function Hero({ variant = 'green', eyebrow, title, sub, stats, right, topInset = 0, flushTop, children, style }: Props) {
   const c = V[variant];
   return (
-    <View
+    <LinearGradient
+      colors={c.grad}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
       style={[
         s.hero,
-        { backgroundColor: c.bg },
+        { backgroundColor: c.base },
         flushTop
           ? { paddingTop: topInset + 14, borderTopLeftRadius: 0, borderTopRightRadius: 0 }
           : shadow.hero,
@@ -65,7 +70,7 @@ export function Hero({ variant = 'green', eyebrow, title, sub, stats, right, top
       )}
 
       {children}
-    </View>
+    </LinearGradient>
   );
 }
 

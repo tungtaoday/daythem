@@ -3,8 +3,12 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { colors } from '../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/ui/Avatar';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+
+// Gradient xanh cho thẻ hero (chuyển màu, hiện đúng trên máy thật).
+const HERO_GRAD: [string, string] = ['#55b083', '#2f6849'];
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
 import { getTuition } from '../../api/tuition';
@@ -81,9 +85,10 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
       <View style={cardStyle}>
-        {/* blobs */}
+        {/* gradient nền + blobs */}
         {highlighted && (
           <>
+            <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
             <View style={cc.blob1} />
             <View style={cc.blob2} />
           </>
@@ -234,7 +239,8 @@ function HeroCard({ klass, delta, studentNames, onPress }: any) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <View style={hc.card}>
-        {/* decorative blobs */}
+        {/* gradient nền + decorative blobs */}
+        <LinearGradient colors={HERO_GRAD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
         <View style={hc.blob1} />
         <View style={hc.blob2} />
 
