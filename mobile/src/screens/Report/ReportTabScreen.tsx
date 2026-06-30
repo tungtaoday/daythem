@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
@@ -280,22 +281,22 @@ export function ReportTabScreen({ navigation, route }: any) {
   }, [isDemo]);
 
   // Tín hiệu thật cho checklist "ĐỂ CÓ BÁO CÁO": đã điểm danh? đã thu học phí?
-  useEffect(() => {
+  // Nạp lại MỖI KHI mở tab (focus) — vì bottom-tab giữ màn cũ, nếu chỉ chạy lúc
+  // mount thì điểm danh/thu tiền sau đó sẽ không được cập nhật.
+  const loadSignals = useCallback(async () => {
     if (isDemo || allClasses.length === 0) return;
-    let alive = true;
     const month = new Date().toISOString().slice(0, 7);
-    (async () => {
-      try {
-        const sess = await Promise.all(allClasses.map((c: any) => listSessions(c.id).catch(() => [])));
-        if (alive && sess.some((arr: any) => Array.isArray(arr) && arr.length > 0)) setHasAttendance(true);
-      } catch {}
-      try {
-        const tui = await Promise.all(allClasses.map((c: any) => getTuition(c.id, month).catch(() => [])));
-        if (alive && tui.some((arr: any) => Array.isArray(arr) && arr.some((t: any) => t.paid))) setHasTuition(true);
-      } catch {}
-    })();
-    return () => { alive = false; };
+    try {
+      const sess = await Promise.all(allClasses.map((c: any) => listSessions(c.id).catch(() => [])));
+      setHasAttendance(sess.some((arr: any) => Array.isArray(arr) && arr.length > 0));
+    } catch {}
+    try {
+      const tui = await Promise.all(allClasses.map((c: any) => getTuition(c.id, month).catch(() => [])));
+      setHasTuition(tui.some((arr: any) => Array.isArray(arr) && arr.some((t: any) => t.paid)));
+    } catch {}
   }, [isDemo, allClasses.length]);
+
+  useFocusEffect(useCallback(() => { loadSignals(); }, [loadSignals]));
 
   const handleConfirmSend = async () => {
     setShowZalo(false);

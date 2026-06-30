@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, spacing, typography, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
@@ -67,25 +68,19 @@ export function ClassDetailScreen({ route, navigation }: any) {
     if (!loaded) { fetchStudents(classId); setLoaded(true); }
   }, [classId]);
 
-  // học phí tháng này — chỉ để hiện stat "Đã nộp", lỗi thì bỏ qua
-  useEffect(() => {
+  // Học phí tháng này (stat "Đã nộp") + đã điểm danh hôm nay chưa.
+  // Nạp lại mỗi khi màn được focus (vd quay lại sau khi điểm danh) để cập nhật ngay.
+  useFocusEffect(useCallback(() => {
     const month = new Date().toISOString().slice(0, 7);
     getTuition(classId, month)
-      .then((data: any[]) => {
-        if (!Array.isArray(data)) return;
-        setTuition({ paid: data.filter(d => d.paid).length, total: data.length });
-      })
+      .then((data: any[]) => { if (Array.isArray(data)) setTuition({ paid: data.filter(d => d.paid).length, total: data.length }); })
       .catch(() => {});
-  }, [classId]);
-
-  // Hôm nay đã điểm danh chưa → đổi nhãn nút cho biết "đã điểm danh".
-  useEffect(() => {
     const d = new Date();
     const todayYmd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     listSessions(classId)
       .then((arr: any[]) => setAttendedToday(Array.isArray(arr) && arr.some(sx => sx.session_date === todayYmd)))
       .catch(() => {});
-  }, [classId]);
+  }, [classId]));
 
   if (!klass) {
     return (
