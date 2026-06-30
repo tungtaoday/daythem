@@ -3,6 +3,8 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput,
 import { colors, spacing, typography, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
+import { Hero } from '../../components/ui/Hero';
+import { Button } from '../../components/ui/Button';
 import { useClassesStore } from '../../store/classes';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
@@ -33,12 +35,12 @@ function countdownWord(delta: number): string {
 type Tile = { Icon: any; label: string; kind: string; bg: string; fg: string };
 
 const TILES: Tile[] = [
-  { Icon: IconWallet,   label: 'Thu tiền',  kind: 'ClassTuition',  bg: '#ffe5da', fg: '#b85a42' },
-  { Icon: IconBell,     label: 'Báo nghỉ',  kind: 'CancelClass',   bg: '#fff4f0', fg: '#b85a42' },
-  { Icon: IconChart,    label: 'Báo cáo',   kind: 'ClassReport',   bg: '#f0faf4', fg: '#2f6849' },
-  { Icon: IconClock,    label: 'Học bù',    kind: 'MakeupPoll',    bg: '#fef5e1', fg: '#b07a20' },
-  { Icon: IconUsers,    label: 'Học sinh',  kind: 'ClassStudents', bg: '#f5f3ed', fg: '#555' },
-  { Icon: IconSettings, label: 'Cài đặt',   kind: 'settings',      bg: '#f5f3ed', fg: '#555' },
+  { Icon: IconWallet,   label: 'Thu tiền',  kind: 'ClassTuition',  bg: colors.coral100,   fg: colors.coral700 },
+  { Icon: IconBell,     label: 'Báo nghỉ',  kind: 'CancelClass',   bg: colors.coral50,    fg: colors.coral700 },
+  { Icon: IconChart,    label: 'Báo cáo',   kind: 'ClassReport',   bg: colors.green50,    fg: colors.green700 },
+  { Icon: IconClock,    label: 'Học bù',    kind: 'MakeupPoll',    bg: colors.honey100,   fg: colors.honey700 },
+  { Icon: IconUsers,    label: 'Học sinh',  kind: 'ClassStudents', bg: colors.surfaceAlt, fg: colors.textSecondary },
+  { Icon: IconSettings, label: 'Cài đặt',   kind: 'settings',      bg: colors.surfaceAlt, fg: colors.textSecondary },
 ];
 
 export function ClassDetailScreen({ route, navigation }: any) {
@@ -136,12 +138,13 @@ export function ClassDetailScreen({ route, navigation }: any) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* ── GREEN HERO ── */}
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <Text style={styles.heroCountdown} numberOfLines={1}>
-            {countdownLine || 'Chưa đặt lịch học'}
-          </Text>
+      {/* ── HERO (design-system component) ── */}
+      <Hero
+        variant="green"
+        eyebrow={countdownLine || 'Chưa đặt lịch học'}
+        title={`${klass.name} · ${klass.subject}`}
+        sub={loc || undefined}
+        right={
           <TouchableOpacity
             style={styles.gearBtn}
             onPress={() => navTo('settings')}
@@ -150,39 +153,20 @@ export function ClassDetailScreen({ route, navigation }: any) {
           >
             <IconSettings size={20} color="#fff" />
           </TouchableOpacity>
-        </View>
-
-        <Text style={styles.heroTitle}>{klass.name} · {klass.subject}</Text>
-        {loc ? <Text style={styles.heroSub}>{loc}</Text> : null}
-
-        {/* stat row */}
-        <View style={styles.statRow}>
-          <View style={styles.stat}>
-            <Text style={styles.statVal}>{studentN}</Text>
-            <Text style={styles.statLabel}>Học sinh</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statVal}>{isDemo ? '96%' : '—'}</Text>
-            <Text style={styles.statLabel}>Chuyên cần</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.stat}>
-            <Text style={styles.statVal}>{tuition ? `${tuition.paid}/${tuition.total}` : '—'}</Text>
-            <Text style={styles.statLabel}>Đã nộp</Text>
-          </View>
-        </View>
-      </View>
+        }
+        stats={[
+          { value: String(studentN), label: 'Học sinh' },
+          { value: isDemo ? '96%' : 'Chưa có', label: 'Chuyên cần' },
+          { value: tuition ? `${tuition.paid}/${tuition.total}` : 'Chưa có', label: 'Đã nộp' },
+        ]}
+      />
 
       {/* ── PRIMARY action ── */}
-      <TouchableOpacity
-        style={styles.primaryBtn}
+      <Button
+        label="Điểm danh buổi hôm nay"
         onPress={() => navTo('Attendance')}
-        activeOpacity={0.85}
-      >
-        <IconCheck size={22} color="#fff" />
-        <Text style={styles.primaryBtnText}>Điểm danh buổi hôm nay</Text>
-      </TouchableOpacity>
+        icon={<IconCheck size={22} color="#fff" />}
+      />
 
       {/* ── secondary action tiles ── */}
       <View style={styles.grid}>
@@ -287,23 +271,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, gap: spacing.md, paddingBottom: 40 },
 
-  // hero (solid green — native safe, no gradient)
-  hero: { backgroundColor: colors.green500, padding: spacing.lg, borderRadius: radius.xl },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  heroCountdown: { flex: 1, fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: '#ffe6a3' },
+  // gear button trong slot phải của Hero
   gearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  heroTitle: { fontSize: 24, fontWeight: '800', letterSpacing: -0.4, color: '#fff', marginTop: 10 },
-  heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
-
-  statRow: { flexDirection: 'row', alignItems: 'center', marginTop: 18, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.md, paddingVertical: 12 },
-  stat: { flex: 1, alignItems: 'center' },
-  statVal: { fontSize: 18, fontWeight: '800', color: '#fff' },
-  statLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  statDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)', marginVertical: 4 },
-
-  // primary button
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, backgroundColor: colors.green600, paddingVertical: 18, borderRadius: radius.lg, shadowColor: colors.green700, shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   action: { width: '31%', aspectRatio: 1, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

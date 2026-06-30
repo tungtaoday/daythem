@@ -17,6 +17,7 @@ export const colors = {
   // Honey (warm highlight)
   honey100: '#fef5e1',
   honey500: '#f2c94c',
+  honey700: '#8a6d30',   // honey text (đậm, đọc rõ trên nền honey)
 
   // Neutrals
   bg: '#faf8f2',
@@ -26,6 +27,21 @@ export const colors = {
   textPrimary: '#1a1a1a',
   textSecondary: '#6b6b6b',
   textMuted: '#9e9e9e',
+
+  // Brand đối tác / phụ trợ
+  zalo: '#3a7dd3',       // xanh Zalo
+  handle: '#e0ddd5',     // tay kéo bottom-sheet
+};
+
+// Công thức bóng dùng chung (native-safe: shadow iOS + elevation Android).
+export const shadow = {
+  card: { shadowColor: '#281e14', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 },
+  hero: { shadowColor: '#1a3d2a', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 16, elevation: 6 },
+};
+
+// Kích thước chạm tối thiểu (thân thiện thầy cô lớn tuổi).
+export const layout = {
+  tapMin: 48,
 };
 
 export const spacing = {
