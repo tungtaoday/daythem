@@ -248,6 +248,34 @@ const rg = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────
 
+// Thống kê THẬT (tài khoản thật, sau khi đã điểm danh) — tính từ sessions + tuition.
+function RealStats({ stats }: any) {
+  return (
+    <>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+        <StatChip label="BUỔI ĐÃ DẠY" value={String(stats.sessionCount)} sub="đã điểm danh" bg={colors.green100} color={colors.green700} />
+        <StatChip label="CHUYÊN CẦN" value={stats.attendPct !== null ? `${stats.attendPct}%` : '–'} sub={`${stats.present}/${stats.present + stats.absent} có mặt`} bg="#f0faf4" color={colors.green700} />
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+        <StatChip label="ĐÃ THU THÁNG NÀY" value={VND(stats.collected)} sub={`${stats.paidCount} lượt nộp`} bg={colors.honey100} color="#8a6d30" />
+        <StatChip label="VẮNG" value={String(stats.absent)} sub="lượt vắng" bg={colors.coral100} color={colors.coral700} />
+      </View>
+
+      <Text style={s.sectionLabel}>BÁO CÁO TỪNG LỚP</Text>
+      <View style={s.card}>
+        {stats.perClass.map((c: any, i: number) => (
+          <View key={c.id} style={{ padding: 14, paddingHorizontal: 16, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>{c.name}</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 3 }}>
+              {c.sessions} buổi · {c.attendPct !== null ? `${c.attendPct}% chuyên cần` : 'chưa điểm danh'} · đã thu {c.paid}/{c.total}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </>
+  );
+}
+
 export function ReportTabScreen({ navigation, route }: any) {
   const insets = useSafeAreaInsets();
   const { classes, fetchClasses } = useClassesStore();
@@ -261,6 +289,7 @@ export function ReportTabScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(!isDemo);
   const [hasAttendance, setHasAttendance] = useState(false);
   const [hasTuition, setHasTuition] = useState(false);
+  const [realStats, setRealStats] = useState<any>(null);
 
   const allClasses = isDemo ? (DEMO_CLASSES as any[]) : classes;
   const validClassIds = new Set(['all', ...allClasses.map((c: any) => c.id)]);
@@ -286,15 +315,33 @@ export function ReportTabScreen({ navigation, route }: any) {
   const loadSignals = useCallback(async () => {
     if (isDemo || allClasses.length === 0) return;
     const month = new Date().toISOString().slice(0, 7);
+    const targets = effectiveFilter === 'all' ? allClasses : allClasses.filter((c: any) => c.id === effectiveFilter);
     try {
-      const sess = await Promise.all(allClasses.map((c: any) => listSessions(c.id).catch(() => [])));
-      setHasAttendance(sess.some((arr: any) => Array.isArray(arr) && arr.length > 0));
+      const [sessArrs, tuiArrs] = await Promise.all([
+        Promise.all(targets.map((c: any) => listSessions(c.id).catch(() => []))),
+        Promise.all(targets.map((c: any) => getTuition(c.id, month).catch(() => []))),
+      ]);
+      let sessionCount = 0, present = 0, totalMarks = 0, collected = 0, paidCount = 0, studentTotal = 0;
+      const perClass = targets.map((c: any, i: number) => {
+        const sess = Array.isArray(sessArrs[i]) ? sessArrs[i] : [];
+        const tui = Array.isArray(tuiArrs[i]) ? tuiArrs[i] : [];
+        let cp = 0, ct = 0;
+        sess.forEach((sx: any) => sx.records?.forEach((r: any) => { ct++; if (r.present) cp++; }));
+        const cPaid = tui.filter((t: any) => t.paid);
+        const cCollected = cPaid.reduce((a: number, t: any) => a + (t.amount || 0), 0);
+        sessionCount += sess.length; present += cp; totalMarks += ct;
+        paidCount += cPaid.length; collected += cCollected; studentTotal += tui.length;
+        return { id: c.id, name: c.name, sessions: sess.length, attendPct: ct ? Math.round((cp / ct) * 100) : null, paid: cPaid.length, total: tui.length, collected: cCollected };
+      });
+      setHasAttendance(sessionCount > 0);
+      setHasTuition(paidCount > 0);
+      setRealStats({
+        sessionCount, present, absent: totalMarks - present,
+        attendPct: totalMarks ? Math.round((present / totalMarks) * 100) : null,
+        collected, paidCount, studentTotal, perClass,
+      });
     } catch {}
-    try {
-      const tui = await Promise.all(allClasses.map((c: any) => getTuition(c.id, month).catch(() => [])));
-      setHasTuition(tui.some((arr: any) => Array.isArray(arr) && arr.some((t: any) => t.paid)));
-    } catch {}
-  }, [isDemo, allClasses.length]);
+  }, [isDemo, allClasses.length, effectiveFilter]);
 
   useFocusEffect(useCallback(() => { loadSignals(); }, [loadSignals]));
 
@@ -447,6 +494,8 @@ export function ReportTabScreen({ navigation, route }: any) {
               </View>
             </View>
           </>
+        ) : (realStats && realStats.sessionCount > 0) ? (
+          <RealStats stats={realStats} />
         ) : (
           <ReportGuide classes={allClasses} gw={gw} navigation={navigation} week={weekLabel()} hasAttendance={hasAttendance} hasTuition={hasTuition} />
         )}
