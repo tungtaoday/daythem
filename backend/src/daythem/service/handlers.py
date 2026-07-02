@@ -682,3 +682,20 @@ def handle_change_password(teacher_id: str, current: str, new: str, uow: SqlAlch
             raise ValueError("Mật khẩu hiện tại không đúng")
         teacher.password_hash = _hash_password(new)
         uow.commit()
+
+
+def handle_reset_password(phone: str, code: str, new_password: str, uow: SqlAlchemyUnitOfWork) -> None:
+    """Reset password after verifying an OTP sent to the phone (forgot-password flow)."""
+    if len(new_password) < 6:
+        raise ValueError("Mật khẩu mới phải có ít nhất 6 ký tự")
+    with uow:
+        otp = uow.otps.get_latest(phone)
+        if not otp or otp.code != code or otp.expires_at < _now():
+            raise ValueError("Mã OTP không hợp lệ hoặc đã hết hạn")
+        otp.used = True
+        teacher = uow.teachers.get_by_phone(phone)
+        if not teacher:
+            teacher = TeacherORM(id=str(uuid.uuid4()), phone=phone)
+            uow.teachers.add(teacher)
+        teacher.password_hash = _hash_password(new_password)
+        uow.commit()

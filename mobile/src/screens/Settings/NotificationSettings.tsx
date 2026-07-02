@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors } from '../../theme';
 import { getNotifConfig, putNotifPrefs, NotifConfig, NotifRule } from '../../api/notify';
+import { syncNotifications } from '../../notifications/engine';
+import { useClassesStore } from '../../store/classes';
+import { useAuthStore } from '../../store/auth';
 
 const TIMES = ['06:00', '06:30', '07:00', '07:30', '08:00'];
 const REPORT_TIMES = ['18:00', '19:00', '20:00', '21:00'];
@@ -31,6 +34,8 @@ function Chips({ options, value, onPick, fmt }: { options: any[]; value: any; on
 export function NotificationSettings() {
   const [cfg, setCfg] = useState<NotifConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const classes = useClassesStore(st => st.classes);
+  const gw = useAuthStore(st => st.teacher?.gender) === 'thay' ? 'thầy' : 'cô';
 
   useEffect(() => {
     getNotifConfig().then(setCfg).catch(() => {}).finally(() => setLoading(false));
@@ -38,7 +43,11 @@ export function NotificationSettings() {
 
   const rule = (k: string): NotifRule => cfg?.rules?.[k] || {};
   const save = (patch: Parameters<typeof putNotifPrefs>[0]) => {
-    putNotifPrefs(patch).then(setCfg).catch(() => {});
+    putNotifPrefs(patch).then(c => {
+      setCfg(c);
+      // Áp dụng ngay: đặt lại lịch thông báo theo cài đặt mới.
+      syncNotifications(classes as any, gw).catch(() => {});
+    }).catch(() => {});
   };
   const setRule = (k: string, v: NotifRule) => {
     setCfg(c => c ? { ...c, rules: { ...c.rules, [k]: { ...c.rules[k], ...v } } } : c); // optimistic

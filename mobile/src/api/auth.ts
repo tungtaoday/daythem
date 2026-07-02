@@ -25,3 +25,9 @@ export const deleteAccount = () =>
 
 export const changePassword = (current_password: string, new_password: string) =>
   api.put('/auth/password', { current_password, new_password }).then(r => r.data);
+
+export const requestOtp = (phone: string) =>
+  api.post('/auth/request-otp', { phone }).then(r => r.data);
+
+export const resetPassword = (phone: string, code: string, new_password: string) =>
+  api.post('/auth/reset-password', { phone, code, new_password }).then(r => r.data);

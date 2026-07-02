@@ -27,6 +27,8 @@ type ClassesState = {
   restoreClass: (id: string) => Promise<void>;
   fetchStudents: (classId: string) => Promise<void>;
   addStudent: (classId: string, body: any) => Promise<Student>;
+  updateStudent: (classId: string, studentId: string, body: any) => Promise<void>;
+  removeStudent: (classId: string, studentId: string) => Promise<void>;
   setStudentFee: (studentId: string, body: any) => Promise<void>;
 };
 
@@ -97,6 +99,24 @@ export const useClassesStore = create<ClassesState>((set, get) => ({
       classes: s.classes.map(c => c.id === classId ? { ...c, student_count: c.student_count + 1 } : c),
     }));
     return student;
+  },
+
+  updateStudent: async (classId, studentId, body) => {
+    const updated = await studentApi.updateStudent(studentId, body);
+    set(s => ({
+      students: {
+        ...s.students,
+        [classId]: (s.students[classId] || []).map(st => st.id === studentId ? { ...st, ...updated } : st),
+      },
+    }));
+  },
+
+  removeStudent: async (classId, studentId) => {
+    await studentApi.removeStudent(studentId);
+    set(s => ({
+      students: { ...s.students, [classId]: (s.students[classId] || []).filter(st => st.id !== studentId) },
+      classes: s.classes.map(c => c.id === classId ? { ...c, student_count: Math.max(0, c.student_count - 1) } : c),
+    }));
   },
 
   setStudentFee: async (studentId, body) => {

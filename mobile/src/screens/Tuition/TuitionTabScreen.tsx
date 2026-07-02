@@ -126,6 +126,35 @@ const cb = StyleSheet.create({
   fill: { height: 6, borderRadius: 3, backgroundColor: colors.green500 },
 });
 
+function MonthSwitcher({ label, atCurrent, onPrev, onNext }: {
+  label: string; atCurrent: boolean; onPrev: () => void; onNext: () => void;
+}) {
+  return (
+    <View style={ms.wrap}>
+      <TouchableOpacity style={ms.arrow} onPress={onPrev} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Text style={ms.arrowText}>‹</Text>
+      </TouchableOpacity>
+      <Text style={ms.label}>{label}</Text>
+      <TouchableOpacity
+        style={[ms.arrow, atCurrent && ms.arrowDisabled]}
+        onPress={onNext}
+        disabled={atCurrent}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      >
+        <Text style={[ms.arrowText, atCurrent && ms.arrowTextDisabled]}>›</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+const ms = StyleSheet.create({
+  wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 5, alignSelf: 'flex-start' },
+  arrow: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200 },
+  arrowDisabled: { backgroundColor: colors.bg, borderColor: colors.border },
+  arrowText: { fontSize: 17, fontWeight: '700', color: colors.green700, lineHeight: 19 },
+  arrowTextDisabled: { color: colors.textSecondary, opacity: 0.4 },
+  label: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, minWidth: 96, textAlign: 'center' },
+});
+
 // ── Main screen ───────────────────────────────────────────────
 
 export function TuitionTabScreen({ navigation, route }: any) {
@@ -143,8 +172,23 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const [showZaloModal, setShowZaloModal] = useState(false);
   const [sent, setSent] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
-  const month = new Date().toISOString().slice(0, 7);
-  const monthLabel = `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
+
+  // Current month bound from LOCAL date (không dùng toISOString — lệch múi giờ)
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  const month = selectedMonth;
+  const [ly, lm] = selectedMonth.split('-');
+  const monthLabel = `Tháng ${Number(lm)}/${ly}`;
+  const atCurrentMonth = selectedMonth >= currentMonth; // string compare hợp lệ cho YYYY-MM
+
+  const shiftMonth = (ym: string, delta: number) => {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const goPrevMonth = () => setSelectedMonth(m => shiftMonth(m, -1));
+  const goNextMonth = () => setSelectedMonth(m => (m >= currentMonth ? m : shiftMonth(m, 1)));
 
   useEffect(() => { if (!isDemo) fetchClasses(); }, [isDemo]);
   useEffect(() => {
@@ -154,7 +198,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
     setLoading(true);
     Promise.all(
       classes.map(cls =>
-        getTuition(cls.id, month)
+        getTuition(cls.id, selectedMonth)
           .then((rows: any[]) => rows.map(r => ({ ...r, classId: cls.id, className: cls.name })))
           .catch(() => [] as Item[])
       )
@@ -162,7 +206,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
       .then(res => { if (alive) setAllData(res.flat()); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [classes, isDemo]);
+  }, [classes, isDemo, selectedMonth]);
 
   const rawData = isDemo ? demoData : allData;
   const allClassIds = [...new Set(rawData.map(d => d.classId))];
@@ -223,7 +267,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
         <View style={[s.header, { paddingTop: insets.top + 12 }]}>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>Học phí</Text>
-            <Text style={s.subtitle}>{monthLabel}</Text>
+            <MonthSwitcher label={monthLabel} atCurrent={atCurrentMonth} onPrev={goPrevMonth} onNext={goNextMonth} />
           </View>
           <TouchableOpacity style={s.taxBtn} onPress={() => navigation.navigate('Tax')}>
             <IconWallet size={15} color={colors.green700} />
@@ -251,7 +295,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Học phí</Text>
-          <Text style={s.subtitle}>{monthLabel}</Text>
+          <MonthSwitcher label={monthLabel} atCurrent={atCurrentMonth} onPrev={goPrevMonth} onNext={goNextMonth} />
         </View>
         <TouchableOpacity style={s.taxBtn} onPress={() => navigation.navigate('Tax')}>
           <IconWallet size={15} color={colors.green700} />
@@ -285,7 +329,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
         {/* ── Revenue summary hero ── */}
         <View style={s.heroCard}>
           <View style={s.heroTopRow}>
-            <Text style={s.heroLabel}>ĐÃ THU THÁNG NÀY</Text>
+            <Text style={s.heroLabel}>ĐÃ THU · {monthLabel.toUpperCase()}</Text>
             <View style={s.heroBadge}>
               <IconWallet size={15} color={colors.green700} />
             </View>

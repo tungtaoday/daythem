@@ -8,6 +8,7 @@ from daythem.service.handlers import (
     LoginWithPasswordCommand,
     handle_request_otp, handle_verify_otp, handle_update_profile,
     handle_login_with_password, handle_delete_account, handle_change_password,
+    handle_reset_password,
 )
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.adapters.orm import TeacherORM
@@ -31,6 +32,11 @@ class LoginBody(BaseModel):
 
 class ChangePasswordBody(BaseModel):
     current_password: str
+    new_password: str
+
+class ResetPasswordBody(BaseModel):
+    phone: str
+    code: str
     new_password: str
 
 class UpdateProfileBody(BaseModel):
@@ -113,6 +119,17 @@ def verify_otp(body: VerifyOTPBody, request: Request, uow: SqlAlchemyUnitOfWork 
 @router.get("/me")
 def me(teacher: TeacherORM = Depends(get_current_teacher)):
     return teacher_out(teacher)
+
+
+@router.post("/reset-password")
+def reset_password(body: ResetPasswordBody, request: Request, uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    # Throttle reset attempts per phone.
+    rate_limit("reset_pw_phone", body.phone, limit=8, window_seconds=600)
+    try:
+        handle_reset_password(body.phone, body.code, body.new_password, uow)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}
 
 
 @router.put("/password")

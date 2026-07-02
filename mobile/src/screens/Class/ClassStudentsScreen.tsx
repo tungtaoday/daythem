@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
-import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload } from '../../components/icons';
+import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
 import { exportStudentsExcel } from '../../utils/exportExcel';
@@ -107,7 +107,7 @@ const HERO = {
   star: { bg: colors.honey500, grad: ['#e9b84d', '#c8902a'] as const, fg: '#5e4715', fgDim: 'rgba(94,71,21,0.72)', chipBg: 'rgba(94,71,21,0.10)', statBg: 'rgba(255,255,255,0.42)', btnBg: 'rgba(94,71,21,0.10)', label: 'Xuất sắc ★' },
 } as const;
 
-function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject, sessions }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; className?: string; subject?: string; sessions?: any[] }) {
+function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete, className, subject, sessions }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; onUpdate?: (id: string, body: { name?: string; parent_name?: string; parent_phone?: string; note?: string }) => Promise<void>; onDelete?: (id: string) => Promise<void>; className?: string; subject?: string; sessions?: any[] }) {
   const insets = useSafeAreaInsets();
 
   // Lịch sử điểm danh thật của em này (từ các buổi đã điểm danh).
@@ -152,6 +152,60 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
       setSavingFee(false);
     }
   };
+  // ── Sửa thông tin học sinh (tài khoản thật) ──
+  const [showEdit, setShowEdit] = useState(false);
+  const [editName, setEditName] = useState(student.name);
+  const [editParentName, setEditParentName] = useState((student as any).parent_name ?? '');
+  const [editPhone, setEditPhone] = useState(student.parent_phone ?? '');
+  const [editNote, setEditNote] = useState(student.feeNote ?? '');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = () => {
+    setEditName(student.name);
+    setEditParentName((student as any).parent_name ?? '');
+    setEditPhone(student.parent_phone ?? '');
+    setEditNote(student.feeNote ?? '');
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if (!onUpdate || !editName.trim()) return;
+    setSavingEdit(true);
+    try {
+      await onUpdate(student.id, {
+        name: editName.trim(),
+        parent_name: editParentName.trim(),
+        parent_phone: editPhone.trim(),
+        note: editNote.trim(),
+      });
+      setShowEdit(false);
+    } catch {
+      Alert.alert('Chưa lưu được', 'Kiểm tra mạng và thử lại.');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (!onDelete) return;
+    Alert.alert(
+      'Xoá học sinh',
+      `Xoá ${student.name} khỏi lớp? Dữ liệu điểm danh/học phí của em cũng sẽ mất.`,
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Xoá',
+          style: 'destructive',
+          onPress: () => {
+            Promise.resolve(onDelete(student.id)).catch(() =>
+              Alert.alert('Chưa xoá được', 'Kiểm tra mạng và thử lại.')
+            );
+          },
+        },
+      ],
+    );
+  };
+
   const isRisk = isDemo && student.status === 'risk';
   const firstName = student.name.trim().split(/\s+/).pop() || student.name;
 
@@ -182,6 +236,11 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
           <TouchableOpacity style={[pp.backBtn, { backgroundColor: hero.chipBg }]} onPress={onClose}>
             <View style={{ transform: [{ rotate: '180deg' }] }}><IconChevron size={18} color={hero.fg} /></View>
           </TouchableOpacity>
+          {!isDemo && onUpdate && (
+            <TouchableOpacity style={[pp.editBtn, { backgroundColor: hero.chipBg }]} onPress={openEdit}>
+              <IconEdit size={18} color={hero.fg} />
+            </TouchableOpacity>
+          )}
 
           <View style={{ alignItems: 'center' }}>
             <View>
@@ -282,6 +341,13 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
               <View style={pp.noteCard}>
                 <Text style={pp.noteEmpty}>Chưa có ghi chú. Thêm ghi chú để nhớ thông tin về em.</Text>
               </View>
+            )}
+
+            {!isDemo && onDelete && (
+              <TouchableOpacity style={pp.deleteRow} onPress={confirmDelete} activeOpacity={0.8}>
+                <IconTrash size={18} color={colors.coral700} />
+                <Text style={pp.deleteText}>Xoá học sinh</Text>
+              </TouchableOpacity>
             )}
           </View>
         )}
@@ -406,6 +472,52 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, className, subject
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Edit student modal (real accounts only) */}
+      <Modal visible={showEdit} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowEdit(false)}>
+        <View style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Sửa thông tin</Text>
+            <TouchableOpacity onPress={() => setShowEdit(false)}>
+              <Text style={s.modalClose}>Huỷ</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={s.fieldLabel}>Tên học sinh *</Text>
+            <TextInput
+              style={s.input} placeholder="VD: Nguyễn Minh An"
+              placeholderTextColor={colors.textMuted}
+              value={editName} onChangeText={setEditName}
+            />
+            <Text style={s.fieldLabel}>Tên phụ huynh</Text>
+            <TextInput
+              style={s.input} placeholder="VD: Chị Hương (mẹ An)"
+              placeholderTextColor={colors.textMuted}
+              value={editParentName} onChangeText={setEditParentName}
+            />
+            <Text style={s.fieldLabel}>SĐT phụ huynh (Zalo)</Text>
+            <TextInput
+              style={s.input} placeholder="VD: 0901 234 567"
+              placeholderTextColor={colors.textMuted}
+              value={editPhone} onChangeText={setEditPhone} keyboardType="phone-pad"
+            />
+            <Text style={s.fieldLabel}>Ghi chú</Text>
+            <TextInput
+              style={[s.input, { height: 72, textAlignVertical: 'top' }]} placeholder="VD: Học sinh cũ, ưu tiên chỗ ngồi gần bảng..."
+              placeholderTextColor={colors.textMuted}
+              value={editNote} onChangeText={setEditNote} multiline
+            />
+            <TouchableOpacity
+              style={[s.saveBtn, (!editName.trim() || savingEdit) && { opacity: 0.5 }]}
+              onPress={saveEdit} disabled={!editName.trim() || savingEdit}
+            >
+              {savingEdit
+                ? <ActivityIndicator color="white" />
+                : <Text style={s.saveBtnText}>Lưu thay đổi</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </Modal>
+
       {showZalo && (
         <ZaloCopySheet
           title={`Nhắn Zalo · ${student.name}`}
@@ -436,6 +548,16 @@ const pp = StyleSheet.create({
     position: 'absolute', top: 16, left: 16, zIndex: 2,
     width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
   },
+  editBtn: {
+    position: 'absolute', top: 16, right: 16, zIndex: 2,
+    width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+  },
+  deleteRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 24, paddingVertical: 14, borderRadius: 14,
+    borderWidth: 1, borderColor: colors.coral100, backgroundColor: colors.coral50,
+  },
+  deleteText: { fontSize: 14, fontWeight: '700', color: colors.coral700 },
   name: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, marginTop: 12, textAlign: 'center' },
   sub: { fontSize: 13, fontWeight: '600', marginTop: 3, textAlign: 'center' },
   statusChip: { marginTop: 10, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
@@ -493,7 +615,7 @@ const fe = StyleSheet.create({
 export function ClassStudentsScreen({ route, navigation }: any) {
   const { classId, className } = route.params;
   const openStudentId: string | undefined = route.params?.openStudentId;
-  const { classes, students, fetchStudents, addStudent, setStudentFee } = useClassesStore();
+  const { classes, students, fetchStudents, addStudent, setStudentFee, updateStudent, removeStudent } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
 
   const klass = classes.find(c => c.id === classId);
@@ -526,6 +648,26 @@ export function ClassStudentsScreen({ route, navigation }: any) {
       note: note || undefined,
     });
     await fetchStudents(classId);
+  };
+
+  // Sửa thông tin học sinh → cập nhật rồi refresh danh sách + hồ sơ đang mở.
+  const handleUpdateStudent = async (
+    studentId: string,
+    body: { name?: string; parent_name?: string; parent_phone?: string; note?: string },
+  ) => {
+    await updateStudent(classId, studentId, body);
+    await fetchStudents(classId);
+    setProfileStu(prev =>
+      prev && prev.id === studentId
+        ? { ...prev, name: body.name ?? prev.name, parent_phone: body.parent_phone ?? prev.parent_phone, feeNote: body.note ?? prev.feeNote }
+        : prev,
+    );
+  };
+
+  // Xoá học sinh khỏi lớp → đóng hồ sơ.
+  const handleDeleteStudent = async (studentId: string) => {
+    await removeStudent(classId, studentId);
+    setProfileStu(null);
   };
 
   const [profileStu, setProfileStu] = useState<StuItem | null>(null);
@@ -588,7 +730,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   };
 
   if (profileStu) {
-    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => setProfileStu(null)} onSetFee={handleSetFee} className={className} subject={klass?.subject} sessions={sessions} />;
+    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => setProfileStu(null)} onSetFee={handleSetFee} onUpdate={isDemo ? undefined : handleUpdateStudent} onDelete={isDemo ? undefined : handleDeleteStudent} className={className} subject={klass?.subject} sessions={sessions} />;
   }
 
   if (loading) {

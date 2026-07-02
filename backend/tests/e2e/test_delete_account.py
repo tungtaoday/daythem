@@ -36,3 +36,19 @@ def test_change_password_flow(client):
     # old password no longer works, new one does
     assert client.post("/api/v1/auth/login", json={"phone": "0911111222", "password": "oldpass1"}).status_code == 401
     assert client.post("/api/v1/auth/login", json={"phone": "0911111222", "password": "newpass1"}).status_code == 200
+
+
+def test_reset_password_flow(client):
+    phone = "0922333444"
+    # create account with a password
+    client.post("/api/v1/auth/login", json={"phone": phone, "password": "orig123"})
+    # request OTP (dev mode echoes code)
+    otp = client.post("/api/v1/auth/request-otp", json={"phone": phone}).json()
+    code = otp.get("dev_code", "123456")
+    # wrong code → 400
+    assert client.post("/api/v1/auth/reset-password", json={"phone": phone, "code": "000000", "new_password": "newpw123"}).status_code == 400
+    # correct code → ok
+    assert client.post("/api/v1/auth/reset-password", json={"phone": phone, "code": code, "new_password": "newpw123"}).json() == {"ok": True}
+    # old password fails, new works
+    assert client.post("/api/v1/auth/login", json={"phone": phone, "password": "orig123"}).status_code == 401
+    assert client.post("/api/v1/auth/login", json={"phone": phone, "password": "newpw123"}).status_code == 200

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput, Alert, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
@@ -156,7 +156,6 @@ export function ProfileScreen({ navigation }: any) {
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(teacher?.name || '');
-  const [editPhone, setEditPhone] = useState(teacher?.phone || '');
   const [editEmail, setEditEmail] = useState('');
   const [editGender, setEditGender] = useState<Gender>(teacher?.gender ?? 'co');
   const [saving, setSaving] = useState(false);
@@ -191,7 +190,6 @@ export function ProfileScreen({ navigation }: any) {
 
   const handleEdit = () => {
     setEditName(teacher?.name || '');
-    setEditPhone(teacher?.phone || '');
     setEditGender(teacher?.gender ?? 'co');
     setEditing(true);
   };
@@ -328,18 +326,11 @@ export function ProfileScreen({ navigation }: any) {
               : <Text style={s.rowValue}>{gender === 'co' ? 'Cô giáo' : 'Thầy giáo'}</Text>}
           </View>
           <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
-            <Text style={s.rowLabel}>Số điện thoại</Text>
-            {editing
-              ? <TextInput
-                  style={s.inlineInput}
-                  value={editPhone}
-                  onChangeText={setEditPhone}
-                  keyboardType="phone-pad"
-                  placeholder="091 234 5678"
-                  placeholderTextColor={colors.textMuted}
-                  textAlign="right"
-                />
-              : <Text style={[s.rowValue, !(teacher?.phone || editPhone) && { color: colors.textMuted }]}>{teacher?.phone || editPhone || 'Chưa thiết lập'}</Text>}
+            <View style={{ flex: 1 }}>
+              <Text style={s.rowLabel}>Số điện thoại</Text>
+              <Text style={s.rowSub}>SĐT là tên đăng nhập, không đổi được ở đây.</Text>
+            </View>
+            <Text style={[s.rowValue, !teacher?.phone && { color: colors.textMuted }]}>{teacher?.phone || 'Chưa thiết lập'}</Text>
           </View>
           <View style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
             <Text style={s.rowLabel}>Email</Text>
@@ -445,7 +436,14 @@ export function ProfileScreen({ navigation }: any) {
             <Text style={s.rowLabel}>Phiên bản</Text>
             <Text style={s.rowValue}>1.0.0 · Beta</Text>
           </View>
-          <TouchableOpacity style={s.row} onPress={() => Alert.alert('Liên hệ', 'Email: support@gieochu.vn')}>
+          <TouchableOpacity
+            style={s.row}
+            onPress={() =>
+              Linking.openURL('mailto:support@gieochu.vn').catch(() =>
+                Alert.alert('Liên hệ', 'Email: support@gieochu.vn'),
+              )
+            }
+          >
             <Text style={s.rowLabel}>Liên hệ hỗ trợ</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
@@ -454,7 +452,7 @@ export function ProfileScreen({ navigation }: any) {
         {/* KHÁC */}
         <SectionHeader>KHÁC</SectionHeader>
         <View style={s.card}>
-          <TouchableOpacity style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]} onPress={() => Alert.alert('Điều khoản', 'Tính năng đang phát triển.')}>
+          <TouchableOpacity style={[s.row, { borderBottomWidth: 1, borderBottomColor: colors.border }]} onPress={() => navigation.navigate('Legal')}>
             <Text style={s.rowLabel}>Điều khoản & bảo mật</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>

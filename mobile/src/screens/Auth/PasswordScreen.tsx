@@ -87,7 +87,9 @@ export function PasswordScreen({ route, navigation }: any) {
             ? <ActivityIndicator color="white" />
             : <Text style={s.btnText}>Đăng nhập</Text>}
         </TouchableOpacity>
-        <Text style={s.forgotText}>Quên mật khẩu? Liên hệ hỗ trợ: support@gieochu.vn</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { phone })}>
+          <Text style={s.forgotText}>Quên mật khẩu?</Text>
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );

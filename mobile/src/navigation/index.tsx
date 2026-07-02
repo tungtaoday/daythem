@@ -10,7 +10,9 @@ import { IconHome, IconBook, IconUsers, IconWallet, IconChart } from '../compone
 // Auth screens
 import { WelcomeScreen } from '../screens/Auth/WelcomeScreen';
 import { PasswordScreen } from '../screens/Auth/PasswordScreen';
+import { ForgotPasswordScreen } from '../screens/Auth/ForgotPasswordScreen';
 import { SetupScreen } from '../screens/Auth/SetupScreen';
+import { LegalScreen } from '../screens/Legal/LegalScreen';
 
 // Tab screens
 import { HomeScreen } from '../screens/Home/HomeScreen';
@@ -133,6 +135,7 @@ export function AppNavigator() {
           <>
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
             <Stack.Screen name="Password" component={PasswordScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </>
         ) : needsSetup ? (
           <Stack.Screen name="Setup" component={SetupScreen} />
@@ -186,6 +189,11 @@ export function AppNavigator() {
               name="ArchivedClasses"
               component={ArchivedClassesScreen}
               options={{ headerShown: true, title: 'Lớp đã lưu trữ', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
+            />
+            <Stack.Screen
+              name="Legal"
+              component={LegalScreen}
+              options={{ headerShown: true, title: 'Điều khoản & Bảo mật', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
             />
             <Stack.Screen
               name="ClassSettings"
