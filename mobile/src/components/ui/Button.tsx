@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, View } from 'react-native';
 import { colors, radius, typography, layout } from '../../theme';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger' | 'onHero';
 
 type Props = {
   label: string;
@@ -13,6 +13,7 @@ type Props = {
   /** Icon tuỳ chọn hiển thị trước nhãn. */
   icon?: React.ReactNode;
   style?: ViewStyle;
+  testID?: string;
 };
 
 const VARIANTS: Record<Variant, { bg: string; fg: string; border?: string }> = {
@@ -21,12 +22,14 @@ const VARIANTS: Record<Variant, { bg: string; fg: string; border?: string }> = {
   ghost:     { bg: 'transparent', fg: colors.green600 },
   outline:   { bg: 'transparent', fg: colors.green700, border: colors.green200 },
   danger:    { bg: colors.coral500, fg: '#ffffff' },
+  onHero:    { bg: '#ffffff', fg: colors.green700 },  // nút trắng trên nền hero màu
 };
 
-export function Button({ label, onPress, variant = 'primary', loading, disabled, icon, style }: Props) {
+export function Button({ label, onPress, variant = 'primary', loading, disabled, icon, style, testID }: Props) {
   const v = VARIANTS[variant];
   return (
     <TouchableOpacity
+      testID={testID}
       onPress={onPress}
       disabled={disabled || loading}
       style={[
