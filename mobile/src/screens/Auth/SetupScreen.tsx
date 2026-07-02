@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
+import { BackButton } from '../../components/ui/BackButton';
 import { useAuthStore, Gender } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 
@@ -212,9 +213,11 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
 
   return (
     <View style={{ flex: 1 }}>
-      <TouchableOpacity onPress={onBack} style={s.backBtn}>
-        <Text style={s.backBtnText}>←</Text>
-      </TouchableOpacity>
+      <BackButton
+        variant="boxed"
+        onPress={onBack}
+        style={{ marginLeft: spacing.lg, marginTop: spacing.sm, marginBottom: 4 }}
+      />
 
       <ScrollView
         style={{ flex: 1 }}
@@ -418,9 +421,6 @@ const s = StyleSheet.create({
   dayBtnActive: { borderColor: colors.green500, backgroundColor: colors.green500 },
   dayBtnText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
   dayBtnTextActive: { color: 'white' },
-
-  backBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', marginLeft: spacing.lg, marginTop: spacing.sm, marginBottom: 4 },
-  backBtnText: { fontSize: 18, color: colors.textPrimary },
 
   footer: { padding: spacing.lg, paddingBottom: 40 },
   btn: { height: 56, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },

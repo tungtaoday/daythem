@@ -78,9 +78,9 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
     cardStyle.push(cc.cardHighlighted, { backgroundColor: colors.green500 } as any);
   }
 
-  const labelColor = highlighted ? 'rgba(255,255,255,0.8)' : '#888';
-  const titleColor = highlighted ? 'white' : '#1a1a1a';
-  const metaColor = highlighted ? 'rgba(255,255,255,0.8)' : '#888';
+  const labelColor = highlighted ? 'rgba(255,255,255,0.8)' : colors.textSecondary;
+  const titleColor = highlighted ? 'white' : colors.textPrimary;
+  const metaColor = highlighted ? 'rgba(255,255,255,0.8)' : colors.textSecondary;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
@@ -126,14 +126,14 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
               <Text style={[cc.progressLabel, { color: highlighted ? 'rgba(255,255,255,0.9)' : '#444' }]}>
                 Đã thu {paidCount}/{totalCount}
               </Text>
-              <Text style={[cc.progressLabel, { color: highlighted ? 'rgba(255,255,255,0.75)' : '#888' }]}>
+              <Text style={[cc.progressLabel, { color: highlighted ? 'rgba(255,255,255,0.75)' : colors.textSecondary }]}>
                 {totalDue > 0 ? `Còn ${totalDue} chưa nộp` : 'Đủ rồi 🎉'}
               </Text>
             </View>
-            <View style={[cc.progressBg, { backgroundColor: highlighted ? 'rgba(255,255,255,0.2)' : '#eeece6' }]}>
+            <View style={[cc.progressBg, { backgroundColor: highlighted ? 'rgba(255,255,255,0.2)' : colors.border }]}>
               <View style={[cc.progressFill, {
                 width: `${paidRatio * 100}%` as any,
-                backgroundColor: highlighted ? 'white' : '#4a9e72',
+                backgroundColor: highlighted ? 'white' : colors.green500,
               }]} />
             </View>
           </View>
@@ -145,10 +145,10 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
             <AvatarStack
               names={studentNames}
               maxVisible={5}
-              ringColor={highlighted ? '#3d8760' : 'white'}
+              ringColor={highlighted ? colors.green600 : 'white'}
             />
           ) : (
-            <Text style={[cc.countText, { color: highlighted ? 'rgba(255,255,255,0.85)' : '#888' }]}>
+            <Text style={[cc.countText, { color: highlighted ? 'rgba(255,255,255,0.85)' : colors.textSecondary }]}>
               {klass.student_count} học sinh
             </Text>
           )}
@@ -168,7 +168,7 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
 }
 
 const cc = StyleSheet.create({
-  card: { backgroundColor: 'white', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: '#eeece6', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, overflow: 'hidden', position: 'relative' },
+  card: { backgroundColor: colors.surface, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3, overflow: 'hidden', position: 'relative' },
   cardHighlighted: { borderWidth: 0, shadowColor: '#4a9e72', shadowOpacity: 0.25, shadowRadius: 20, elevation: 8 },
   blob1: { position: 'absolute', top: -40, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.08)' },
   blob2: { position: 'absolute', bottom: -50, right: -50, width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(255,255,255,0.06)' },
@@ -182,9 +182,9 @@ const cc = StyleSheet.create({
 
   badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, alignSelf: 'flex-start', flexShrink: 0 },
   badgeHoney: { backgroundColor: 'rgba(255,255,255,0.9)' },
-  badgeGray: { backgroundColor: '#eeece6' },
+  badgeGray: { backgroundColor: colors.border },
   badgeText: { fontSize: 12, fontWeight: '600' },
-  badgeTextHoney: { color: '#7a5c00' },
+  badgeTextHoney: { color: colors.honey700 },
   badgeTextGray: { color: '#666' },
 
   progressWrap: { marginBottom: 14 },
@@ -197,10 +197,10 @@ const cc = StyleSheet.create({
   countText: { fontSize: 13 },
   btn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
   btnLight: { backgroundColor: 'white' },
-  btnGreen: { backgroundColor: '#f0faf4' },
+  btnGreen: { backgroundColor: colors.green50 },
   btnText: { fontSize: 14, fontWeight: '600' },
-  btnTextLight: { color: '#3d8760' },
-  btnTextGreen: { color: '#3d8760' },
+  btnTextLight: { color: colors.green600 },
+  btnTextGreen: { color: colors.green600 },
 });
 
 // ── ActivityRow ───────────────────────────────────────────────
@@ -221,10 +221,10 @@ function ActivityRow({ iconBg, iconColor, Icon, title, time, last }: any) {
 
 const ar = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
-  divider: { borderBottomWidth: 1, borderBottomColor: '#f0ede6' },
+  divider: { borderBottomWidth: 1, borderBottomColor: colors.border },
   iconWrap: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  title: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  time: { fontSize: 12, color: '#888', marginTop: 1 },
+  title: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  time: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
 });
 
 // ── HeroCard: BUỔI TỚI GẦN NHẤT ───────────────────────────────
@@ -301,7 +301,7 @@ const hc = StyleSheet.create({
   bottom: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
   countText: { fontSize: 13, color: 'rgba(255,255,255,0.85)' },
   btn: { backgroundColor: 'white', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
-  btnText: { fontSize: 14, fontWeight: '800', color: '#2f6849' },
+  btnText: { fontSize: 14, fontWeight: '800', color: colors.green700 },
 });
 
 // ── ClassesScreen (HomeB) ─────────────────────────────────────
@@ -375,7 +375,7 @@ export function ClassesScreen({ navigation }: any) {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={s.list}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor="#4a9e72" />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor={colors.green500} />}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero: buổi tới gần nhất ── */}
@@ -391,13 +391,13 @@ export function ClassesScreen({ navigation }: any) {
         {/* ── Quick stats strip ── */}
         {classes.length > 0 && (
           <View style={s.statStrip}>
-            <View style={[s.statPill, { backgroundColor: '#f0faf4' }]}>
-              <Text style={[s.statPillLabel, { color: '#3d8760' }]}>HÔM NAY</Text>
+            <View style={[s.statPill, { backgroundColor: colors.green50 }]}>
+              <Text style={[s.statPillLabel, { color: colors.green600 }]}>HÔM NAY</Text>
               <Text style={[s.statPillVal, { color: '#1a3d2a' }]}>{todayCount} buổi</Text>
             </View>
             <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
-              <Text style={[s.statPillLabel, { color: '#b85a42' }]}>CHƯA NỘP</Text>
-              <Text style={[s.statPillVal, { color: '#b85a42' }]}>{unpaidCount} học sinh</Text>
+              <Text style={[s.statPillLabel, { color: colors.coral700 }]}>CHƯA NỘP</Text>
+              <Text style={[s.statPillVal, { color: colors.coral700 }]}>{unpaidCount} học sinh</Text>
             </View>
             {isDemo && (
               <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
@@ -441,7 +441,7 @@ export function ClassesScreen({ navigation }: any) {
           onPress={() => navigation.navigate('CreateClass')}
           activeOpacity={0.8}
         >
-          <IconPlus size={18} color="#888" />
+          <IconPlus size={18} color={colors.textSecondary} />
           <Text style={s.addBtnText}>Thêm lớp mới</Text>
         </TouchableOpacity>
 
@@ -450,9 +450,9 @@ export function ClassesScreen({ navigation }: any) {
           <>
             <Text style={s.sectionTitle}>Hoạt động gần đây</Text>
             <View style={s.activityCard}>
-              <ActivityRow Icon={IconChevron} iconBg="#d8f3e3" iconColor="#4a9e72" title="Hoàng Tuấn Kiệt đã nộp tiền" time="2 giờ trước" />
-              <ActivityRow Icon={IconChevron} iconBg="#fef5e1" iconColor="#b07a20" title="Gửi Zalo nhắc 3 phụ huynh" time="Hôm qua, 21:14" />
-              <ActivityRow Icon={IconChevron} iconBg="#fff4f0" iconColor="#b85a42" title="Bùi Nam Sơn vắng buổi 18/05" time="2 ngày trước" last />
+              <ActivityRow Icon={IconChevron} iconBg={colors.green100} iconColor={colors.green500} title="Hoàng Tuấn Kiệt đã nộp tiền" time="2 giờ trước" />
+              <ActivityRow Icon={IconChevron} iconBg="#fef5e1" iconColor={colors.honey700} title="Gửi Zalo nhắc 3 phụ huynh" time="Hôm qua, 21:14" />
+              <ActivityRow Icon={IconChevron} iconBg="#fff4f0" iconColor={colors.coral700} title="Bùi Nam Sơn vắng buổi 18/05" time="2 ngày trước" last />
             </View>
           </>
         )}
@@ -470,11 +470,11 @@ export function ClassesScreen({ navigation }: any) {
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#faf8f2' },
+  container: { flex: 1, backgroundColor: colors.bg },
 
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 52, paddingBottom: 12 },
-  headerSub: { fontSize: 12, color: '#888', fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 },
-  headerTitle: { fontSize: 26, fontWeight: '700', color: '#1a1a1a', letterSpacing: -0.5 },
+  headerSub: { fontSize: 12, color: colors.textSecondary, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 },
+  headerTitle: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5 },
 
   list: { paddingHorizontal: 20, gap: 14, paddingBottom: 20 },
 
@@ -485,14 +485,14 @@ const s = StyleSheet.create({
 
   empty: { alignItems: 'center', paddingVertical: 60 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
-  emptyText: { fontSize: 14, color: '#888' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
+  emptyText: { fontSize: 14, color: colors.textSecondary },
 
   addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 18, borderRadius: 22, borderWidth: 1.5, borderColor: '#c8c4bc', borderStyle: 'dashed' },
-  addBtnText: { fontSize: 14, fontWeight: '600', color: '#888' },
+  addBtnText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   archivedLink: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
   archivedLinkText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
 
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 8, marginBottom: 4 },
-  activityCard: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#eeece6', overflow: 'hidden' },
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginTop: 8, marginBottom: 4 },
+  activityCard: { backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
 });

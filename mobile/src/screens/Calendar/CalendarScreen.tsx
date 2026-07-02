@@ -8,6 +8,7 @@ import { useClassesStore } from '../../store/classes';
 import { classColor } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
+import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -100,11 +101,7 @@ export function CalendarScreen({ navigation }: any) {
     <View style={s.container}>
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
-          <View style={{ transform: [{ rotate: '180deg' }] }}>
-            <IconChevron size={20} color={colors.textPrimary} />
-          </View>
-        </TouchableOpacity>
+        <BackButton variant="boxed" onPress={() => navigation.goBack()} />
         <Text style={s.headerTitle}>Lịch dạy</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -279,11 +276,6 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 13,
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
   },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary },
   monthNav: {

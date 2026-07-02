@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { BackButton } from '../../components/ui/BackButton';
 import { useAuthStore, Gender } from '../../store/auth';
 import { changePassword, deleteAccount } from '../../api/auth';
 import { useClassesStore } from '../../store/classes';
@@ -253,11 +254,7 @@ export function ProfileScreen({ navigation }: any) {
     <View style={s.container}>
       {/* Top bar */}
       <View style={[s.topBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
-          <View style={{ transform: [{ rotate: '180deg' }] }}>
-            <IconChevron size={20} color={colors.textPrimary} />
-          </View>
-        </TouchableOpacity>
+        <BackButton variant="boxed" onPress={() => navigation.goBack()} />
         <Text style={s.topTitle}>Tài khoản</Text>
         <TouchableOpacity
           style={s.editBtn}
@@ -484,11 +481,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingTop: 52, paddingBottom: 8,
   },
   topTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 13,
-    backgroundColor: 'white', borderWidth: 1, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
   editBtn: { paddingHorizontal: 12, paddingVertical: 6 },
   editBtnText: { fontSize: 15, fontWeight: '500', color: colors.green600 },
 

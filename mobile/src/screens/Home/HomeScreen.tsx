@@ -86,22 +86,22 @@ function dayPartWord(startTime?: string): string {
 const TONES: Record<string, any> = {
   class: {
     label: 'BUỔI HỌC HÔM NAY',
-    grad: ['#55b083', '#2f6849'] as [string, string], heroBg: '#2f6849',
-    iconBg: '#d8f3e3', iconColor: '#2f6849',
-    btnBg: '#4a9e72', btnColor: 'white',
+    grad: ['#55b083', '#2f6849'] as [string, string], heroBg: colors.green700,
+    iconBg: colors.green100, iconColor: colors.green700,
+    btnBg: colors.green500, btnColor: 'white',
     Icon: IconClock,
   },
   risk: {
     label: 'CẦN QUAN TÂM',
     grad: ['#ec8b73', '#c2593f'] as [string, string], heroBg: '#c2593f',
-    iconBg: '#ffe5da', iconColor: '#b85a42',
-    btnBg: '#e07a5f', btnColor: 'white',
+    iconBg: colors.coral100, iconColor: colors.coral700,
+    btnBg: colors.coral500, btnColor: 'white',
     Icon: IconWarn,
   },
   money: {
     label: 'HỌC PHÍ',
     grad: ['#e9b84d', '#c8902a'] as [string, string], heroBg: '#c8902a',
-    iconBg: '#fef5e1', iconColor: '#b07a20',
+    iconBg: '#fef5e1', iconColor: colors.honey700,
     btnBg: '#c8902a', btnColor: 'white',
     Icon: IconWallet,
   },
@@ -158,7 +158,7 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
             {tone.label}
           </Text>
           {card.meta && (
-            <View style={[nc.metaBadge, { backgroundColor: isPrimary ? 'rgba(255,255,255,0.18)' : '#eeece6' }]}>
+            <View style={[nc.metaBadge, { backgroundColor: isPrimary ? 'rgba(255,255,255,0.18)' : colors.border }]}>
               <Text style={[nc.metaText, { color: isPrimary ? 'white' : '#444' }]}>{card.meta}</Text>
             </View>
           )}
@@ -213,7 +213,7 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
             onPress={() => dismiss('left', onLater)}
             activeOpacity={0.7}
           >
-            <Text style={[nc.btnSecondaryText, { color: isPrimary ? 'white' : '#888' }]}>
+            <Text style={[nc.btnSecondaryText, { color: isPrimary ? 'white' : colors.textSecondary }]}>
               {card.secondary?.label}
             </Text>
           </TouchableOpacity>
@@ -224,7 +224,7 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
 }
 
 const nc = StyleSheet.create({
-  card: { backgroundColor: 'white', borderRadius: 22, padding: 18, borderWidth: 1, borderColor: '#eeece6', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1, overflow: 'hidden', position: 'relative' },
+  card: { backgroundColor: colors.surface, borderRadius: 22, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1, overflow: 'hidden', position: 'relative' },
   cardPrimary: { borderWidth: 0, shadowOpacity: 0.2, shadowRadius: 20, shadowColor: '#3d6849', elevation: 8, padding: 22 },
   blob1: { position: 'absolute', top: -40, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.08)' },
   blob2: { position: 'absolute', bottom: -50, right: -50, width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(255,255,255,0.06)' },
@@ -235,17 +235,17 @@ const nc = StyleSheet.create({
   metaBadge: { marginLeft: 'auto' as any, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
   metaText: { fontSize: 11, fontWeight: '600' },
 
-  title: { fontWeight: '700', letterSpacing: -0.3, lineHeight: 22, marginBottom: 6, color: '#1a1a1a' },
+  title: { fontWeight: '700', letterSpacing: -0.3, lineHeight: 22, marginBottom: 6, color: colors.textPrimary },
   titleLight: { color: 'white' },
-  body: { fontSize: 13.5, color: '#888', lineHeight: 20, marginBottom: 16 },
+  body: { fontSize: 13.5, color: colors.textSecondary, lineHeight: 20, marginBottom: 16 },
   bodyLight: { color: 'rgba(255,255,255,0.88)' },
 
   avatarRow: { flexDirection: 'row', marginBottom: 16 },
   avatarRing: { borderWidth: 2, borderRadius: 16 },
 
   studentRow: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 10, marginBottom: 16 },
-  studentName: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
-  studentSub: { fontSize: 11, color: '#888', marginTop: 1 },
+  studentName: { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  studentSub: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
 
   btnRow: { flexDirection: 'row', gap: 8 },
   btnPrimary: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 13, paddingHorizontal: 16, borderRadius: 14 },
@@ -271,11 +271,11 @@ function EmptyState() {
 }
 
 const es = StyleSheet.create({
-  wrap: { borderRadius: 22, overflow: 'hidden', backgroundColor: '#f0faf4', borderWidth: 1, borderColor: '#aee6c5', padding: 32, alignItems: 'center' } as any,
+  wrap: { borderRadius: 22, overflow: 'hidden', backgroundColor: colors.green50, borderWidth: 1, borderColor: '#aee6c5', padding: 32, alignItems: 'center' } as any,
   inner: { alignItems: 'center' },
-  icon: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#4a9e72', alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: '#4a9e72', shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
+  icon: { width: 80, height: 80, borderRadius: 24, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center', marginBottom: 20, shadowColor: '#4a9e72', shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   title: { fontSize: 22, fontWeight: '700', color: '#1a3d2a', letterSpacing: -0.4, marginBottom: 8 },
-  sub: { fontSize: 15, color: '#3d8760', textAlign: 'center', lineHeight: 22 },
+  sub: { fontSize: 15, color: colors.green600, textAlign: 'center', lineHeight: 22 },
 });
 
 // ── Warm "no class today" card ─────────────────────────────────
@@ -359,20 +359,20 @@ function GettingStarted({ hasClass, hasStudents, firstClass, navigation }: any) 
 }
 
 const gs = StyleSheet.create({
-  card: { borderRadius: 22, backgroundColor: 'white', borderWidth: 1, borderColor: '#eeece6', padding: 22 },
+  card: { borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, padding: 22 },
   emoji: { fontSize: 36, marginBottom: 8 },
-  title: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', letterSpacing: -0.3, marginBottom: 4 },
-  sub: { fontSize: 14, color: '#888', lineHeight: 20, marginBottom: 18 },
+  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3, marginBottom: 4 },
+  sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 18 },
   steps: { gap: 14, marginBottom: 20 },
   step: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   bullet: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#f0eee8', alignItems: 'center', justifyContent: 'center' },
-  bulletActive: { backgroundColor: '#4a9e72' },
-  bulletDone: { backgroundColor: '#4a9e72' },
-  bulletNum: { fontSize: 14, fontWeight: '700', color: '#9e9e9e' },
-  stepLabel: { fontSize: 15, fontWeight: '600', color: '#1a1a1a' },
-  stepLabelDone: { color: '#9e9e9e', textDecorationLine: 'line-through' },
-  stepSub: { fontSize: 12.5, color: '#999', marginTop: 1 },
-  cta: { backgroundColor: '#4a9e72', borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  bulletActive: { backgroundColor: colors.green500 },
+  bulletDone: { backgroundColor: colors.green500 },
+  bulletNum: { fontSize: 14, fontWeight: '700', color: colors.textMuted },
+  stepLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
+  stepLabelDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
+  stepSub: { fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  cta: { backgroundColor: colors.green500, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
   ctaText: { color: 'white', fontSize: 15, fontWeight: '700' },
 });
 
@@ -495,7 +495,7 @@ export function HomeScreen({ navigation }: any) {
         style={{ flex: 1 }}
         contentContainerStyle={[s.scroll, { paddingTop: insets.top + 12 }]}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor="#4a9e72" />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchClasses} tintColor={colors.green500} />}
       >
         {/* ── Greeting ── */}
         <View style={s.greetRow}>
@@ -527,7 +527,7 @@ export function HomeScreen({ navigation }: any) {
         {/* ── Feed / Getting started ── */}
         <View style={s.feed}>
           {initialLoading
-            ? <ActivityIndicator color="#4a9e72" size="large" style={{ marginTop: 40 }} />
+            ? <ActivityIndicator color={colors.green500} size="large" style={{ marginTop: 40 }} />
             : needsSetup
               ? <GettingStarted hasClass={hasClass} hasStudents={hasStudents} firstClass={classes[0]} navigation={navigation} />
               : cards.length > 0
@@ -567,21 +567,21 @@ export function HomeScreen({ navigation }: any) {
 
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#faf8f2' },
+  container: { flex: 1, backgroundColor: colors.bg },
   scroll: { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 20 },
 
   // Greeting
   greetRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
-  greetDate: { fontSize: 12, color: '#888', fontWeight: '600' },
-  calBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: 'white', borderWidth: 1, borderColor: '#e8e4da', alignItems: 'center', justifyContent: 'center' },
-  greetTitle: { fontSize: 26, fontWeight: '700', color: '#1a1a1a', letterSpacing: -0.5, lineHeight: 30, marginBottom: 4 },
-  greetSub: { fontSize: 15, color: '#888', lineHeight: 22, marginBottom: 22 },
+  greetDate: { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
+  calBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.surface, borderWidth: 1, borderColor: '#e8e4da', alignItems: 'center', justifyContent: 'center' },
+  greetTitle: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5, lineHeight: 30, marginBottom: 4 },
+  greetSub: { fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 22 },
 
   // Feed
   feed: { gap: 12 },
   feedHeader: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5, color: colors.textSecondary, marginBottom: 2 },
 
   // Progress
-  progress: { marginTop: 18, backgroundColor: '#f0faf4', borderRadius: 16, padding: 14 },
-  progressText: { fontSize: 13, color: '#2f6849', lineHeight: 20 },
+  progress: { marginTop: 18, backgroundColor: colors.green50, borderRadius: 16, padding: 14 },
+  progressText: { fontSize: 13, color: colors.green700, lineHeight: 20 },
 });

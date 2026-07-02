@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
+import { BackButton } from '../../components/ui/BackButton';
 import { useAuthStore } from '../../store/auth';
 
 type Phase = 'welcome' | 'phone';
@@ -38,9 +39,11 @@ export function WelcomeScreen({ navigation }: any) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={s.container}
       >
-        <TouchableOpacity onPress={() => setPhase('welcome')} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={20} color={colors.textPrimary} />
-        </TouchableOpacity>
+        <BackButton
+          variant="boxed"
+          onPress={() => setPhase('welcome')}
+          style={{ margin: spacing.lg, marginTop: 56 }}
+        />
 
         <View style={s.phoneContent}>
           <Text style={s.phoneTitle}>Số điện thoại của bạn</Text>
@@ -270,7 +273,6 @@ const s = StyleSheet.create({
   overlayTitle: { fontSize: 16, fontWeight: '600', color: colors.textPrimary, marginBottom: 6 },
   overlaySub: { fontSize: 13, color: colors.textSecondary },
 
-  backBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignItems: 'center', justifyContent: 'center', margin: spacing.lg, marginTop: 56 },
   phoneContent: { flex: 1, paddingHorizontal: spacing.lg },
   phoneTitle: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, lineHeight: 30, marginBottom: 8 },
   phoneSub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 28 },

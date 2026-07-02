@@ -6,6 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
+import { BackButton } from '../../components/ui/BackButton';
 import { useAuthStore } from '../../store/auth';
 
 export function PasswordScreen({ route, navigation }: any) {
@@ -33,9 +34,11 @@ export function PasswordScreen({ route, navigation }: any) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={s.container}
     >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
-        <Text style={s.backBtnText}>←</Text>
-      </TouchableOpacity>
+      <BackButton
+        variant="boxed"
+        onPress={() => navigation.goBack()}
+        style={{ margin: spacing.lg, marginTop: insets.top + 8 }}
+      />
 
       <View style={s.content}>
         <Text style={s.title}>Mật khẩu cho số này</Text>
@@ -97,14 +100,6 @@ export function PasswordScreen({ route, navigation }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-
-  backBtn: {
-    width: 40, height: 40, borderRadius: 12, borderWidth: 1,
-    borderColor: colors.border, backgroundColor: 'white',
-    alignItems: 'center', justifyContent: 'center',
-    margin: spacing.lg, marginTop: 56,
-  },
-  backBtnText: { fontSize: 18, color: colors.textPrimary },
 
   content: { flex: 1, paddingHorizontal: spacing.lg },
   title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, lineHeight: 30, marginBottom: 8 },
