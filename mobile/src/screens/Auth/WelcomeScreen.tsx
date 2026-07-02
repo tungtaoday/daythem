@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { BackButton } from '../../components/ui/BackButton';
+import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth';
 
 type Phase = 'welcome' | 'phone';
@@ -75,13 +76,7 @@ export function WelcomeScreen({ navigation }: any) {
         </View>
 
         <View style={[s.phoneFooter, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
-          <TouchableOpacity
-            style={[s.btnPrimary, s.btnRow, !phoneValid && s.btnDisabled]}
-            onPress={handlePhoneNext}
-            disabled={!phoneValid}
-          >
-            <Text style={s.btnPrimaryText}>Tiếp tục</Text>
-          </TouchableOpacity>
+          <Button label="Tiếp tục" onPress={handlePhoneNext} disabled={!phoneValid} />
         </View>
       </KeyboardAvoidingView>
     );
@@ -259,7 +254,6 @@ const s = StyleSheet.create({
   btnOutlineText: { fontSize: 14, fontWeight: '500', color: colors.textSecondary },
   btnPrimaryWelcome: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500 },
   btnPrimaryWelcomeText: { fontSize: 15, fontWeight: '600', color: 'white' },
-  btnDisabled: { opacity: 0.5 },
 
   divider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 2 },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
@@ -283,6 +277,4 @@ const s = StyleSheet.create({
   phoneInputError: { borderColor: colors.coral500 },
   phoneError: { fontSize: 12, color: colors.coral700, marginTop: 6 },
   phoneFooter: { padding: spacing.lg, paddingBottom: 32 },
-  btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  btnPrimaryText: { color: 'white', fontSize: 15, fontWeight: '600' },
 });

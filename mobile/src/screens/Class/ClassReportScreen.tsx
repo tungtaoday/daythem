@@ -7,6 +7,7 @@ import { classColor } from '../../theme/classColors';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { Button } from '../../components/ui/Button';
 import { IconZalo, IconStar, IconWarn, IconBook } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
@@ -266,10 +267,7 @@ export function ClassReportScreen({ route }: any) {
       {/* Bottom send button */}
       {!sending && (
         <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32), backgroundImage: 'linear-gradient(to top, #faf8f2 60%, transparent)' } as any]}>
-          <TouchableOpacity style={s.sendBtn} onPress={() => setShowZalo(true)}>
-            <IconZalo size={20} color="white" />
-            <Text style={s.sendBtnText}>Gửi báo cáo cho {totalCount} phụ huynh</Text>
-          </TouchableOpacity>
+          <Button label={`Gửi báo cáo cho ${totalCount} phụ huynh`} onPress={() => setShowZalo(true)} icon={<IconZalo size={16} color="#fff" />} />
         </View>
       )}
 
@@ -332,6 +330,4 @@ const s = StyleSheet.create({
   previewNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
 
   bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.bg },
-  sendBtn: { height: 56, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  sendBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });

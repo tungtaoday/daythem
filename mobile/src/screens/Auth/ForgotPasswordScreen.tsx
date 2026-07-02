@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
+import { Button } from '../../components/ui/Button';
 import { requestOtp, resetPassword } from '../../api/auth';
 
 export function ForgotPasswordScreen({ route, navigation }: any) {
@@ -171,25 +172,19 @@ export function ForgotPasswordScreen({ route, navigation }: any) {
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
         {step === 'phone' ? (
-          <TouchableOpacity
-            style={[s.btnPrimary, (!phoneValid || loading) && s.btnDisabled]}
+          <Button
+            label="Gửi mã xác thực"
             onPress={handleRequestOtp}
+            loading={loading}
             disabled={!phoneValid || loading}
-          >
-            {loading
-              ? <ActivityIndicator color="white" />
-              : <Text style={s.btnText}>Gửi mã xác thực</Text>}
-          </TouchableOpacity>
+          />
         ) : (
-          <TouchableOpacity
-            style={[s.btnPrimary, (!resetValid || loading) && s.btnDisabled]}
+          <Button
+            label="Đặt lại mật khẩu"
             onPress={handleReset}
+            loading={loading}
             disabled={!resetValid || loading}
-          >
-            {loading
-              ? <ActivityIndicator color="white" />
-              : <Text style={s.btnText}>Đặt lại mật khẩu</Text>}
-          </TouchableOpacity>
+          />
         )}
       </View>
     </KeyboardAvoidingView>
@@ -232,7 +227,4 @@ const s = StyleSheet.create({
   errText: { fontSize: 13, color: colors.coral700, marginTop: -8, marginBottom: 8 },
 
   footer: { padding: spacing.lg, gap: 14 },
-  btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  btnDisabled: { opacity: 0.5 },
 });

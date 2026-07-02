@@ -9,6 +9,7 @@ import { colors, spacing, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { Button } from '../../components/ui/Button';
 import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { recordAttendance, listSessions } from '../../api/attendance';
@@ -313,9 +314,7 @@ export function AttendanceScreen({ route, navigation }: any) {
 
       {/* Bottom bar */}
       <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
-        <TouchableOpacity style={s.btnPrimary} onPress={handleSave}>
-          <Text style={s.btnPrimaryText}>Hoàn tất điểm danh</Text>
-        </TouchableOpacity>
+        <Button label="Hoàn tất điểm danh" onPress={handleSave} />
       </View>
 
       {/* Note modal */}

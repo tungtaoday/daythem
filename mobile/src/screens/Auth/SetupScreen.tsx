@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { BackButton } from '../../components/ui/BackButton';
+import { Button } from '../../components/ui/Button';
 import { useAuthStore, Gender } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 
@@ -198,9 +199,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
-        <TouchableOpacity style={[s.btn, !valid && s.btnDisabled]} onPress={onNext} disabled={!valid}>
-          <Text style={s.btnText}>Tiếp tục</Text>
-        </TouchableOpacity>
+        <Button label="Tiếp tục" onPress={onNext} disabled={!valid} />
       </View>
     </KeyboardAvoidingView>
   );
@@ -320,13 +319,11 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
       </ScrollView>
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
-        <TouchableOpacity
-          style={[s.btn, (!className.trim() || days.length === 0) && s.btnDisabled]}
+        <Button
+          label="Tạo lớp"
           onPress={onNext}
           disabled={!className.trim() || days.length === 0}
-        >
-          <Text style={s.btnText}>Tạo lớp</Text>
-        </TouchableOpacity>
+        />
       </View>
     </View>
   );
@@ -366,11 +363,7 @@ function DoneStep({ name, gender, className, fee, days, time, place, isLoading, 
         </View>
       </View>
 
-      <TouchableOpacity style={s.btn} onPress={onEnter} disabled={isLoading}>
-        {isLoading
-          ? <ActivityIndicator color="white" />
-          : <Text style={s.btnText}>Vào app 🌿</Text>}
-      </TouchableOpacity>
+      <Button label="Vào app 🌿" onPress={onEnter} loading={isLoading} disabled={isLoading} />
     </View>
   );
 }
@@ -428,9 +421,6 @@ const s = StyleSheet.create({
   dayBtnTextActive: { color: 'white' },
 
   footer: { padding: spacing.lg, paddingBottom: 40 },
-  btn: { height: 56, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  btnDisabled: { opacity: 0.45 },
 
   doneWrap: { flex: 1, padding: spacing.lg, alignItems: 'center', justifyContent: 'center' },
   doneIcon: {

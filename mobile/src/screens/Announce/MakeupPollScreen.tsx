@@ -8,6 +8,7 @@ import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { Button } from '../../components/ui/Button';
 import { IconSend, IconSparkle, IconX, IconPlus } from '../../components/icons';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { confirmMakeup, getMakeupPoll } from '../../api/announcements';
@@ -358,16 +359,12 @@ export function MakeupPollScreen({ route, navigation }: any) {
       </ScrollView>
 
       <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
-        <TouchableOpacity
-          style={[s.btnPrimary, slots.length === 0 && { opacity: 0.4 }]}
-          disabled={slots.length === 0}
+        <Button
+          label={isDemo ? 'Gửi poll lên nhóm Zalo' : 'Soạn tin gửi nhóm Zalo'}
           onPress={() => { if (isDemo) setStep('live'); else setShowZalo(true); }}
-        >
-          <IconSend size={20} color="white" />
-          <Text style={s.btnPrimaryText}>
-            {isDemo ? 'Gửi poll lên nhóm Zalo' : 'Soạn tin gửi nhóm Zalo'}
-          </Text>
-        </TouchableOpacity>
+          icon={<IconSend size={16} color="#fff" />}
+          disabled={slots.length === 0}
+        />
       </View>
 
       {/* Real accounts: honest copy + Mở Zalo. After the teacher confirms she
@@ -430,11 +427,6 @@ const s = StyleSheet.create({
     position: 'absolute', left: 0, right: 0, bottom: 0,
     padding: 16,
   },
-  btnPrimary: {
-    height: 56, borderRadius: 16, backgroundColor: colors.green500,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-  },
-  btnPrimaryText: { color: 'white', fontSize: 16, fontWeight: '600' },
 
   // Live step — honey hero
   hero: {

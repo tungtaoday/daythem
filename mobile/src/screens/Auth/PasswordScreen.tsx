@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { BackButton } from '../../components/ui/BackButton';
+import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth';
 
 export function PasswordScreen({ route, navigation }: any) {
@@ -81,15 +82,12 @@ export function PasswordScreen({ route, navigation }: any) {
       </View>
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
-        <TouchableOpacity
-          style={[s.btnPrimary, (!valid || isLoading) && s.btnDisabled]}
+        <Button
+          label="Đăng nhập"
           onPress={handleLogin}
+          loading={isLoading}
           disabled={!valid || isLoading}
-        >
-          {isLoading
-            ? <ActivityIndicator color="white" />
-            : <Text style={s.btnText}>Đăng nhập</Text>}
-        </TouchableOpacity>
+        />
         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword', { phone })}>
           <Text style={s.forgotText}>Quên mật khẩu?</Text>
         </TouchableOpacity>
@@ -126,8 +124,5 @@ const s = StyleSheet.create({
   devHintText: { fontSize: 13, color: colors.textSecondary },
 
   footer: { padding: spacing.lg, gap: 14 },
-  btnPrimary: { height: 52, borderRadius: radius.lg, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: 'white', fontSize: 15, fontWeight: '600' },
-  btnDisabled: { opacity: 0.5 },
   forgotText: { fontSize: 12, color: colors.textMuted, textAlign: 'center' },
 });

@@ -9,6 +9,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { Button } from '../../components/ui/Button';
 import { cancelClass, proposeMakeup } from '../../api/announcements';
 import { useAuthStore } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
@@ -280,10 +281,7 @@ export function CancelClassScreen({ route, navigation }: any) {
       {/* Bottom bar */}
       {!sending ? (
         <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32) }]}>
-          <TouchableOpacity style={s.btnPrimary} onPress={send}>
-            <IconZalo size={20} color="white" />
-            <Text style={s.btnPrimaryText}>Soạn tin báo nghỉ</Text>
-          </TouchableOpacity>
+          <Button label="Soạn tin báo nghỉ" onPress={send} icon={<IconZalo size={16} color="#fff" />} />
         </View>
       ) : (
         <View style={[s.sendingBar, { paddingBottom: Math.max(insets.bottom + 16, 36) }]}>
