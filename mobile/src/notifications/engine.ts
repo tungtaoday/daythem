@@ -6,6 +6,7 @@ import {
   getNotifConfig, getCampaigns, registerPushToken, logNotifEvent,
   NotifConfig,
 } from '../api/notify';
+import { getDays } from '../utils/schedule';
 
 const FIRED_CAMPAIGNS_KEY = 'notif_fired_campaigns';
 const isWeb = Platform.OS === 'web';
@@ -106,14 +107,17 @@ export async function syncNotifications(classes: ClassLite[], genderWord: string
   if (r.class_reminder?.enabled !== false) {
     const lead = r.class_reminder?.lead_minutes ?? 30;
     for (const c of classes) {
-      const day = c.schedule?.day; const hm = parseHM(c.schedule?.start_time);
-      if (!day || !hm) continue;
-      const t = minusLead(day, hm.hour, hm.minute, lead);
-      if (inQuiet(t.hour, t.minute, quiet)) continue;
-      await sched(
-        { title: `Sắp tới giờ dạy ${c.name}`, body: `${c.schedule?.start_time} · ${c.student_count || 0} học sinh · ${c.schedule?.location || 'tại nhà'}`, data: { channel: 'utility', rule: 'class_reminder' } },
-        { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: toExpoWeekday(t.day), hour: t.hour, minute: t.minute },
-      );
+      const hm = parseHM(c.schedule?.start_time);
+      if (!hm) continue;
+      // 1 lớp có thể nhiều ngày/tuần → 1 nhắc nhở/tuần cho MỖI thứ.
+      for (const day of getDays(c.schedule)) {
+        const t = minusLead(day, hm.hour, hm.minute, lead);
+        if (inQuiet(t.hour, t.minute, quiet)) continue;
+        await sched(
+          { title: `Sắp tới giờ dạy ${c.name}`, body: `${c.schedule?.start_time} · ${c.student_count || 0} học sinh · ${c.schedule?.location || 'tại nhà'}`, data: { channel: 'utility', rule: 'class_reminder' } },
+          { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: toExpoWeekday(t.day), hour: t.hour, minute: t.minute },
+        );
+      }
     }
   }
 

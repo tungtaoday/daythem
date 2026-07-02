@@ -33,7 +33,7 @@ export function SetupScreen() {
 
   const [className, setClassName] = useState('');
   const [fee, setFee] = useState(500000);
-  const [day, setDay] = useState(3);
+  const [days, setDays] = useState<number[]>([3]);
   const [time, setTime] = useState('18:30');
   const [duration, setDuration] = useState(90);
   const [place, setPlace] = useState('Tại nhà');
@@ -60,7 +60,7 @@ export function SetupScreen() {
         default_fee: fee,
         fee_type: 'month',
         color: 'green',
-        schedule: { day, start_time: time, duration, location: place },
+        schedule: { days, day: days[0], start_time: time, duration, location: place },
       }).catch(() => {});
     }
     await updateProfile(name.trim(), gender);
@@ -88,7 +88,7 @@ export function SetupScreen() {
           gender={gender}
           className={className} setClassName={setClassName}
           fee={fee} setFee={setFee}
-          day={day} setDay={setDay}
+          days={days} setDays={setDays}
           time={time} setTime={setTime}
           duration={duration} setDuration={setDuration}
           place={place} setPlace={setPlace}
@@ -100,7 +100,7 @@ export function SetupScreen() {
         <DoneStep
           name={name} gender={gender}
           className={className} fee={fee}
-          day={day} time={time} place={place}
+          days={days} time={time} place={place}
           isLoading={isLoading}
           onEnter={handleEnter}
         />
@@ -207,9 +207,14 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
 }
 
 // ─── First Class Step ─────────────────────────────────────────────────────────
-function FirstClassStep({ gender, className, setClassName, fee, setFee, day, setDay, time, setTime, duration, setDuration, place, setPlace, onBack, onNext }: any) {
+function FirstClassStep({ gender, className, setClassName, fee, setFee, days, setDays, time, setTime, duration, setDuration, place, setPlace, onBack, onNext }: any) {
   const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
+
+  const toggleDay = (value: number) =>
+    setDays((prev: number[]) =>
+      prev.includes(value) ? prev.filter((x: number) => x !== value) : [...prev, value]
+    );
 
   return (
     <View style={{ flex: 1 }}>
@@ -231,15 +236,15 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
         <TextInput style={s.input} value={className} onChangeText={setClassName} />
 
         <Text style={[s.sectionLabel, { marginTop: 20 }]}>LỊCH HỌC</Text>
-        <Text style={s.sectionHint}>Ngày trong tuần</Text>
+        <Text style={s.sectionHint}>Ngày học trong tuần (chọn nhiều được)</Text>
         <View style={s.dayRow}>
           {DAYS.map((d, i) => (
             <TouchableOpacity
               key={d}
-              style={[s.dayBtn, day === i + 1 && s.dayBtnActive]}
-              onPress={() => setDay(i + 1)}
+              style={[s.dayBtn, days.includes(i + 1) && s.dayBtnActive]}
+              onPress={() => toggleDay(i + 1)}
             >
-              <Text style={[s.dayBtnText, day === i + 1 && s.dayBtnTextActive]}>{d}</Text>
+              <Text style={[s.dayBtnText, days.includes(i + 1) && s.dayBtnTextActive]}>{d}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -316,9 +321,9 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
 
       <View style={[s.footer, { paddingBottom: Math.max(insets.bottom + 12, 40) }]}>
         <TouchableOpacity
-          style={[s.btn, !className.trim() && s.btnDisabled]}
+          style={[s.btn, (!className.trim() || days.length === 0) && s.btnDisabled]}
           onPress={onNext}
-          disabled={!className.trim()}
+          disabled={!className.trim() || days.length === 0}
         >
           <Text style={s.btnText}>Tạo lớp</Text>
         </TouchableOpacity>
@@ -328,11 +333,11 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, day, set
 }
 
 // ─── Done Step ────────────────────────────────────────────────────────────────
-function DoneStep({ name, gender, className, fee, day, time, place, isLoading, onEnter }: any) {
+function DoneStep({ name, gender, className, fee, days, time, place, isLoading, onEnter }: any) {
   const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
   const firstName = name.trim().split(' ').slice(-1)[0];
-  const dayLabel = DAYS[day - 1] ?? '';
+  const dayLabel = (days as number[]).map(d => DAYS[d - 1] ?? '').filter(Boolean).join(', ');
 
   return (
     <View style={[s.doneWrap, { paddingBottom: spacing.lg + insets.bottom }]}>

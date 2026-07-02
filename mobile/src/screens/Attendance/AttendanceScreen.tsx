@@ -12,6 +12,7 @@ import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../compone
 import { useClassesStore } from '../../store/classes';
 import { recordAttendance, listSessions } from '../../api/attendance';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import { getDays } from '../../utils/schedule';
 
 // Hero progress ring — react-native-svg renders on iOS, Android and web.
 function HeroRing({ present, total }: { present: number; total: number }) {
@@ -52,17 +53,34 @@ function formatDateLine(s: string): string {
   return `${WEEKDAYS[d.getDay()]} · ${dd}/${mm}/${d.getFullYear()}`;
 }
 
-// Các buổi gần nhất theo lịch lớp (lùi về quá khứ). Không có lịch → vài ngày gần đây.
-function recentSessionDates(scheduleDay: number | undefined, count = 5): Date[] {
-  const out: Date[] = [];
+// Các buổi gần nhất theo lịch lớp (lùi về quá khứ), gộp TẤT CẢ các thứ trong tuần.
+// Không có lịch → vài ngày gần đây.
+function recentSessionDates(schedule: any, count = 6): Date[] {
   const today = new Date();
-  if (scheduleDay) {
-    const targetJs = scheduleDay % 7; // 1=Mon..6=Sat, 7(CN)→0
+  const days = getDays(schedule); // 1=T2..7=CN (đã sort, dedupe)
+  if (!days.length) {
+    const out: Date[] = [];
+    for (let i = 0; i < count; i++) { const x = new Date(today); x.setDate(today.getDate() - i); out.push(x); }
+    return out;
+  }
+  // Với mỗi thứ trong lịch, sinh `count` buổi gần nhất → gộp lại.
+  const merged: Date[] = [];
+  for (const day of days) {
+    const targetJs = day % 7; // 1=Mon..6=Sat, 7(CN)→0
     const cur = new Date(today);
     while (cur.getDay() !== targetJs) cur.setDate(cur.getDate() - 1);
-    for (let i = 0; i < count; i++) { out.push(new Date(cur)); cur.setDate(cur.getDate() - 7); }
-  } else {
-    for (let i = 0; i < count; i++) { const x = new Date(today); x.setDate(today.getDate() - i); out.push(x); }
+    for (let i = 0; i < count; i++) { merged.push(new Date(cur)); cur.setDate(cur.getDate() - 7); }
+  }
+  // Sort DESC (mới nhất trước), dedupe theo ngày, lấy `count` buổi gần nhất.
+  merged.sort((a, b) => b.getTime() - a.getTime());
+  const seen = new Set<string>();
+  const out: Date[] = [];
+  for (const d of merged) {
+    const key = ymd(d);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(d);
+    if (out.length >= count) break;
   }
   return out;
 }
@@ -90,11 +108,11 @@ export function AttendanceScreen({ route, navigation }: any) {
   const todayYmd = ymd(new Date());
   // Các buổi chọn được: vài buổi gần nhất theo lịch lớp + buổi truyền từ Lịch (nếu có).
   const sessionDates = useMemo(() => {
-    const list = recentSessionDates(cls?.schedule?.day, 5).map(ymd);
+    const list = recentSessionDates(cls?.schedule, 6).map(ymd);
     const fromParam: string | undefined = route.params?.sessionDate;
     if (fromParam && !list.includes(fromParam)) list.unshift(fromParam);
     return list;
-  }, [cls?.schedule?.day, route.params?.sessionDate]);
+  }, [cls?.schedule, route.params?.sessionDate]);
   const [sessionDate, setSessionDate] = useState<string>(route.params?.sessionDate || sessionDates[0] || todayYmd);
   const [sessionsByDate, setSessionsByDate] = useState<Record<string, any>>({});
   const dateLine = formatDateLine(sessionDate);

@@ -10,6 +10,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { hasClassOnDayN } from '../../utils/schedule';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -74,7 +75,7 @@ export function CalendarScreen({ navigation }: any) {
   // Selected day: day-of-week 1=Mon..7=Sun
   const selDow = selectedDate.getDay();
   const selDayN = selDow === 0 ? 7 : selDow;
-  const selectedClasses = classes.filter((c: any) => c.schedule?.day === selDayN);
+  const selectedClasses = classes.filter((c: any) => hasClassOnDayN(c.schedule, selDayN));
 
   // Ngày đã chọn là buổi đã qua / hôm nay → cho điểm danh đúng buổi đó.
   const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -138,7 +139,7 @@ export function CalendarScreen({ navigation }: any) {
                 const hasCls = d !== null && (() => {
                   const dow = d.getDay();
                   const dayN = dow === 0 ? 7 : dow;
-                  return classes.some((c: any) => c.schedule?.day === dayN);
+                  return classes.some((c: any) => hasClassOnDayN(c.schedule, dayN));
                 })();
                 return (
                   <TouchableOpacity

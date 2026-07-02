@@ -20,7 +20,8 @@ export function CreateClassScreen({ navigation }: any) {
   const [grade, setGrade] = useState('9');
   const [name, setName] = useState('');
   const [fee, setFee] = useState('800000');
-  const [day, setDay] = useState(3);
+  const [days, setDays] = useState<number[]>([3]);
+  const toggleDay = (v: number) => setDays(p => p.includes(v) ? p.filter(x => x !== v) : [...p, v].sort((a, b) => a - b));
   const [time, setTime] = useState('18:30');
   const [place, setPlace] = useState('Tại nhà');
   const [color, setColor] = useState<ClassColorKey>('green');
@@ -30,6 +31,7 @@ export function CreateClassScreen({ navigation }: any) {
   const autoName = `${subject} · Lớp ${grade}`;
 
   const handleCreate = async () => {
+    if (days.length === 0) { Alert.alert('Chọn ngày học', 'Chọn ít nhất 1 ngày trong tuần.'); return; }
     setLoading(true);
     try {
       await createClass({
@@ -39,7 +41,7 @@ export function CreateClassScreen({ navigation }: any) {
         default_fee: parseFloat(fee) || 0,
         fee_type: 'month',
         color,
-        schedule: { day, start_time: time, duration: 90, location: place },
+        schedule: { days, day: days[0], start_time: time, duration: 90, location: place },
       });
       navigation.goBack();
     } catch {
@@ -90,11 +92,11 @@ export function CreateClassScreen({ navigation }: any) {
         onChangeText={setFee}
       />
 
-      <Text style={styles.label}>Ngày học trong tuần</Text>
+      <Text style={styles.label}>Ngày học trong tuần (chọn nhiều được)</Text>
       <View style={styles.chips}>
         {DAYS.map(d => (
-          <Button key={d.value} label={d.label} onPress={() => setDay(d.value)}
-            variant={day === d.value ? 'primary' : 'secondary'}
+          <Button key={d.value} label={d.label} onPress={() => toggleDay(d.value)}
+            variant={days.includes(d.value) ? 'primary' : 'secondary'}
             style={styles.chip}
           />
         ))}

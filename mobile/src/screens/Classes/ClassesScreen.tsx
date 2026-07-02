@@ -12,14 +12,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
 import { getTuition } from '../../api/tuition';
-
-const DAY_LABELS: Record<number, string> = {
-  1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7', 7: 'CN',
-};
-const DAY_FULL: Record<number, string> = {
-  1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 7: 'Chủ nhật',
-};
-const DAY_N: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
+import { nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL, daysLabel } from '../../utils/schedule';
 
 // ── time / countdown helpers ──────────────────────────────────
 
@@ -66,7 +59,7 @@ const as = StyleSheet.create({
 // ── ClassCardLarge ────────────────────────────────────────────
 
 function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCount, onPress }: any) {
-  const dayLabel = klass.schedule?.day ? DAY_FULL[klass.schedule.day] : '';
+  const dayLabel = daysLabel(klass.schedule);
   const timeStr = klass.schedule?.start_time || '';
   const loc = klass.schedule?.location || '';
   const totalDue = totalCount - paidCount;
@@ -229,8 +222,7 @@ const ar = StyleSheet.create({
 
 // ── HeroCard: BUỔI TỚI GẦN NHẤT ───────────────────────────────
 
-function HeroCard({ klass, delta, studentNames, onPress }: any) {
-  const day = klass.schedule?.day;
+function HeroCard({ klass, delta, dayN, studentNames, onPress }: any) {
   const start = klass.schedule?.start_time || '';
   const dur = klass.schedule?.duration || 0;
   const end = start && dur ? addMinutes(start, dur) : '';
@@ -256,7 +248,7 @@ function HeroCard({ klass, delta, studentNames, onPress }: any) {
         </View>
 
         {/* countdown */}
-        <Text style={hc.countdown}>{countdownLabel(delta, day)}</Text>
+        <Text style={hc.countdown}>{countdownLabel(delta, dayN)}</Text>
 
         {/* title */}
         <Text style={hc.title}>{klass.name} · {klass.subject}</Text>
@@ -331,29 +323,25 @@ export function ClassesScreen({ navigation }: any) {
     });
   }, [classes.length]);
 
-  const todayN = DAY_N[new Date().getDay()];
+  // Sắp xếp: lớp có buổi gần nhất sắp tới lên trước (xét mọi ngày trong tuần).
   const sorted = [...classes].sort((a, b) => {
-    const aToday = a.schedule?.day === todayN;
-    const bToday = b.schedule?.day === todayN;
-    return aToday === bToday ? 0 : aToday ? -1 : 1;
+    const da = nextOccurrence(a.schedule)?.delta ?? 99;
+    const db = nextOccurrence(b.schedule)?.delta ?? 99;
+    return da - db;
   });
 
-  // ── next upcoming class (soonest schedule.day ≥ today, wrap week) ──
-  let heroClass: any = null;
-  let heroDelta = 99;
-  classes.forEach(c => {
-    const day = c.schedule?.day;
-    if (!day) return;
-    const delta = ((day - todayN) % 7 + 7) % 7;
-    const startA = heroClass?.schedule?.start_time || '99:99';
-    const startC = c.schedule?.start_time || '99:99';
-    if (delta < heroDelta || (delta === heroDelta && startC < startA)) {
-      heroDelta = delta;
-      heroClass = c;
-    }
-  });
+  // ── next upcoming class (buổi gần nhất sắp tới trong tất cả các ngày, vòng tuần) ──
+  const heroPick = classes
+    .map(c => ({ c, occ: nextOccurrence(c.schedule) }))
+    .filter((x): x is { c: any; occ: { date: Date; dayN: number; delta: number } } => !!x.occ)
+    .sort((a, b) =>
+      a.occ.delta - b.occ.delta ||
+      (a.c.schedule?.start_time || '99:99').localeCompare(b.c.schedule?.start_time || '99:99'),
+    )[0] || null;
+  const heroClass: any = heroPick?.c || null;
+  const heroOcc = heroPick?.occ || null;
 
-  const todayCount = classes.filter(c => c.schedule?.day === todayN).length;
+  const todayCount = classes.filter(c => hasClassOnDayN(c.schedule, todayDayN())).length;
   const totalStudents = classes.reduce((t, c) => t + (c.student_count || 0), 0);
   // unpaid across all classes
   const unpaidCount = Object.values(tuitionMap).reduce((t, d) => t + (d.total - d.paid), 0);
@@ -379,10 +367,11 @@ export function ClassesScreen({ navigation }: any) {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Hero: buổi tới gần nhất ── */}
-        {heroClass && (
+        {heroClass && heroOcc && (
           <HeroCard
             klass={heroClass}
-            delta={heroDelta}
+            delta={heroOcc.delta}
+            dayN={heroOcc.dayN}
             studentNames={(students[heroClass.id] || []).map(st => st.name)}
             onPress={() => navigation.navigate('ClassDetail', { classId: heroClass.id, className: heroClass.name })}
           />
@@ -417,7 +406,7 @@ export function ClassesScreen({ navigation }: any) {
             <ClassCardLarge
               key={klass.id}
               klass={klass}
-              highlighted={i === 0 && klass.schedule?.day === todayN}
+              highlighted={i === 0 && hasClassOnDayN(klass.schedule, todayDayN())}
               studentNames={studentNames}
               paidCount={tui?.paid ?? 0}
               totalCount={tui?.total ?? 0}

@@ -16,6 +16,7 @@ import {
   IconChart, IconWarn, IconZalo, IconClock, IconSend,
   IconChevron,
 } from '../../components/icons';
+import { nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -33,28 +34,21 @@ function todayStr() {
   return `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}`;
 }
 
-const DAY_N: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
-
-// Tên thứ trong tuần (1=T2 .. 7=CN) — để hiển thị buổi học gần nhất.
-const DAY_LABELS: Record<number, string> = {
-  1: 'Thứ Hai', 2: 'Thứ Ba', 3: 'Thứ Tư', 4: 'Thứ Năm',
-  5: 'Thứ Sáu', 6: 'Thứ Bảy', 7: 'Chủ nhật',
-};
-
-// Tìm lớp có buổi học gần nhất sắp tới (tính theo schedule.day, vòng tuần).
+// Tìm lớp có buổi học gần nhất sắp tới (xét mọi ngày trong tuần của lớp, vòng tuần).
+// Bắt đầu từ ngày mai → bỏ qua buổi hôm nay (hôm nay đã xử lý riêng).
 function nearestClass(classes: any[]): { cls: any; dayLabel: string } | null {
-  const todayN = DAY_N[new Date().getDay()];
+  const from = new Date();
+  from.setDate(from.getDate() + 1);
   let best: any = null;
+  let bestOcc: { date: Date; dayN: number; delta: number } | null = null;
   let bestDist = 99;
   for (const c of classes) {
-    const d = c.schedule?.day;
-    if (!d) continue;
-    let dist = ((d - todayN) % 7 + 7) % 7;
-    if (dist === 0) dist = 7; // hôm nay đã xử lý riêng → coi như tuần sau
-    if (dist < bestDist) { bestDist = dist; best = c; }
+    const occ = nextOccurrence(c.schedule, from);
+    if (!occ) continue;
+    if (occ.delta < bestDist) { bestDist = occ.delta; best = c; bestOcc = occ; }
   }
-  if (!best) return null;
-  return { cls: best, dayLabel: DAY_LABELS[best.schedule.day] || '' };
+  if (!best || !bestOcc) return null;
+  return { cls: best, dayLabel: DAY_FULL[bestOcc.dayN] || '' };
 }
 
 // Đánh giá buổi học hôm nay so với giờ hiện tại.
@@ -400,9 +394,8 @@ export function HomeScreen({ navigation }: any) {
   useEffect(() => {
     if (isLoading) return;
     const now = new Date();
-    const todayN = DAY_N[now.getDay()];
-    // CHỈ lấy lớp có lịch đúng hôm nay (không fallback sang lớp khác).
-    const todayClass = classes.find(c => c.schedule?.day === todayN) || null;
+    // CHỈ lấy lớp có lịch đúng hôm nay (xét mọi ngày trong tuần, không fallback sang lớp khác).
+    const todayClass = classes.find(c => hasClassOnDayN(c.schedule, todayDayN())) || null;
     const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
 
     const generated: any[] = [];

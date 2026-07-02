@@ -9,6 +9,7 @@ import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import { getDays } from '../../utils/schedule';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -143,8 +144,9 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
   const sched = (klass as any)?.schedule ?? null;
   const DAY_LABELS = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-  const scheduleDay = sched?.day
-    ? `${DAY_LABELS[sched.day] ?? ''}${sched.start_time ? ` · ${sched.start_time}` : ''}`
+  const schedDays = getDays(sched);
+  const scheduleDay = schedDays.length
+    ? `${schedDays.map(d => DAY_LABELS[d] ?? '').filter(Boolean).join(', ')}${sched?.start_time ? ` · ${sched.start_time}` : ''}`
     : 'Chưa đặt lịch';
   const scheduleSub = sched
     ? `${sched.duration ? `${Math.floor(sched.duration / 60)}h${sched.duration % 60 ? ` ${sched.duration % 60}p` : ''}` : ''}${sched.location ? ` · ${sched.location}` : ''}`.replace(/^ · /, '')
@@ -162,24 +164,35 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
   // ── Sửa lịch học ──
   const [showSched, setShowSched] = useState(false);
-  const [edDay, setEdDay] = useState<number>(sched?.day ?? 3);
+  const [edDays, setEdDays] = useState<number[]>(getDays(sched).length ? getDays(sched) : [3]);
   const [edTime, setEdTime] = useState<string>(sched?.start_time ?? '18:30');
   const [edDur, setEdDur] = useState<number>(sched?.duration ?? 90);
   const [edPlace, setEdPlace] = useState<string>(sched?.location ?? 'Tại nhà');
   const [savingSched, setSavingSched] = useState(false);
 
   const openSchedEdit = () => {
-    setEdDay(sched?.day ?? 3);
+    const initDays = getDays(sched);
+    setEdDays(initDays.length ? initDays : [3]);
     setEdTime(sched?.start_time ?? '18:30');
     setEdDur(sched?.duration ?? 90);
     setEdPlace(sched?.location ?? 'Tại nhà');
     setShowSched(true);
   };
 
+  const toggleEdDay = (value: number) =>
+    setEdDays(prev =>
+      prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value]
+    );
+
   const saveSchedule = async () => {
+    if (edDays.length === 0) {
+      Alert.alert('Chọn ngày học', 'Vui lòng chọn ít nhất 1 ngày trong tuần.');
+      return;
+    }
+    const days = [...edDays].sort((a, b) => a - b);
     setSavingSched(true);
     try {
-      await updateClass(classId, { schedule: { day: edDay, start_time: edTime, duration: edDur, location: edPlace } });
+      await updateClass(classId, { schedule: { days, day: days[0], start_time: edTime, duration: edDur, location: edPlace } });
       setShowSched(false);
     } catch {
       Alert.alert('Chưa lưu được', 'Kiểm tra mạng và thử lại.');
@@ -521,11 +534,11 @@ export function ClassSettingsScreen({ route, navigation }: any) {
             <View style={s.handle} />
             <Text style={s.sheetTitle}>Lịch học định kỳ</Text>
 
-            <Text style={sc.label}>Thứ trong tuần</Text>
+            <Text style={sc.label}>Thứ trong tuần (chọn nhiều được)</Text>
             <View style={sc.chipWrap}>
               {[{ l: 'T2', v: 1 }, { l: 'T3', v: 2 }, { l: 'T4', v: 3 }, { l: 'T5', v: 4 }, { l: 'T6', v: 5 }, { l: 'T7', v: 6 }, { l: 'CN', v: 7 }].map(d => (
-                <TouchableOpacity key={d.v} style={[sc.chip, edDay === d.v && sc.chipActive]} onPress={() => setEdDay(d.v)}>
-                  <Text style={[sc.chipText, edDay === d.v && sc.chipTextActive]}>{d.l}</Text>
+                <TouchableOpacity key={d.v} style={[sc.chip, edDays.includes(d.v) && sc.chipActive]} onPress={() => toggleEdDay(d.v)}>
+                  <Text style={[sc.chipText, edDays.includes(d.v) && sc.chipTextActive]}>{d.l}</Text>
                 </TouchableOpacity>
               ))}
             </View>

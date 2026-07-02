@@ -14,13 +14,9 @@ import { listSessions } from '../../api/attendance';
 import {
   IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
 } from '../../components/icons';
+import { getDays, nextOccurrence, daysLabel, DAY_FULL } from '../../utils/schedule';
 
 // ── day / time / countdown helpers ───────────────────────────
-const DAY_FULL: Record<number, string> = {
-  1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 7: 'Chủ nhật',
-};
-const DAY_N: Record<number, number> = { 0: 7, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 };
-
 function addMinutes(time: string, mins: number): string {
   const parts = time.split(':').map(Number);
   const total = parts[0] * 60 + (parts[1] || 0) + (mins || 0);
@@ -124,21 +120,24 @@ export function ClassDetailScreen({ route, navigation }: any) {
     }
   };
 
-  // ── countdown line: "THỨ 4 · 18:30 – 20:00 · CÒN 4 NGÀY" ──
+  // ── countdown line: "THỨ 4 · 18:30 – 20:00 · CÒN 4 NGÀY" (buổi gần nhất) ──
   const sched = klass.schedule || {};
-  const day: number | undefined = sched.day;
   const start: string = sched.start_time || '';
   const dur: number = sched.duration || 0;
   const end = start && dur ? addMinutes(start, dur) : '';
   const timeStr = start ? (end ? `${start} – ${end}` : start) : '';
   const loc: string = sched.location || '';
-  const todayN = DAY_N[new Date().getDay()];
-  const delta = day ? (((day - todayN) % 7) + 7) % 7 : null;
-  const countdownLine = [
-    day ? DAY_FULL[day].toUpperCase() : '',
-    timeStr,
-    delta !== null ? countdownWord(delta) : '',
-  ].filter(Boolean).join(' · ');
+  const occ = nextOccurrence(klass.schedule);
+  const countdownLine = occ
+    ? [
+        DAY_FULL[occ.dayN].toUpperCase(),
+        timeStr,
+        countdownWord(occ.delta),
+      ].filter(Boolean).join(' · ')
+    : '';
+  // Lớp học nhiều ngày/tuần → hiện tất cả các thứ ở dòng phụ của hero.
+  const multiDays = getDays(klass.schedule).length > 1 ? daysLabel(klass.schedule) : '';
+  const heroSub = [multiDays, loc].filter(Boolean).join(' · ') || undefined;
 
   const studentN = klass.student_count ?? classStudents.length ?? 0;
   const tchTitle = teacher?.gender === 'thay' ? 'thầy' : 'cô';
@@ -151,7 +150,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
         grad={classColor(klass.color).grad}
         eyebrow={countdownLine || 'Chưa đặt lịch học'}
         title={`${klass.name} · ${klass.subject}`}
-        sub={loc || undefined}
+        sub={heroSub}
         right={
           <TouchableOpacity
             style={styles.gearBtn}
