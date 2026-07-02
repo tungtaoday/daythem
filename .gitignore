@@ -31,3 +31,8 @@ claude/
 
 # Design reference mockups (large, local only)
 template/
+
+# Playwright
+mobile/playwright-report/
+mobile/test-results/
+mobile/blob-report/
