@@ -5,6 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
@@ -501,13 +502,12 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         </View>
 
         {/* ── LƯU THAY ĐỔI ── */}
-        <TouchableOpacity
-          style={[s.saveBtn, isDemo && { opacity: 0.4 }]}
+        <Button
+          label={saved ? '✓ Đã lưu' : 'Lưu thay đổi'}
           onPress={handleSave}
           disabled={isDemo}
-        >
-          <Text style={s.saveBtnText}>{saved ? '✓ Đã lưu' : 'Lưu thay đổi'}</Text>
-        </TouchableOpacity>
+          style={{ marginHorizontal: 16, marginTop: 20 }}
+        />
 
         {/* ── Danger zone ── */}
         <View style={[s.card, { marginTop: 8 }]}>
@@ -640,9 +640,6 @@ const s = StyleSheet.create({
   zaloIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
   zaloName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
   zaloBadgeText: { fontSize: 12, color: colors.textSecondary },
-
-  saveBtn: { marginHorizontal: 16, marginTop: 20, height: 52, borderRadius: 16, backgroundColor: colors.green500, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
 
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.4)', justifyContent: 'flex-end' } as any,
   sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 36 },

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 import { classColor } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
@@ -146,14 +147,12 @@ function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCoun
             </Text>
           )}
           <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={[cc.btn, highlighted ? cc.btnLight : cc.btnGreen]}
+          <Button
+            variant={highlighted ? 'onHero' : 'secondary'}
+            label={highlighted ? 'Mở lớp →' : 'Xem'}
             onPress={onPress}
-          >
-            <Text style={[cc.btnText, highlighted ? cc.btnTextLight : cc.btnTextGreen]}>
-              {highlighted ? 'Mở lớp →' : 'Xem'}
-            </Text>
-          </TouchableOpacity>
+            style={{ paddingHorizontal: 16, paddingVertical: 10, minHeight: 0, borderRadius: 12 }}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -188,12 +187,6 @@ const cc = StyleSheet.create({
 
   bottom: { flexDirection: 'row', alignItems: 'center' },
   countText: { fontSize: 13 },
-  btn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  btnLight: { backgroundColor: 'white' },
-  btnGreen: { backgroundColor: colors.green50 },
-  btnText: { fontSize: 14, fontWeight: '600' },
-  btnTextLight: { color: colors.green600 },
-  btnTextGreen: { color: colors.green600 },
 });
 
 // ── ActivityRow ───────────────────────────────────────────────
@@ -264,9 +257,12 @@ function HeroCard({ klass, delta, dayN, studentNames, onPress }: any) {
             <Text style={hc.countText}>{klass.student_count || 0} học sinh</Text>
           )}
           <View style={{ flex: 1 }} />
-          <TouchableOpacity style={hc.btn} onPress={onPress} activeOpacity={0.85}>
-            <Text style={hc.btnText}>Mở lớp →</Text>
-          </TouchableOpacity>
+          <Button
+            variant="onHero"
+            label="Mở lớp →"
+            onPress={onPress}
+            style={hc.btn}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -292,8 +288,7 @@ const hc = StyleSheet.create({
 
   bottom: { flexDirection: 'row', alignItems: 'center', marginTop: 18 },
   countText: { fontSize: 13, color: 'rgba(255,255,255,0.85)' },
-  btn: { backgroundColor: 'white', paddingHorizontal: 18, paddingVertical: 11, borderRadius: 14, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
-  btnText: { fontSize: 14, fontWeight: '800', color: colors.green700 },
+  btn: { backgroundColor: 'white', paddingHorizontal: 18, paddingVertical: 11, minHeight: 0, borderRadius: 14, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
 });
 
 // ── ClassesScreen (HomeB) ─────────────────────────────────────

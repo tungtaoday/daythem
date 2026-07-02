@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -672,12 +673,12 @@ export function StudentsTabScreen({ navigation, route }: any) {
             style={s.input} placeholder="SĐT phụ huynh"
             value={parentPhone} onChangeText={setParentPhone} keyboardType="phone-pad"
           />
-          <TouchableOpacity
-            style={[s.saveBtn, !name.trim() && { opacity: 0.5 }]}
-            onPress={handleAdd} disabled={!name.trim()}
-          >
-            <Text style={s.saveBtnText}>Thêm học sinh</Text>
-          </TouchableOpacity>
+          <Button
+            label="Thêm học sinh"
+            onPress={handleAdd}
+            disabled={!name.trim() || !addClsId}
+            style={{ marginTop: 8 }}
+          />
         </View>
       </Modal>
     </View>
@@ -719,8 +720,6 @@ const s = StyleSheet.create({
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   modalClose: { fontSize: 16, color: colors.green600, fontWeight: '600' },
   input: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 14, fontSize: 16, marginBottom: 12, color: colors.textPrimary },
-  saveBtn: { backgroundColor: colors.green500, padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 8 },
-  saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
   stuRow: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16 },
   stuDivider: { borderTopWidth: 1, borderTopColor: colors.border },
   stuName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },

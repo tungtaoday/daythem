@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 import { PromoBanner } from '../../components/ui/PromoBanner';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
@@ -344,9 +345,7 @@ function GettingStarted({ hasClass, hasStudents, firstClass, navigation }: any) 
       </View>
 
       {cta && (
-        <TouchableOpacity style={gs.cta} onPress={cta.onPress} activeOpacity={0.85}>
-          <Text style={gs.ctaText}>{cta.label}</Text>
-        </TouchableOpacity>
+        <Button label={cta.label} onPress={cta.onPress} />
       )}
     </View>
   );
@@ -366,8 +365,6 @@ const gs = StyleSheet.create({
   stepLabel: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
   stepLabelDone: { color: colors.textMuted, textDecorationLine: 'line-through' },
   stepSub: { fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
-  cta: { backgroundColor: colors.green500, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  ctaText: { color: 'white', fontSize: 15, fontWeight: '700' },
 });
 
 // ── Main HomeScreen (HomeD) ───────────────────────────────────

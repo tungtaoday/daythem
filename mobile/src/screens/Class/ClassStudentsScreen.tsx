@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
+import { Button } from '../../components/ui/Button';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
@@ -439,11 +440,11 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
                     placeholderTextColor={colors.textMuted}
                   />
 
-                  <TouchableOpacity style={[fe.saveBtn, savingFee && { opacity: 0.6 }]} onPress={saveFee} disabled={savingFee}>
-                    {savingFee
-                      ? <ActivityIndicator color="white" />
-                      : <Text style={fe.saveText}>{feeSaved ? '✓ Đã lưu học phí' : 'Lưu học phí riêng'}</Text>}
-                  </TouchableOpacity>
+                  <Button
+                    label={feeSaved ? '✓ Đã lưu học phí' : 'Lưu học phí riêng'}
+                    onPress={saveFee}
+                    loading={savingFee}
+                  />
                 </View>
 
                 <View style={[pp.emptyTab, { paddingVertical: 24 }]}>
@@ -606,8 +607,6 @@ const fe = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 },
   amtInput: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, padding: 13, fontSize: 16, color: colors.textPrimary, marginBottom: 12 },
   noteInput: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, padding: 13, fontSize: 14, color: colors.textPrimary, marginBottom: 14 },
-  saveBtn: { backgroundColor: colors.green500, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
-  saveText: { color: 'white', fontSize: 15, fontWeight: '700' },
 });
 
 // ── Main screen ───────────────────────────────────────────────
@@ -835,12 +834,12 @@ export function ClassStudentsScreen({ route, navigation }: any) {
             placeholderTextColor={colors.textMuted}
             value={addNote} onChangeText={setAddNote} multiline
           />
-          <TouchableOpacity
-            style={[s.saveBtn, !addName.trim() && { opacity: 0.5 }]}
-            onPress={handleAdd} disabled={!addName.trim()}
-          >
-            <Text style={s.saveBtnText}>Thêm học sinh</Text>
-          </TouchableOpacity>
+          <Button
+            label="Thêm học sinh"
+            onPress={handleAdd}
+            disabled={!addName.trim()}
+            style={{ marginTop: 8 }}
+          />
         </View>
       </Modal>
     </View>
