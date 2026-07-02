@@ -11,6 +11,7 @@ import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
+import { getTuition } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Demo data ─────────────────────────────────────────────────
@@ -18,6 +19,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 type DemoStu = {
   id: string; name: string; attend: number;
   status: 'ok' | 'risk' | 'star'; debt: number; parent_phone: string | null;
+  hasData?: boolean;
 };
 type DemoClsGroup = { id: string; name: string; subject: string; students: DemoStu[] };
 
@@ -76,7 +78,7 @@ function DemoStuRow({ stu, onPress, last, isDemo }: { stu: DemoStu; onPress: () 
       <View style={sr.info}>
         <Text style={sr.name} numberOfLines={1}>{stu.name}</Text>
         <Text style={sr.sub} numberOfLines={1}>
-          {isDemo
+          {isDemo || stu.hasData
             ? `${stu.attend}% chuyên cần${stu.debt > 0 ? ` · Nợ ${(stu.debt / 1000).toFixed(0)}k` : ''}`
             : (stu.parent_phone ? `PH: ${stu.parent_phone}` : 'Chưa có dữ liệu')}
         </Text>
@@ -398,6 +400,8 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const [profileCls, setProfileCls] = useState<string>('');
   const [profileClsId, setProfileClsId] = useState<string>('');
   const [profileSessions, setProfileSessions] = useState<any[]>([]);
+  const [sessionsByClass, setSessionsByClass] = useState<Record<string, any[]>>({});
+  const [tuitionByClass, setTuitionByClass] = useState<Record<string, any[]>>({});
   const [showAdd, setShowAdd] = useState(false);
   const [addClsId, setAddClsId] = useState('');
   const [name, setName] = useState('');
@@ -413,6 +417,22 @@ export function StudentsTabScreen({ navigation, route }: any) {
   }, [isDemo]);
   useEffect(() => { classes.forEach(c => fetchStudents(c.id)); }, [classes.length]);
 
+  // Tải điểm danh + học phí tháng này cho từng lớp → tính chuyên cần / nợ thật.
+  useEffect(() => {
+    if (isDemo) return;
+    let alive = true;
+    const month = new Date().toISOString().slice(0, 7);
+    classes.forEach(c => {
+      listSessions(c.id)
+        .then((arr: any[]) => { if (alive) setSessionsByClass(prev => ({ ...prev, [c.id]: Array.isArray(arr) ? arr : [] })); })
+        .catch(() => { if (alive) setSessionsByClass(prev => ({ ...prev, [c.id]: [] })); });
+      getTuition(c.id, month)
+        .then((rows: any[]) => { if (alive) setTuitionByClass(prev => ({ ...prev, [c.id]: Array.isArray(rows) ? rows : [] })); })
+        .catch(() => { if (alive) setTuitionByClass(prev => ({ ...prev, [c.id]: [] })); });
+    });
+    return () => { alive = false; };
+  }, [classes.length, isDemo]);
+
   // Khi mở hồ sơ 1 em → tải lịch sử điểm danh của lớp em đó để hiển thị.
   useEffect(() => {
     if (isDemo || !profileClsId) { setProfileSessions([]); return; }
@@ -421,14 +441,37 @@ export function StudentsTabScreen({ navigation, route }: any) {
 
   const displayGroups: DemoClsGroup[] = isDemo
     ? DEMO_GROUPS
-    : classes.map(c => ({
-        id: c.id,
-        name: c.name,
-        subject: c.subject || '',
-        students: (students[c.id] || []).map(s => ({
-          id: s.id, name: s.name, attend: 0, status: 'ok' as const, debt: 0, parent_phone: s.parent_phone ?? null,
-        })),
-      }));
+    : classes.map(c => {
+        const sessions = sessionsByClass[c.id] || [];
+        const tuition = tuitionByClass[c.id] || [];
+        return {
+          id: c.id,
+          name: c.name,
+          subject: c.subject || '',
+          students: (students[c.id] || []).map(s => {
+            // Chuyên cần thật: đếm số lần có mặt / tổng số lần được điểm danh của em này.
+            let present = 0, marks = 0;
+            sessions.forEach((sx: any) => {
+              const r = sx.records?.find((x: any) => x.student_id === s.id);
+              if (r) { marks++; if (r.present) present++; }
+            });
+            const hasData = marks > 0;
+            const attend = hasData ? Math.round((present / marks) * 100) : 0;
+            const status: 'ok' | 'risk' | 'star' =
+              hasData && attend === 100 ? 'star'
+              : hasData && attend < 75 ? 'risk'
+              : 'ok';
+            // Nợ tháng này: cộng amount của các dòng học phí chưa nộp của em này.
+            const debt = tuition
+              .filter((t: any) => t.student_id === s.id && !t.paid)
+              .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+            return {
+              id: s.id, name: s.name, attend, status, debt,
+              parent_phone: s.parent_phone ?? null, hasData,
+            };
+          }),
+        };
+      });
 
   const allStus = displayGroups.flatMap(g => g.students);
   const unpaidStus = allStus.filter(s => s.debt > 0);
@@ -436,9 +479,11 @@ export function StudentsTabScreen({ navigation, route }: any) {
   const totalCount = allStus.length;
   const unpaidCount = unpaidStus.length;
   const riskCount = riskStus.length;
-  // Chuyên cần: demo tính trung bình thật; tài khoản thật chưa có dữ liệu → "–"
-  const avgAttend = isDemo && allStus.length
-    ? Math.round(allStus.reduce((sum, st) => sum + st.attend, 0) / allStus.length)
+  // Chuyên cần trung bình. Demo: mọi HS đều có %. Thật: chỉ tính HS đã có dữ liệu
+  // điểm danh (null nếu chưa có em nào được điểm danh).
+  const attendPool = isDemo ? allStus : allStus.filter(st => st.hasData);
+  const avgAttend = attendPool.length
+    ? Math.round(attendPool.reduce((sum, st) => sum + st.attend, 0) / attendPool.length)
     : null;
 
   // Normalize filter — ignore unknown IDs (e.g. real UUID when in demo mode)
@@ -473,16 +518,11 @@ export function StudentsTabScreen({ navigation, route }: any) {
     );
   }
 
-  // "Chưa nộp" / "Cần quan tâm" chỉ lọc được trên dữ liệu demo. Tài khoản thật
-  // chưa có học phí / chuyên cần → ẩn 2 chip này, chỉ giữ "Tất cả" + lọc theo lớp.
+  // "Chưa nộp" / "Cần quan tâm" nay tính được từ dữ liệu thật → luôn hiển thị.
   const filterChips = [
     { id: 'all', label: `Tất cả ${totalCount}` },
-    ...(isDemo
-      ? [
-          { id: 'unpaid', label: `Chưa nộp ${unpaidCount}` },
-          { id: 'risk', label: `Cần quan tâm ${riskCount}` },
-        ]
-      : []),
+    { id: 'unpaid', label: `Chưa nộp ${unpaidCount}` },
+    { id: 'risk', label: `Cần quan tâm ${riskCount}` },
     ...displayGroups.map(g => ({ id: g.id, label: g.name })),
   ];
 
@@ -514,27 +554,22 @@ export function StudentsTabScreen({ navigation, route }: any) {
         </TouchableOpacity>
       )}
 
-      {/* Stat band — dải thống kê màu.
-          Tài khoản thật chưa có dữ liệu chuyên cần / "cần quan tâm" → chỉ hiện "Đang học". */}
+      {/* Stat band — dải thống kê màu. Chuyên cần "–" khi chưa có buổi điểm danh nào. */}
       <View style={s.statBand}>
         <View style={[s.statPill, { backgroundColor: colors.green100 }]}>
           <Text style={[s.statValue, { color: colors.green700 }]}>{totalCount}</Text>
           <Text style={[s.statLabel, { color: colors.green700 }]}>Đang học</Text>
         </View>
-        {isDemo && (
-          <View style={[s.statPill, { backgroundColor: colors.coral100 }]}>
-            <Text style={[s.statValue, { color: colors.coral700 }]}>{riskCount}</Text>
-            <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
-          </View>
-        )}
-        {isDemo && (
-          <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
-            <Text style={[s.statValue, { color: '#8a6d30' }]}>
-              {avgAttend !== null ? `${avgAttend}%` : '–'}
-            </Text>
-            <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
-          </View>
-        )}
+        <View style={[s.statPill, { backgroundColor: colors.coral100 }]}>
+          <Text style={[s.statValue, { color: colors.coral700 }]}>{riskCount}</Text>
+          <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
+        </View>
+        <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
+          <Text style={[s.statValue, { color: '#8a6d30' }]}>
+            {avgAttend !== null ? `${avgAttend}%` : '–'}
+          </Text>
+          <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
+        </View>
       </View>
 
       {/* Filter chips */}

@@ -10,7 +10,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { hasClassOnDayN } from '../../utils/schedule';
+import { getDays, hasClassOnDayN, nextOccurrence, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -41,6 +41,7 @@ export function CalendarScreen({ navigation }: any) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
+  const [mode, setMode] = useState<'week' | 'month'>('week');
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -82,11 +83,51 @@ export function CalendarScreen({ navigation }: any) {
   const selYmd = ymd(selectedDate);
   const isPastOrToday = selYmd <= ymd(new Date());
 
-  // Monthly stats — scheduled is a reasonable estimate (~4 buổi/tháng mỗi lớp).
-  // Buổi bù / buổi nghỉ chỉ có số liệu trong phiên demo.
-  const monthlyScheduled = classes.length * 4;
+  // Monthly stats — "Buổi định kỳ" tính thật: với mỗi lớp, đếm số ngày trong
+  // tháng đang xem có thứ ∈ getDays(schedule); cộng dồn tất cả lớp.
+  // Buổi bù / buổi nghỉ không có nguồn dữ liệu thật → chỉ hiện trong demo.
+  const countMonthlyScheduled = (y: number, m: number) => {
+    let total = 0;
+    const dim = getDaysInMonth(y, m);
+    for (const c of classes) {
+      const days = getDays(c.schedule);
+      if (!days.length) continue;
+      for (let day = 1; day <= dim; day++) {
+        const dow = new Date(y, m, day).getDay();
+        const dayN = dow === 0 ? 7 : dow;
+        if (days.includes(dayN)) total++;
+      }
+    }
+    return total;
+  };
+  const monthlyScheduled = countMonthlyScheduled(year, month);
   const monthlyMakeup = 1;
   const monthlyCancelled = 1;
+
+  // Week navigation: dịch tuần bằng cách dời selectedDate ±7 ngày.
+  const shiftWeek = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    setSelectedDate(d);
+  };
+
+  // "SẮP TỚI": buổi gần nhất trên tất cả các lớp (delta nhỏ nhất, hoà thì start_time sớm hơn).
+  const upcoming = (() => {
+    let best: { cls: any; occ: { date: Date; dayN: number; delta: number } } | null = null;
+    for (const c of classes) {
+      const occ = nextOccurrence(c.schedule);
+      if (!occ) continue;
+      if (
+        !best ||
+        occ.delta < best.occ.delta ||
+        (occ.delta === best.occ.delta &&
+          (c.schedule?.start_time || '99:99') < (best.cls.schedule?.start_time || '99:99'))
+      ) {
+        best = { cls: c, occ };
+      }
+    }
+    return best;
+  })();
 
   const isSelected = (d: Date | null) =>
     d !== null && d.toDateString() === selectedDate.toDateString();
@@ -98,6 +139,54 @@ export function CalendarScreen({ navigation }: any) {
     return `${days[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth() + 1}`;
   };
 
+  // Danh sách buổi học của ngày đang chọn — dùng chung cho cả 2 chế độ.
+  const renderSessionsSection = () => (
+    <View style={s.section}>
+      <Text style={s.sectionLabel}>
+        {selDateLabel().toUpperCase()} · {selectedClasses.length > 0 ? `${selectedClasses.length} buổi học` : 'Không có lớp'}
+      </Text>
+      {selectedClasses.length > 0 ? (
+        <View style={s.card}>
+          {selectedClasses.map((cls: any, i: number) => (
+            <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
+              <View style={s.classBar} />
+              <View style={{ flex: 1 }}>
+                <View style={s.nameRow}>
+                  <View style={[s.colorDot, { backgroundColor: classColor(cls.color).dot }]} />
+                  <Text style={s.className}>{cls.name} · {cls.subject}</Text>
+                </View>
+                <Text style={s.classSub}>
+                  {cls.schedule?.start_time ? `${cls.schedule.start_time} · ` : ''}
+                  {cls.student_count || 0} học sinh
+                  {cls.schedule?.location ? ` · ${cls.schedule.location}` : ''}
+                </Text>
+              </View>
+              {isPastOrToday ? (
+                <TouchableOpacity
+                  style={s.attendBtn}
+                  onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
+                >
+                  <Text style={s.attendBtnText}>Điểm danh</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={s.openBtn}
+                  onPress={() => navigation.navigate('ClassDetail', { classId: cls.id, className: cls.name })}
+                >
+                  <Text style={s.openBtnText}>Mở lớp →</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={s.emptyDay}>
+          <Text style={s.emptyDayText}>Ngày nghỉ</Text>
+        </View>
+      )}
+    </View>
+  );
+
   return (
     <View style={s.container}>
       {/* Header */}
@@ -107,7 +196,29 @@ export function CalendarScreen({ navigation }: any) {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* Tuần | Tháng toggle */}
+      <View style={s.toggleRow}>
+        <View style={s.toggle}>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'week' && s.toggleBtnActive]}
+            onPress={() => setMode('week')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.toggleText, mode === 'week' && s.toggleTextActive]}>Tuần</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.toggleBtn, mode === 'month' && s.toggleBtnActive]}
+            onPress={() => setMode('month')}
+            activeOpacity={0.8}
+          >
+            <Text style={[s.toggleText, mode === 'month' && s.toggleTextActive]}>Tháng</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {mode === 'month' && (
+          <>
         {/* Month nav */}
         <View style={s.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={s.monthArrow}>
@@ -161,50 +272,7 @@ export function CalendarScreen({ navigation }: any) {
         </View>
 
         {/* Selected day classes */}
-        <View style={s.section}>
-          <Text style={s.sectionLabel}>
-            {selDateLabel().toUpperCase()} · {selectedClasses.length > 0 ? `${selectedClasses.length} buổi học` : 'Không có lớp'}
-          </Text>
-          {selectedClasses.length > 0 ? (
-            <View style={s.card}>
-              {selectedClasses.map((cls: any, i: number) => (
-                <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
-                  <View style={s.classBar} />
-                  <View style={{ flex: 1 }}>
-                    <View style={s.nameRow}>
-                      <View style={[s.colorDot, { backgroundColor: classColor(cls.color).dot }]} />
-                      <Text style={s.className}>{cls.name} · {cls.subject}</Text>
-                    </View>
-                    <Text style={s.classSub}>
-                      {cls.schedule?.start_time ? `${cls.schedule.start_time} · ` : ''}
-                      {cls.student_count || 0} học sinh
-                      {cls.schedule?.location ? ` · ${cls.schedule.location}` : ''}
-                    </Text>
-                  </View>
-                  {isPastOrToday ? (
-                    <TouchableOpacity
-                      style={s.attendBtn}
-                      onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
-                    >
-                      <Text style={s.attendBtnText}>Điểm danh</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={s.openBtn}
-                      onPress={() => navigation.navigate('ClassDetail', { classId: cls.id, className: cls.name })}
-                    >
-                      <Text style={s.openBtnText}>Mở lớp →</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={s.emptyDay}>
-              <Text style={s.emptyDayText}>Ngày nghỉ</Text>
-            </View>
-          )}
-        </View>
+        {renderSessionsSection()}
 
         {/* Monthly overview */}
         <View style={s.section}>
@@ -215,6 +283,89 @@ export function CalendarScreen({ navigation }: any) {
             {isDemo && <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />}
           </View>
         </View>
+          </>
+        )}
+
+        {mode === 'week' && (
+          <>
+            {/* Week nav */}
+            <View style={s.monthNav}>
+              <TouchableOpacity onPress={() => shiftWeek(-7)} style={s.monthArrow}>
+                <View style={{ transform: [{ rotate: '180deg' }] }}>
+                  <IconChevron size={16} color={colors.textSecondary} />
+                </View>
+              </TouchableOpacity>
+              <Text style={s.monthLabel}>{getMonthLabel(selectedDate.getFullYear(), selectedDate.getMonth())}</Text>
+              <TouchableOpacity onPress={() => shiftWeek(7)} style={s.monthArrow}>
+                <IconChevron size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Week strip */}
+            <View style={s.weekStrip}>
+              {weekDays.map((d, i) => {
+                const dow = d.getDay();
+                const dayN = dow === 0 ? 7 : dow;
+                const active = isSelected(d);
+                const todayMark = isToday(d);
+                const hasCls = classes.some((c: any) => hasClassOnDayN(c.schedule, dayN));
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[s.weekCell, active && s.weekCellSelected, todayMark && !active && s.weekCellToday]}
+                    onPress={() => setSelectedDate(d)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.weekDow, active && s.weekTextSelected]}>{DAY_SHORT[dayN]}</Text>
+                    <Text style={[s.weekDate, active && s.weekTextSelected, todayMark && !active && s.weekDateToday]}>
+                      {d.getDate()}
+                    </Text>
+                    {hasCls && <View style={[s.weekDot, active && { backgroundColor: 'rgba(255,255,255,0.8)' }]} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Selected day sessions */}
+            {renderSessionsSection()}
+
+            {/* SẮP TỚI */}
+            {upcoming && (
+              <View style={s.section}>
+                <Text style={s.sectionLabel}>SẮP TỚI</Text>
+                <TouchableOpacity
+                  style={s.upcomingCard}
+                  activeOpacity={0.85}
+                  onPress={() => navigation.navigate('ClassDetail', { classId: upcoming.cls.id, className: upcoming.cls.name })}
+                >
+                  <View style={[s.classBar, { backgroundColor: classColor(upcoming.cls.color).dot }]} />
+                  <View style={{ flex: 1 }}>
+                    <View style={s.nameRow}>
+                      <View style={[s.colorDot, { backgroundColor: classColor(upcoming.cls.color).dot }]} />
+                      <Text style={s.className}>{upcoming.cls.name} · {upcoming.cls.subject}</Text>
+                    </View>
+                    <Text style={s.classSub}>
+                      {DAY_FULL[upcoming.occ.dayN]}
+                      {upcoming.cls.schedule?.start_time ? ` · ${upcoming.cls.schedule.start_time}` : ''}
+                      {upcoming.cls.schedule?.location ? ` · ${upcoming.cls.schedule.location}` : ''}
+                    </Text>
+                  </View>
+                  <Text style={s.openBtnText}>Mở lớp →</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Tổng quan tháng */}
+            <View style={s.section}>
+              <Text style={s.sectionLabel}>TỔNG QUAN THÁNG {selectedDate.getMonth() + 1}</Text>
+              <View style={s.statsCard}>
+                <StatItem value={String(countMonthlyScheduled(selectedDate.getFullYear(), selectedDate.getMonth()))} label="Buổi định kỳ" color={colors.green700} bg={colors.green100} />
+                {isDemo && <StatItem value={String(monthlyMakeup)} label="Buổi bù" color="#8a6d30" bg={colors.honey100} />}
+                {isDemo && <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Classes summary */}
         {classes.length > 0 && (
@@ -339,4 +490,35 @@ const s = StyleSheet.create({
   },
   emptyDayText: { fontSize: 14, color: colors.textSecondary },
   statsCard: { flexDirection: 'row', gap: 10 },
+  // Tuần | Tháng toggle
+  toggleRow: { paddingHorizontal: 16, paddingBottom: 12 },
+  toggle: {
+    flexDirection: 'row', backgroundColor: colors.green100, borderRadius: 12, padding: 3,
+  },
+  toggleBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: 'center', justifyContent: 'center',
+  },
+  toggleBtnActive: { backgroundColor: 'white' },
+  toggleText: { fontSize: 13, fontWeight: '700', color: colors.green700 },
+  toggleTextActive: { color: colors.textPrimary },
+  // Week strip
+  weekStrip: {
+    flexDirection: 'row', paddingHorizontal: 12, gap: 4, marginBottom: 8,
+  },
+  weekCell: {
+    flex: 1, height: 60, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 3,
+  },
+  weekCellSelected: { backgroundColor: colors.green500 },
+  weekCellToday: { backgroundColor: colors.green100 },
+  weekDow: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.2 },
+  weekDate: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  weekDateToday: { color: colors.green700 },
+  weekTextSelected: { color: 'white' },
+  weekDot: {
+    width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.green500,
+  },
+  upcomingCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
+    backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border,
+  },
 });

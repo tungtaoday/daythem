@@ -31,6 +31,48 @@ function weekLabel(d = new Date()) {
   return `${fmt(mon)} – ${fmt(sun)}`;
 }
 
+// ── Range-aware date helpers (real stats) ─────────────────────
+type Range = 'week' | 'month' | 'all';
+
+function localYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+// Monday (ISO week start) of the week containing `dateStr` (YYYY-MM-DD).
+function weekKeyOf(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+  return localYmd(d);
+}
+
+// Current ISO week (Mon–Sun) as inclusive YYYY-MM-DD bounds.
+function currentWeekBounds(base = new Date()): { start: string; end: string } {
+  const mon = new Date(base);
+  const day = mon.getDay();
+  mon.setDate(mon.getDate() - day + (day === 0 ? -6 : 1));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  return { start: localYmd(mon), end: localYmd(sun) };
+}
+
+// Is a session's date within the selected range? (string compare on YYYY-MM-DD)
+function inRange(dateStr: string | undefined, range: Range): boolean {
+  if (!dateStr) return false;
+  if (range === 'all') return true;
+  if (range === 'month') return dateStr.slice(0, 7) === localYmd(new Date()).slice(0, 7);
+  const { start, end } = currentWeekBounds();
+  return dateStr >= start && dateStr <= end;
+}
+
+const RANGE_OPTIONS: { key: Range; label: string }[] = [
+  { key: 'week', label: 'Tuần' },
+  { key: 'month', label: 'Tháng' },
+  { key: 'all', label: 'Tổng' },
+];
+
 const DEMO_CLASSES = [
   { id: 'demo1', name: 'Lớp 9', subject: 'Toán', student_count: 7 },
   { id: 'demo2', name: 'Lớp 10', subject: 'Toán', student_count: 10 },
@@ -248,18 +290,85 @@ const rg = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────
 
+// Segmented "Tuần | Tháng | Tổng" control (real accounts).
+function RangeToggle({ range, onChange }: { range: Range; onChange: (r: Range) => void }) {
+  return (
+    <View style={rt.wrap}>
+      {RANGE_OPTIONS.map(opt => {
+        const active = opt.key === range;
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            style={[rt.seg, active && rt.segActive]}
+            onPress={() => onChange(opt.key)}
+            activeOpacity={0.85}
+          >
+            <Text style={[rt.segText, active && rt.segTextActive]}>{opt.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+const rt = StyleSheet.create({
+  wrap: { flexDirection: 'row', backgroundColor: colors.surfaceAlt, borderRadius: 12, padding: 3, marginBottom: 14 },
+  seg: { flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' },
+  segActive: { backgroundColor: 'white', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  segText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
+  segTextActive: { color: colors.green700, fontWeight: '700' },
+});
+
+const RANGE_SUB: Record<Range, string> = {
+  week: 'tuần này',
+  month: 'tháng này',
+  all: 'tổng cộng',
+};
+
+// REAL chuyên-cần trend chart card (per-week % from real sessions).
+function RealTrendCard({ trend }: { trend: { week: string; pct: number }[] }) {
+  const dm = (k: string) => { const p = k.split('-'); return `${+p[2]}/${+p[1]}`; };
+  const enough = trend.length >= 2;
+  return (
+    <View style={s.card}>
+      <View style={{ padding: 14, paddingHorizontal: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={s.cardTitle}>Tỉ lệ chuyên cần</Text>
+          {enough && <Text style={s.cardSub}>{trend.length} tuần gần đây</Text>}
+        </View>
+        {enough ? (
+          <>
+            <AttendanceChart data={trend.map(t => t.pct)} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>{dm(trend[0].week)}</Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>{dm(trend[trend.length - 1].week)}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={{ fontSize: 12.5, color: colors.textSecondary }}>Cần thêm buổi để vẽ biểu đồ 🌿</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 // Thống kê THẬT (tài khoản thật, sau khi đã điểm danh) — tính từ sessions + tuition.
 function RealStats({ stats }: any) {
+  const total = stats.present + stats.absent;
+  const d = stats.delta;
+  const deltaTxt = (d === null || d === undefined) ? '' : ` · ${d >= 0 ? '↑' : '↓'}${Math.abs(d)}%`;
+  const rangeSub = RANGE_SUB[stats.range as Range] || '';
   return (
     <>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-        <StatChip label="BUỔI ĐÃ DẠY" value={String(stats.sessionCount)} sub="đã điểm danh" bg={colors.green100} color={colors.green700} />
-        <StatChip label="CHUYÊN CẦN" value={stats.attendPct !== null ? `${stats.attendPct}%` : '–'} sub={`${stats.present}/${stats.present + stats.absent} có mặt`} bg="#f0faf4" color={colors.green700} />
+        <StatChip label="BUỔI ĐÃ DẠY" value={String(stats.sessionCount)} sub={rangeSub} bg={colors.green100} color={colors.green700} />
+        <StatChip label="CHUYÊN CẦN" value={stats.attendPct !== null ? `${stats.attendPct}%` : '–'} sub={`${stats.present}/${total} có mặt${deltaTxt}`} bg="#f0faf4" color={colors.green700} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         <StatChip label="ĐÃ THU THÁNG NÀY" value={VND(stats.collected)} sub={`${stats.paidCount} lượt nộp`} bg={colors.honey100} color="#8a6d30" />
-        <StatChip label="VẮNG" value={String(stats.absent)} sub="lượt vắng" bg={colors.coral100} color={colors.coral700} />
+        <StatChip label="VẮNG" value={String(stats.absent)} sub={`lượt vắng ${rangeSub}`} bg={colors.coral100} color={colors.coral700} />
       </View>
+
+      <RealTrendCard trend={stats.trend || []} />
 
       <Text style={s.sectionLabel}>BÁO CÁO TỪNG LỚP</Text>
       <View style={s.card}>
@@ -290,6 +399,7 @@ export function ReportTabScreen({ navigation, route }: any) {
   const [hasAttendance, setHasAttendance] = useState(false);
   const [hasTuition, setHasTuition] = useState(false);
   const [realStats, setRealStats] = useState<any>(null);
+  const [range, setRange] = useState<Range>('week');
 
   const allClasses = isDemo ? (DEMO_CLASSES as any[]) : classes;
   const validClassIds = new Set(['all', ...allClasses.map((c: any) => c.id)]);
@@ -321,10 +431,24 @@ export function ReportTabScreen({ navigation, route }: any) {
         Promise.all(targets.map((c: any) => listSessions(c.id).catch(() => []))),
         Promise.all(targets.map((c: any) => getTuition(c.id, month).catch(() => []))),
       ]);
+      // Range-filtered attendance totals + per-class rows.
       let sessionCount = 0, present = 0, totalMarks = 0, collected = 0, paidCount = 0, studentTotal = 0;
+      let anySessions = 0;
+      // Weekly attendance accumulator for the trend chart (ALL sessions, unfiltered by range).
+      const weekAcc: Record<string, { p: number; t: number }> = {};
       const perClass = targets.map((c: any, i: number) => {
-        const sess = Array.isArray(sessArrs[i]) ? sessArrs[i] : [];
+        const sessAll = Array.isArray(sessArrs[i]) ? sessArrs[i] : [];
         const tui = Array.isArray(tuiArrs[i]) ? tuiArrs[i] : [];
+        anySessions += sessAll.length;
+        // Trend: group every session's records by ISO week.
+        sessAll.forEach((sx: any) => {
+          if (!sx.session_date) return;
+          const wk = weekKeyOf(sx.session_date);
+          const acc = weekAcc[wk] || (weekAcc[wk] = { p: 0, t: 0 });
+          sx.records?.forEach((r: any) => { acc.t++; if (r.present) acc.p++; });
+        });
+        // Range-filtered stats.
+        const sess = sessAll.filter((sx: any) => inRange(sx.session_date, range));
         let cp = 0, ct = 0;
         sess.forEach((sx: any) => sx.records?.forEach((r: any) => { ct++; if (r.present) cp++; }));
         const cPaid = tui.filter((t: any) => t.paid);
@@ -333,15 +457,22 @@ export function ReportTabScreen({ navigation, route }: any) {
         paidCount += cPaid.length; collected += cCollected; studentTotal += tui.length;
         return { id: c.id, name: c.name, sessions: sess.length, attendPct: ct ? Math.round((cp / ct) * 100) : null, paid: cPaid.length, total: tui.length, collected: cCollected };
       });
-      setHasAttendance(sessionCount > 0);
+      // Build trend: last ~8 weeks that have data, sorted chronologically.
+      const trend = Object.keys(weekAcc).sort().slice(-8).map(k => ({
+        week: k,
+        pct: weekAcc[k].t ? Math.round((weekAcc[k].p / weekAcc[k].t) * 100) : 0,
+      }));
+      const delta = trend.length >= 2 ? trend[trend.length - 1].pct - trend[trend.length - 2].pct : null;
+      setHasAttendance(anySessions > 0);
       setHasTuition(paidCount > 0);
       setRealStats({
         sessionCount, present, absent: totalMarks - present,
         attendPct: totalMarks ? Math.round((present / totalMarks) * 100) : null,
         collected, paidCount, studentTotal, perClass,
+        range, trend, delta, hasAnySessions: anySessions > 0,
       });
     } catch {}
-  }, [isDemo, allClasses.length, effectiveFilter]);
+  }, [isDemo, allClasses.length, effectiveFilter, range]);
 
   useFocusEffect(useCallback(() => { loadSignals(); }, [loadSignals]));
 
@@ -494,8 +625,11 @@ export function ReportTabScreen({ navigation, route }: any) {
               </View>
             </View>
           </>
-        ) : (realStats && realStats.sessionCount > 0) ? (
-          <RealStats stats={realStats} />
+        ) : (realStats && realStats.hasAnySessions) ? (
+          <>
+            <RangeToggle range={range} onChange={setRange} />
+            <RealStats stats={realStats} />
+          </>
         ) : (
           <ReportGuide classes={allClasses} gw={gw} navigation={navigation} week={weekLabel()} hasAttendance={hasAttendance} hasTuition={hasTuition} />
         )}
