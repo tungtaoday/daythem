@@ -8,6 +8,7 @@ import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
+import { SuccessScreen } from '../../components/ui/SuccessScreen';
 import { cancelClass, proposeMakeup } from '../../api/announcements';
 import { useAuthStore } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
@@ -133,20 +134,20 @@ export function CancelClassScreen({ route, navigation }: any) {
 
   if (sent) {
     return (
-      <View style={[s.container, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
-        <View style={s.successCircle}>
-          <Text style={{ fontSize: 40, color: colors.green600 }}>✓</Text>
-        </View>
-        <Text style={s.successTitle}>Đã đánh dấu báo nghỉ</Text>
-        <Text style={s.successSub}>
-          {toGroup && toIndividual
+      <SuccessScreen
+        title="Đã đánh dấu báo nghỉ"
+        sub={
+          toGroup && toIndividual
             ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo và nhắn riêng từng phụ huynh nhé.'
             : toGroup
             ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo nhé.'
             : toIndividual
             ? 'Tin đã được copy. Nhớ dán & gửi riêng cho từng phụ huynh nhé.'
-            : 'Tin đã được copy. Nhớ dán & gửi trong Zalo nhé.'}
-        </Text>
+            : 'Tin đã được copy. Nhớ dán & gửi trong Zalo nhé.'
+        }
+        secondaryLabel="Về trang chính"
+        onSecondary={() => navigation.goBack()}
+      >
         <TouchableOpacity style={s.openZaloBtn} onPress={() => { openZalo(); }} activeOpacity={0.85}>
           <IconZalo size={18} color="white" />
           <Text style={s.openZaloBtnText}>Mở Zalo</Text>
@@ -164,10 +165,7 @@ export function CancelClassScreen({ route, navigation }: any) {
             </TouchableOpacity>
           </View>
         )}
-        <TouchableOpacity style={s.ghostBtn} onPress={() => navigation.goBack()}>
-          <Text style={s.ghostBtnText}>Về trang chính</Text>
-        </TouchableOpacity>
-      </View>
+      </SuccessScreen>
     );
   }
 
@@ -387,12 +385,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
   },
   btnPrimaryText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  successCircle: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: colors.green100,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 18,
-  },
-  successTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4 },
-  successSub: { fontSize: 13, color: colors.textSecondary, maxWidth: 280, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   nextStep: {
     backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100,
     borderRadius: 18, padding: 18, marginBottom: 14, width: '100%',
@@ -403,6 +395,4 @@ const s = StyleSheet.create({
     paddingHorizontal: 28, marginBottom: 16,
   },
   openZaloBtnText: { color: 'white', fontSize: 15, fontWeight: '700' },
-  ghostBtn: { padding: 12 },
-  ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
 });

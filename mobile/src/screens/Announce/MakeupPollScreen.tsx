@@ -7,7 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
-import { IconSend, IconCalendar, IconSparkle, IconX, IconPlus } from '../../components/icons';
+import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { IconSend, IconSparkle, IconX, IconPlus } from '../../components/icons';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { confirmMakeup, getMakeupPoll } from '../../api/announcements';
 
@@ -128,11 +129,12 @@ export function MakeupPollScreen({ route, navigation }: any) {
   if (step === 'confirmed') {
     const slot = slots.find(s => s.id === picked);
     return (
-      <View style={[s.container, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
-        <View style={s.successCircle}>
-          <IconCalendar size={40} color={colors.green600} />
-        </View>
-        <Text style={s.successTitle}>Đã chốt buổi học bù</Text>
+      <SuccessScreen
+        emoji="📅"
+        title="Đã chốt buổi học bù"
+        secondaryLabel="Về trang chính"
+        onSecondary={() => navigation.goBack()}
+      >
         <Text style={[s.successSub, { color: colors.green700, fontWeight: '600' }]}>
           {slot?.day} · {slot?.time}
         </Text>
@@ -160,11 +162,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
             </View>
           </View>
         </View>
-
-        <TouchableOpacity style={s.ghostBtn} onPress={() => navigation.goBack()}>
-          <Text style={s.ghostBtnText}>Về trang chính</Text>
-        </TouchableOpacity>
-      </View>
+      </SuccessScreen>
     );
   }
 
@@ -493,13 +491,6 @@ const s = StyleSheet.create({
   chonBtnText: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
 
   // Confirmed
-  successCircle: {
-    width: 88, height: 88, borderRadius: 44, backgroundColor: colors.green100,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 18,
-  },
-  successTitle: { fontSize: 20, fontWeight: '700', letterSpacing: -0.3, marginBottom: 4, color: colors.textPrimary },
   successSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', maxWidth: 280, lineHeight: 22 },
   confirmCard: { width: '100%', marginTop: 24, marginBottom: 16 },
-  ghostBtn: { padding: 12 },
-  ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
 });

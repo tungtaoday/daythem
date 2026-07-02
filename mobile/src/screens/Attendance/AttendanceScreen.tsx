@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
+import { SuccessScreen } from '../../components/ui/SuccessScreen';
 import { IconCheck, IconX, IconNote, IconSparkle, IconZalo } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { recordAttendance, listSessions } from '../../api/attendance';
@@ -182,14 +183,12 @@ export function AttendanceScreen({ route, navigation }: any) {
   if (submitted) {
     return (
       <>
-      <View style={[s.container, s.successWrap]}>
-        <View style={s.successCircle}>
-          <Text style={{ fontSize: 36, color: colors.green600 }}>✓</Text>
-        </View>
-        <Text style={s.successTitle}>Đã điểm danh!</Text>
-        <Text style={s.successSub}>
-          {presentCount}/{classStudents.length} có mặt. Đã tự động lưu vào lịch sử mỗi học sinh.
-        </Text>
+      <SuccessScreen
+        title="Đã điểm danh!"
+        sub={`${presentCount}/${classStudents.length} có mặt. Đã tự động lưu vào lịch sử mỗi học sinh.`}
+        secondaryLabel="Về trang chính"
+        onSecondary={() => navigation.goBack()}
+      >
         {absentCount > 0 && firstAbsent && (
           <View style={s.nudgeCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -206,10 +205,7 @@ export function AttendanceScreen({ route, navigation }: any) {
             </TouchableOpacity>
           </View>
         )}
-        <TouchableOpacity style={s.ghostBtn} onPress={() => navigation.goBack()}>
-          <Text style={s.ghostBtnText}>Về trang chính</Text>
-        </TouchableOpacity>
-      </View>
+      </SuccessScreen>
 
       {showZalo && firstAbsent && (
         <ZaloCopySheet
@@ -372,13 +368,6 @@ function NoteModal({ name, initial, onSave, onClose }: any) {
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  successWrap: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-  successCircle: {
-    width: 96, height: 96, borderRadius: 48, backgroundColor: colors.green100,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 22,
-  },
-  successTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 6 },
-  successSub: { fontSize: 14, color: colors.textSecondary, maxWidth: 280, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
   nudgeCard: {
     width: '100%', backgroundColor: 'white', borderRadius: 18,
     padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border,
@@ -389,8 +378,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   zaloPrimaryText: { color: 'white', fontSize: 14, fontWeight: '600' },
-  ghostBtn: { padding: 12 },
-  ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
   hero: {
     alignItems: 'center',
     backgroundColor: colors.green600,

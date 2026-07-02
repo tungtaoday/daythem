@@ -6,6 +6,7 @@ import { colors } from '../../theme';
 import { classColor } from '../../theme/classColors';
 import { Avatar } from '../../components/ui/Avatar';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
+import { SuccessScreen } from '../../components/ui/SuccessScreen';
 import { IconZalo, IconStar, IconWarn, IconBook } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
@@ -116,13 +117,10 @@ export function ClassReportScreen({ route }: any) {
 
   if (done) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <View style={s.successCircle}>
-          <Text style={{ fontSize: 48, color: colors.green600 }}>✓</Text>
-        </View>
-        <Text style={s.successTitle}>Đã gửi {totalCount} báo cáo</Text>
-        <Text style={s.successSub}>Phụ huynh lớp {className} sẽ nhận qua Zalo.</Text>
-      </View>
+      <SuccessScreen
+        title={`Đã gửi ${totalCount} báo cáo`}
+        sub={`Phụ huynh lớp ${className} sẽ nhận qua Zalo.`}
+      />
     );
   }
 
@@ -336,8 +334,4 @@ const s = StyleSheet.create({
   bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.bg },
   sendBtn: { height: 56, borderRadius: 16, backgroundColor: colors.green500, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   sendBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
-
-  successCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
-  successTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 6 },
-  successSub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
 });
