@@ -560,13 +560,14 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
       {/* Schedule edit modal */}
       {showSched && (
-        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setShowSched(false)}>
-          <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
+        <View style={s.overlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowSched(false)} />
+          <View style={[s.sheet, { maxHeight: '88%', paddingBottom: insets.bottom + 16 }]}>
             <View style={s.handle} />
             <Text style={s.sheetTitle}>Lịch học định kỳ</Text>
-            <Text style={s.sheetSub}>Mỗi buổi có giờ, thời lượng và địa điểm riêng.</Text>
+            <Text style={s.sheetSub}>Mỗi buổi có giờ, thời lượng và địa điểm riêng. Kéo để xem hết.</Text>
 
-            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingBottom: 8 }} showsVerticalScrollIndicator>
               {edSessions.map((sess, idx) => (
                 <View key={idx} style={sc.sessionCard}>
                   <View style={sc.sessionHead}>
@@ -624,8 +625,8 @@ export function ClassSettingsScreen({ route, navigation }: any) {
             <TouchableOpacity style={[s.btnPrimary, { marginTop: 14 }, savingSched && { opacity: 0.6 }]} onPress={saveSchedule} disabled={savingSched}>
               {savingSched ? <ActivityIndicator color="white" /> : <Text style={s.btnPrimaryText}>Lưu lịch học</Text>}
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
