@@ -10,7 +10,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getDays, hasClassOnDayN, nextOccurrence, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
+import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -113,7 +113,7 @@ export function CalendarScreen({ navigation }: any) {
 
   // "SẮP TỚI": buổi gần nhất trên tất cả các lớp (delta nhỏ nhất, hoà thì start_time sớm hơn).
   const upcoming = (() => {
-    let best: { cls: any; occ: { date: Date; dayN: number; delta: number } } | null = null;
+    let best: { cls: any; occ: NonNullable<ReturnType<typeof nextOccurrence>> } | null = null;
     for (const c of classes) {
       const occ = nextOccurrence(c.schedule);
       if (!occ) continue;
@@ -147,7 +147,11 @@ export function CalendarScreen({ navigation }: any) {
       </Text>
       {selectedClasses.length > 0 ? (
         <View style={s.card}>
-          {selectedClasses.map((cls: any, i: number) => (
+          {selectedClasses.map((cls: any, i: number) => {
+            // Giờ + địa điểm của ĐÚNG buổi vào thứ đang chọn (mỗi buổi có giờ riêng).
+            const sess = sessionForDay(cls.schedule, selDayN);
+            const sessTime = sessionTimeStr(sess);
+            return (
             <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
               <View style={s.classBar} />
               <View style={{ flex: 1 }}>
@@ -156,9 +160,9 @@ export function CalendarScreen({ navigation }: any) {
                   <Text style={s.className}>{cls.name} · {cls.subject}</Text>
                 </View>
                 <Text style={s.classSub}>
-                  {cls.schedule?.start_time ? `${cls.schedule.start_time} · ` : ''}
+                  {sessTime ? `${sessTime} · ` : ''}
                   {cls.student_count || 0} học sinh
-                  {cls.schedule?.location ? ` · ${cls.schedule.location}` : ''}
+                  {sess?.location ? ` · ${sess.location}` : ''}
                 </Text>
               </View>
               {isPastOrToday ? (
@@ -177,7 +181,8 @@ export function CalendarScreen({ navigation }: any) {
                 </TouchableOpacity>
               )}
             </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={s.emptyDay}>
@@ -346,8 +351,8 @@ export function CalendarScreen({ navigation }: any) {
                     </View>
                     <Text style={s.classSub}>
                       {DAY_FULL[upcoming.occ.dayN]}
-                      {upcoming.cls.schedule?.start_time ? ` · ${upcoming.cls.schedule.start_time}` : ''}
-                      {upcoming.cls.schedule?.location ? ` · ${upcoming.cls.schedule.location}` : ''}
+                      {sessionTimeStr(upcoming.occ.session) ? ` · ${sessionTimeStr(upcoming.occ.session)}` : ''}
+                      {upcoming.occ.session.location ? ` · ${upcoming.occ.session.location}` : ''}
                     </Text>
                   </View>
                   <Text style={s.openBtnText}>Mở lớp →</Text>

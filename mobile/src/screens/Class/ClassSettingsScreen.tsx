@@ -10,11 +10,23 @@ import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
-import { getDays } from '../../utils/schedule';
+import { getSessions, sessionTimeStr, DAY_SHORT, Session } from '../../utils/schedule';
 
 // ── Types ─────────────────────────────────────────────────────
 
 type FeeMode = 'month' | 'session' | 'course';
+
+// ── Schedule editor presets ───────────────────────────────────
+
+const TIME_PRESETS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
+const DUR_PRESETS: { l: string; v: number }[] = [
+  { l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }, { l: '2h30', v: 150 },
+];
+const PLACE_PRESETS = ['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'];
+const DAY_CHIPS: { l: string; v: number }[] = [
+  { l: 'T2', v: 1 }, { l: 'T3', v: 2 }, { l: 'T4', v: 3 }, { l: 'T5', v: 4 },
+  { l: 'T6', v: 5 }, { l: 'T7', v: 6 }, { l: 'CN', v: 7 },
+];
 
 type StuFee = {
   id: string; name: string; baseAmt: number;
@@ -144,14 +156,11 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   const [loadingStus, setLoadingStus] = useState(!isDemo);
 
   const sched = (klass as any)?.schedule ?? null;
-  const DAY_LABELS = ['', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
-  const schedDays = getDays(sched);
-  const scheduleDay = schedDays.length
-    ? `${schedDays.map(d => DAY_LABELS[d] ?? '').filter(Boolean).join(', ')}${sched?.start_time ? ` · ${sched.start_time}` : ''}`
-    : 'Chưa đặt lịch';
-  const scheduleSub = sched
-    ? `${sched.duration ? `${Math.floor(sched.duration / 60)}h${sched.duration % 60 ? ` ${sched.duration % 60}p` : ''}` : ''}${sched.location ? ` · ${sched.location}` : ''}`.replace(/^ · /, '')
-    : 'Thêm ngày, giờ, địa điểm';
+  const schedSessions = getSessions(sched);
+  // Mỗi buổi 1 dòng: "T4 · 18:30 – 20:00 · Tại nhà"
+  const scheduleLines = schedSessions.map(sess =>
+    [DAY_SHORT[sess.day], sessionTimeStr(sess), sess.location].filter(Boolean).join(' · ')
+  );
 
   const [className, setClassName] = useState(klass?.name ?? 'Lớp 9');
   const [subject, setSubject] = useState(klass?.subject ?? 'Toán');
@@ -163,37 +172,51 @@ export function ClassSettingsScreen({ route, navigation }: any) {
   const [editingStu, setEditingStu] = useState<StuFee | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // ── Sửa lịch học ──
+  // ── Sửa lịch học (mỗi buổi có giờ/thời lượng/địa điểm RIÊNG) ──
+  const initSessions = (): Session[] => {
+    const s = getSessions(sched);
+    return s.length ? s : [{ day: 3, start_time: '18:30', duration: 90, location: 'Tại nhà' }];
+  };
   const [showSched, setShowSched] = useState(false);
-  const [edDays, setEdDays] = useState<number[]>(getDays(sched).length ? getDays(sched) : [3]);
-  const [edTime, setEdTime] = useState<string>(sched?.start_time ?? '18:30');
-  const [edDur, setEdDur] = useState<number>(sched?.duration ?? 90);
-  const [edPlace, setEdPlace] = useState<string>(sched?.location ?? 'Tại nhà');
+  const [edSessions, setEdSessions] = useState<Session[]>(initSessions);
   const [savingSched, setSavingSched] = useState(false);
 
   const openSchedEdit = () => {
-    const initDays = getDays(sched);
-    setEdDays(initDays.length ? initDays : [3]);
-    setEdTime(sched?.start_time ?? '18:30');
-    setEdDur(sched?.duration ?? 90);
-    setEdPlace(sched?.location ?? 'Tại nhà');
+    setEdSessions(initSessions());
     setShowSched(true);
   };
 
-  const toggleEdDay = (value: number) =>
-    setEdDays(prev =>
-      prev.includes(value) ? prev.filter(x => x !== value) : [...prev, value]
-    );
+  const patchSession = (idx: number, patch: Partial<Session>) =>
+    setEdSessions(prev => prev.map((s, i) => (i === idx ? { ...s, ...patch } : s)));
+
+  const removeSession = (idx: number) =>
+    setEdSessions(prev => prev.filter((_, i) => i !== idx));
+
+  const addSession = () =>
+    setEdSessions(prev => {
+      const used = new Set(prev.map(s => s.day));
+      const nextDay = DAY_CHIPS.map(d => d.v).find(v => !used.has(v)) ?? 3;
+      return [...prev, { day: nextDay, start_time: '18:30', duration: 90, location: 'Tại nhà' }];
+    });
 
   const saveSchedule = async () => {
-    if (edDays.length === 0) {
-      Alert.alert('Chọn ngày học', 'Vui lòng chọn ít nhất 1 ngày trong tuần.');
+    if (edSessions.length === 0 || edSessions.some(s => !s.day)) {
+      Alert.alert('Chọn ngày học', 'Mỗi buổi cần chọn 1 ngày trong tuần.');
       return;
     }
-    const days = [...edDays].sort((a, b) => a - b);
+    const first = edSessions[0];
     setSavingSched(true);
     try {
-      await updateClass(classId, { schedule: { days, day: days[0], start_time: edTime, duration: edDur, location: edPlace } });
+      await updateClass(classId, {
+        schedule: {
+          sessions: edSessions,
+          day: first.day,
+          days: [...new Set(edSessions.map(s => s.day))],
+          start_time: first.start_time,
+          duration: first.duration,
+          location: first.location,
+        },
+      });
       setShowSched(false);
     } catch {
       Alert.alert('Chưa lưu được', 'Kiểm tra mạng và thử lại.');
@@ -369,8 +392,16 @@ export function ClassSettingsScreen({ route, navigation }: any) {
           >
             <View style={s.scheduleDot} />
             <View style={{ flex: 1 }}>
-              <Text style={s.scheduleDay}>{scheduleDay}</Text>
-              <Text style={s.scheduleSub}>{scheduleSub}</Text>
+              {scheduleLines.length ? (
+                scheduleLines.map((line, i) => (
+                  <Text key={i} style={[s.scheduleDay, i > 0 && { marginTop: 3 }]}>{line}</Text>
+                ))
+              ) : (
+                <>
+                  <Text style={s.scheduleDay}>Chưa đặt lịch</Text>
+                  <Text style={s.scheduleSub}>Thêm ngày, giờ, địa điểm</Text>
+                </>
+              )}
             </View>
             {!isDemo && <Text style={{ fontSize: 13, fontWeight: '700', color: colors.green700 }}>Sửa</Text>}
           </TouchableOpacity>
@@ -533,44 +564,64 @@ export function ClassSettingsScreen({ route, navigation }: any) {
           <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
             <View style={s.handle} />
             <Text style={s.sheetTitle}>Lịch học định kỳ</Text>
+            <Text style={s.sheetSub}>Mỗi buổi có giờ, thời lượng và địa điểm riêng.</Text>
 
-            <Text style={sc.label}>Thứ trong tuần (chọn nhiều được)</Text>
-            <View style={sc.chipWrap}>
-              {[{ l: 'T2', v: 1 }, { l: 'T3', v: 2 }, { l: 'T4', v: 3 }, { l: 'T5', v: 4 }, { l: 'T6', v: 5 }, { l: 'T7', v: 6 }, { l: 'CN', v: 7 }].map(d => (
-                <TouchableOpacity key={d.v} style={[sc.chip, edDays.includes(d.v) && sc.chipActive]} onPress={() => toggleEdDay(d.v)}>
-                  <Text style={[sc.chipText, edDays.includes(d.v) && sc.chipTextActive]}>{d.l}</Text>
-                </TouchableOpacity>
+            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+              {edSessions.map((sess, idx) => (
+                <View key={idx} style={sc.sessionCard}>
+                  <View style={sc.sessionHead}>
+                    <Text style={sc.sessionTitle}>Buổi {idx + 1}</Text>
+                    {edSessions.length > 1 && (
+                      <TouchableOpacity onPress={() => removeSession(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={sc.removeText}>Xoá buổi</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <Text style={sc.label}>Ngày</Text>
+                  <View style={sc.chipWrap}>
+                    {DAY_CHIPS.map(d => (
+                      <TouchableOpacity key={d.v} style={[sc.chip, sess.day === d.v && sc.chipActive]} onPress={() => patchSession(idx, { day: d.v })}>
+                        <Text style={[sc.chipText, sess.day === d.v && sc.chipTextActive]}>{d.l}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={sc.label}>Giờ</Text>
+                  <View style={sc.chipWrap}>
+                    {TIME_PRESETS.map(t => (
+                      <TouchableOpacity key={t} style={[sc.chip, sess.start_time === t && sc.chipActive]} onPress={() => patchSession(idx, { start_time: t })}>
+                        <Text style={[sc.chipText, sess.start_time === t && sc.chipTextActive]}>{t}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={sc.label}>Thời lượng</Text>
+                  <View style={sc.chipWrap}>
+                    {DUR_PRESETS.map(d => (
+                      <TouchableOpacity key={d.v} style={[sc.chip, sess.duration === d.v && sc.chipActive]} onPress={() => patchSession(idx, { duration: d.v })}>
+                        <Text style={[sc.chipText, sess.duration === d.v && sc.chipTextActive]}>{d.l}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={sc.label}>Địa điểm</Text>
+                  <View style={[sc.chipWrap, { marginBottom: 0 }]}>
+                    {PLACE_PRESETS.map(p => (
+                      <TouchableOpacity key={p} style={[sc.chip, sess.location === p && sc.chipActive]} onPress={() => patchSession(idx, { location: p })}>
+                        <Text style={[sc.chipText, sess.location === p && sc.chipTextActive]}>{p}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
               ))}
-            </View>
 
-            <Text style={sc.label}>Giờ học</Text>
-            <View style={sc.chipWrap}>
-              {['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'].map(t => (
-                <TouchableOpacity key={t} style={[sc.chip, edTime === t && sc.chipActive]} onPress={() => setEdTime(t)}>
-                  <Text style={[sc.chipText, edTime === t && sc.chipTextActive]}>{t}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+              <TouchableOpacity style={sc.addBtn} onPress={addSession}>
+                <Text style={sc.addBtnText}>+ Thêm buổi định kỳ</Text>
+              </TouchableOpacity>
+            </ScrollView>
 
-            <Text style={sc.label}>Thời lượng</Text>
-            <View style={sc.chipWrap}>
-              {[{ l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }, { l: '2h30', v: 150 }].map(d => (
-                <TouchableOpacity key={d.v} style={[sc.chip, edDur === d.v && sc.chipActive]} onPress={() => setEdDur(d.v)}>
-                  <Text style={[sc.chipText, edDur === d.v && sc.chipTextActive]}>{d.l}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={sc.label}>Địa điểm</Text>
-            <View style={sc.chipWrap}>
-              {['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'].map(p => (
-                <TouchableOpacity key={p} style={[sc.chip, edPlace === p && sc.chipActive]} onPress={() => setEdPlace(p)}>
-                  <Text style={[sc.chipText, edPlace === p && sc.chipTextActive]}>{p}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity style={[s.btnPrimary, savingSched && { opacity: 0.6 }]} onPress={saveSchedule} disabled={savingSched}>
+            <TouchableOpacity style={[s.btnPrimary, { marginTop: 14 }, savingSched && { opacity: 0.6 }]} onPress={saveSchedule} disabled={savingSched}>
               {savingSched ? <ActivityIndicator color="white" /> : <Text style={s.btnPrimaryText}>Lưu lịch học</Text>}
             </TouchableOpacity>
           </TouchableOpacity>
@@ -587,6 +638,12 @@ const sc = StyleSheet.create({
   chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
   chipText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   chipTextActive: { color: colors.green700 },
+  sessionCard: { borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, marginBottom: 12, backgroundColor: colors.surfaceAlt },
+  sessionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  sessionTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
+  removeText: { fontSize: 13, fontWeight: '700', color: colors.coral700 },
+  addBtn: { paddingVertical: 13, borderRadius: 14, borderWidth: 1.5, borderColor: colors.green500, borderStyle: 'dashed', alignItems: 'center', backgroundColor: colors.green50, marginBottom: 4 },
+  addBtnText: { fontSize: 14, fontWeight: '700', color: colors.green700 },
 });
 
 const s = StyleSheet.create({

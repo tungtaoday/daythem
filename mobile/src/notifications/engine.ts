@@ -6,7 +6,7 @@ import {
   getNotifConfig, getCampaigns, registerPushToken, logNotifEvent,
   NotifConfig,
 } from '../api/notify';
-import { getDays } from '../utils/schedule';
+import { getSessions } from '../utils/schedule';
 
 const FIRED_CAMPAIGNS_KEY = 'notif_fired_campaigns';
 const isWeb = Platform.OS === 'web';
@@ -107,14 +107,15 @@ export async function syncNotifications(classes: ClassLite[], genderWord: string
   if (r.class_reminder?.enabled !== false) {
     const lead = r.class_reminder?.lead_minutes ?? 30;
     for (const c of classes) {
-      const hm = parseHM(c.schedule?.start_time);
-      if (!hm) continue;
-      // 1 lớp có thể nhiều ngày/tuần → 1 nhắc nhở/tuần cho MỖI thứ.
-      for (const day of getDays(c.schedule)) {
-        const t = minusLead(day, hm.hour, hm.minute, lead);
+      // 1 lớp có thể nhiều BUỔI/tuần, mỗi buổi giờ + địa điểm RIÊNG →
+      // 1 nhắc nhở/tuần cho MỖI buổi, dùng đúng giờ của buổi đó.
+      for (const session of getSessions(c.schedule)) {
+        const hm = parseHM(session.start_time);
+        if (!hm) continue;
+        const t = minusLead(session.day, hm.hour, hm.minute, lead);
         if (inQuiet(t.hour, t.minute, quiet)) continue;
         await sched(
-          { title: `Sắp tới giờ dạy ${c.name}`, body: `${c.schedule?.start_time} · ${c.student_count || 0} học sinh · ${c.schedule?.location || 'tại nhà'}`, data: { channel: 'utility', rule: 'class_reminder' } },
+          { title: `Sắp tới giờ dạy ${c.name}`, body: `${session.start_time} · ${c.student_count || 0} học sinh · ${session.location || 'tại nhà'}`, data: { channel: 'utility', rule: 'class_reminder' } },
           { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: toExpoWeekday(t.day), hour: t.hour, minute: t.minute },
         );
       }

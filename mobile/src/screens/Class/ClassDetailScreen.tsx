@@ -14,17 +14,9 @@ import { listSessions } from '../../api/attendance';
 import {
   IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
 } from '../../components/icons';
-import { getDays, nextOccurrence, daysLabel, DAY_FULL } from '../../utils/schedule';
+import { getDays, nextOccurrence, sessionTimeStr, daysLabel, DAY_FULL } from '../../utils/schedule';
 
 // ── day / time / countdown helpers ───────────────────────────
-function addMinutes(time: string, mins: number): string {
-  const parts = time.split(':').map(Number);
-  const total = parts[0] * 60 + (parts[1] || 0) + (mins || 0);
-  const hh = ((Math.floor(total / 60) % 24) + 24) % 24;
-  const mm = ((total % 60) + 60) % 60;
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
-
 function countdownWord(delta: number): string {
   if (delta === 0) return 'HÔM NAY';
   if (delta === 1) return 'NGÀY MAI';
@@ -121,13 +113,10 @@ export function ClassDetailScreen({ route, navigation }: any) {
   };
 
   // ── countdown line: "THỨ 4 · 18:30 – 20:00 · CÒN 4 NGÀY" (buổi gần nhất) ──
-  const sched = klass.schedule || {};
-  const start: string = sched.start_time || '';
-  const dur: number = sched.duration || 0;
-  const end = start && dur ? addMinutes(start, dur) : '';
-  const timeStr = start ? (end ? `${start} – ${end}` : start) : '';
-  const loc: string = sched.location || '';
+  // Giờ + địa điểm lấy từ ĐÚNG buổi sắp tới (mỗi buổi có giờ/địa điểm riêng).
   const occ = nextOccurrence(klass.schedule);
+  const timeStr = occ ? sessionTimeStr(occ.session) : '';
+  const loc: string = occ?.session.location || '';
   const countdownLine = occ
     ? [
         DAY_FULL[occ.dayN].toUpperCase(),

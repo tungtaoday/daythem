@@ -13,17 +13,9 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
 import { getTuition } from '../../api/tuition';
-import { nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL, daysLabel } from '../../utils/schedule';
+import { nextOccurrence, hasClassOnDayN, todayDayN, sessionTimeStr, DAY_FULL, daysLabel } from '../../utils/schedule';
 
 // ── time / countdown helpers ──────────────────────────────────
-
-function addMinutes(time: string, mins: number): string {
-  const parts = time.split(':').map(Number);
-  const total = parts[0] * 60 + (parts[1] || 0) + (mins || 0);
-  const hh = ((Math.floor(total / 60) % 24) + 24) % 24;
-  const mm = ((total % 60) + 60) % 60;
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
 
 function countdownLabel(delta: number, day: number): string {
   if (delta === 0) return 'HÔM NAY';
@@ -61,8 +53,10 @@ const as = StyleSheet.create({
 
 function ClassCardLarge({ klass, highlighted, studentNames, paidCount, totalCount, onPress }: any) {
   const dayLabel = daysLabel(klass.schedule);
-  const timeStr = klass.schedule?.start_time || '';
-  const loc = klass.schedule?.location || '';
+  // Giờ + địa điểm của BUỔI TỚI GẦN NHẤT (mỗi buổi có giờ/địa điểm riêng); giữ daysLabel cho badge nhiều ngày.
+  const occ = nextOccurrence(klass.schedule);
+  const timeStr = occ ? sessionTimeStr(occ.session) : '';
+  const loc = occ?.session.location || '';
   const totalDue = totalCount - paidCount;
   const paidRatio = totalCount > 0 ? paidCount / totalCount : 0;
 
@@ -216,14 +210,11 @@ const ar = StyleSheet.create({
 // ── HeroCard: BUỔI TỚI GẦN NHẤT ───────────────────────────────
 
 function HeroCard({ klass, delta, dayN, studentNames, onPress }: any) {
-  const start = klass.schedule?.start_time || '';
-  const dur = klass.schedule?.duration || 0;
-  const end = start && dur ? addMinutes(start, dur) : '';
-  const loc = klass.schedule?.location || '';
-
+  // Giờ + địa điểm của ĐÚNG buổi tới gần nhất (mỗi buổi có giờ/địa điểm riêng).
+  const occ = nextOccurrence(klass.schedule);
   const timeLine = [
-    start ? (end ? `${start} – ${end}` : start) : '',
-    loc,
+    occ ? sessionTimeStr(occ.session) : '',
+    occ?.session.location || '',
   ].filter(Boolean).join(' · ');
 
   return (
@@ -328,7 +319,7 @@ export function ClassesScreen({ navigation }: any) {
   // ── next upcoming class (buổi gần nhất sắp tới trong tất cả các ngày, vòng tuần) ──
   const heroPick = classes
     .map(c => ({ c, occ: nextOccurrence(c.schedule) }))
-    .filter((x): x is { c: any; occ: { date: Date; dayN: number; delta: number } } => !!x.occ)
+    .filter((x): x is { c: any; occ: NonNullable<ReturnType<typeof nextOccurrence>> } => !!x.occ)
     .sort((a, b) =>
       a.occ.delta - b.occ.delta ||
       (a.c.schedule?.start_time || '99:99').localeCompare(b.c.schedule?.start_time || '99:99'),

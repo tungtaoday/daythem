@@ -17,7 +17,7 @@ import {
   IconChart, IconWarn, IconZalo, IconClock, IconSend,
   IconChevron,
 } from '../../components/icons';
-import { nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
+import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -402,9 +402,11 @@ export function HomeScreen({ navigation }: any) {
     const hasStudents = totalStudents > 0;
 
     if (todayClass) {
-      const timing = isDemo ? 'upcoming' : classTiming(todayClass.schedule?.start_time, todayClass.schedule?.duration);
-      const st = todayClass.schedule?.start_time || '';
-      const loc = todayClass.schedule?.location || 'tại nhà';
+      // Buổi định kỳ đúng hôm nay → lấy giờ/thời lượng/địa điểm RIÊNG của buổi đó.
+      const todaySession = sessionForDay(todayClass.schedule, todayDayN());
+      const timing = isDemo ? 'upcoming' : classTiming(todaySession?.start_time, todaySession?.duration);
+      const st = todaySession?.start_time || '';
+      const loc = todaySession?.location || 'tại nhà';
       const cnt = todayClass.student_count || 0;
       // Buổi đã qua → KHÔNG hiện "sắp tới" nữa.
       if (timing && timing !== 'finished') {
