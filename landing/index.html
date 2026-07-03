@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GieoChữ — Trợ lý lớp dạy thêm cho giáo viên</title>
+<meta name="description" content="GieoChữ giúp giáo viên dạy thêm quản lý lớp, điểm danh, học phí, báo cáo phụ huynh và nhắc nhở qua Zalo — nhẹ nhàng, tiếng Việt, không cần rành công nghệ.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green50:#f0faf4; --green100:#d8f3e3; --green200:#aee6c5; --green500:#4a9e72;
+    --green600:#3d8760; --green700:#2f6849; --green900:#1a3d2a;
+    --coral100:#ffe5da; --coral500:#e07a5f; --coral700:#b85a42;
+    --honey100:#fef5e1; --honey500:#f2c94c; --honey700:#8a6d30;
+    --bg:#faf8f2; --surface:#fff; --surfaceAlt:#f5f3ed; --border:#e8e4da;
+    --tp:#1a1a1a; --ts:#6b6b6b; --tm:#9e9e9e; --zalo:#3a7dd3;
+    --grad-hero:linear-gradient(145deg,#55b083,#2f6849);
+    --shadow-card:0 2px 8px rgba(40,30,20,.06);
+    --shadow-hero:0 12px 30px rgba(26,61,42,.22);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Be Vietnam Pro',system-ui,sans-serif;background:var(--bg);color:var(--tp);line-height:1.6;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;padding:13px 22px;border-radius:14px;border:none;cursor:pointer;transition:.15s;font-family:inherit}
+  .btn-primary{background:var(--green500);color:#fff}
+  .btn-primary:hover{background:var(--green600);transform:translateY(-1px)}
+  .btn-ghost{background:var(--surface);color:var(--green700);border:1.5px solid var(--green200)}
+  .btn-ghost:hover{background:var(--green50)}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--green100);color:var(--green700);font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:50;background:rgba(250,248,242,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--green700)}
+  .logo .mark{width:34px;height:34px;border-radius:10px;background:var(--grad-hero);display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:var(--shadow-card)}
+  .nav-links{display:flex;align-items:center;gap:26px;font-size:15px;color:var(--ts);font-weight:500}
+  .nav-links a:hover{color:var(--green700)}
+  @media(max-width:760px){.nav-links a:not(.btn){display:none}}
+
+  /* HERO */
+  .hero{padding:64px 0 40px}
+  .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+  @media(max-width:860px){.hero-grid{grid-template-columns:1fr;gap:36px;text-align:center}}
+  h1{font-size:46px;font-weight:800;line-height:1.12;letter-spacing:-1px}
+  h1 .hl{color:var(--green600)}
+  .hero p.sub{font-size:18px;color:var(--ts);margin:18px 0 26px;max-width:520px}
+  @media(max-width:860px){.hero p.sub{margin-left:auto;margin-right:auto}}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+  @media(max-width:860px){.hero-cta{justify-content:center}}
+  .hero-note{font-size:13px;color:var(--tm);margin-top:14px}
+  h1{font-size:46px} @media(max-width:860px){h1{font-size:34px}}
+
+  /* PHONE MOCKUP */
+  .phone-col{display:flex;justify-content:center}
+  .phone{width:280px;background:#101816;border-radius:40px;padding:10px;box-shadow:var(--shadow-hero);position:relative}
+  .screen{background:var(--bg);border-radius:31px;overflow:hidden;height:560px}
+  .st-hero{background:var(--grad-hero);padding:20px 18px 26px;color:#fff}
+  .st-hero .top{display:flex;justify-content:space-between;align-items:center;font-size:13px;opacity:.9}
+  .st-hero h3{font-size:20px;font-weight:700;margin-top:14px}
+  .st-hero .cd{background:rgba(255,255,255,.16);border-radius:14px;padding:12px 14px;margin-top:14px}
+  .st-hero .cd .lb{font-size:11px;opacity:.85;font-weight:600;letter-spacing:.4px}
+  .st-hero .cd .vl{font-size:16px;font-weight:700;margin-top:2px}
+  .st-body{padding:14px}
+  .st-card{background:#fff;border-radius:16px;padding:13px;box-shadow:var(--shadow-card);display:flex;align-items:center;gap:11px;margin-bottom:10px}
+  .st-dot{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
+  .st-card .nm{font-size:14px;font-weight:600}
+  .st-card .mt{font-size:12px;color:var(--ts)}
+  .st-card .bd{margin-left:auto;font-size:11px;font-weight:600;padding:4px 9px;border-radius:8px;background:var(--green100);color:var(--green700)}
+  .st-tab{position:absolute;bottom:10px;left:10px;right:10px;background:#fff;border-radius:0 0 31px 31px;height:52px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--border);font-size:19px}
+
+  /* SECTIONS */
+  section.blk{padding:56px 0}
+  .center{text-align:center;max-width:640px;margin:0 auto 40px}
+  h2{font-size:32px;font-weight:800;letter-spacing:-.5px}
+  @media(max-width:860px){h2{font-size:26px}}
+  .center p{color:var(--ts);font-size:17px;margin-top:10px}
+
+  /* PROBLEM strip */
+  .prob{background:var(--surfaceAlt);border-radius:24px;padding:32px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:760px){.prob{grid-template-columns:1fr}}
+  .prob .it{display:flex;gap:12px;align-items:flex-start}
+  .prob .ic{font-size:22px}
+  .prob .it b{display:block;font-size:15px}
+  .prob .it span{font-size:14px;color:var(--ts)}
+
+  /* FEATURES */
+  .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:860px){.feat{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.feat{grid-template-columns:1fr}}
+  .fc{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;transition:.15s}
+  .fc:hover{transform:translateY(-3px);box-shadow:var(--shadow-card);border-color:var(--green200)}
+  .fc .fi{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;margin-bottom:14px}
+  .fc h3{font-size:17px;font-weight:700}
+  .fc p{font-size:14px;color:var(--ts);margin-top:6px}
+
+  /* STEPS */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;counter-reset:s}
+  @media(max-width:760px){.steps{grid-template-columns:1fr}}
+  .step{position:relative;padding-left:6px}
+  .step .n{width:40px;height:40px;border-radius:12px;background:var(--green700);color:#fff;font-weight:800;display:grid;place-items:center;font-size:18px;margin-bottom:12px}
+  .step h3{font-size:18px;font-weight:700}
+  .step p{color:var(--ts);font-size:15px;margin-top:4px}
+
+  /* ZALO band */
+  .band{background:var(--grad-hero);border-radius:28px;padding:40px;color:#fff;display:grid;grid-template-columns:1.2fr .8fr;gap:24px;align-items:center;box-shadow:var(--shadow-hero)}
+  @media(max-width:760px){.band{grid-template-columns:1fr;text-align:center}}
+  .band h2{color:#fff}
+  .band p{color:rgba(255,255,255,.9);font-size:16px;margin-top:10px}
+  .chat{background:rgba(255,255,255,.14);border-radius:18px;padding:16px}
+  .bub{background:#fff;color:var(--tp);border-radius:14px;padding:11px 13px;font-size:13px;margin-bottom:9px;box-shadow:var(--shadow-card)}
+  .bub.me{background:var(--zalo);color:#fff}
+
+  /* PRICING */
+  .price{max-width:440px;margin:0 auto;background:var(--surface);border:2px solid var(--green200);border-radius:24px;padding:34px;text-align:center;box-shadow:var(--shadow-card)}
+  .price .tag{font-size:44px;font-weight:800;color:var(--green700)}
+  .price ul{list-style:none;text-align:left;margin:20px 0 24px;display:flex;flex-direction:column;gap:10px}
+  .price li{display:flex;gap:10px;font-size:15px}
+  .price li:before{content:"✓";color:var(--green500);font-weight:800}
+
+  /* FAQ */
+  .faq{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+  details{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px}
+  details[open]{border-color:var(--green200)}
+  summary{font-weight:600;font-size:16px;cursor:pointer;list-style:none;display:flex;justify-content:space-between}
+  summary::-webkit-details-marker{display:none}
+  summary:after{content:"+";color:var(--green600);font-weight:800;font-size:20px}
+  details[open] summary:after{content:"–"}
+  details p{color:var(--ts);font-size:15px;margin-top:10px}
+
+  /* CTA + FOOTER */
+  .final{text-align:center;padding:64px 20px}
+  .final h2{margin-bottom:14px}
+  footer{border-top:1px solid var(--border);padding:30px 0;color:var(--tm);font-size:14px}
+  .foot-in{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+  .foot-in a{color:var(--ts)}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap nav-in">
+  <div class="logo"><span class="mark">🌱</span> GieoChữ</div>
+  <div class="nav-links">
+    <a href="#tinhnang">Tính năng</a>
+    <a href="#cachdung">Cách dùng</a>
+    <a href="#giá">Giá</a>
+    <a href="#tai" class="btn btn-primary">Tải app</a>
+  </div>
+</div></nav>
+
+<!-- HERO -->
+<header class="hero"><div class="wrap hero-grid">
+  <div>
+    <span class="pill">🌿 Made in Vietnam · cho thầy cô dạy thêm</span>
+    <h1 style="margin-top:16px">Quản lý lớp dạy thêm,<br><span class="hl">nhẹ như nhắn tin.</span></h1>
+    <p class="sub">Điểm danh 1 chạm, theo dõi học phí, nhắc phụ huynh qua Zalo và gửi báo cáo — tất cả trong một app tiếng Việt, làm cho người <b>không rành công nghệ</b>.</p>
+    <div class="hero-cta">
+      <a href="#tai" class="btn btn-primary">📲 Tải app miễn phí</a>
+      <a href="#tinhnang" class="btn btn-ghost">Xem tính năng</a>
+    </div>
+    <div class="hero-note">Không quảng cáo · Không đọc tin nhắn riêng · Xoá dữ liệu bất cứ lúc nào</div>
+  </div>
+
+  <!-- PHONE -->
+  <div class="phone-col"><div class="phone"><div class="screen">
+    <div class="st-hero">
+      <div class="top"><span>Chào cô Lan 🌿</span><span>T4, 3/7</span></div>
+      <h3>Hôm nay có 2 buổi</h3>
+      <div class="cd"><div class="lb">BUỔI TỚI · THỨ 4</div><div class="vl">18:30 – 20:00 · Toán Lớp 9</div></div>
+    </div>
+    <div class="st-body">
+      <div class="st-card"><div class="st-dot" style="background:#4a9e72">T9</div><div><div class="nm">Toán · Lớp 9</div><div class="mt">T2, T4 · 7 học sinh</div></div><span class="bd">Điểm danh</span></div>
+      <div class="st-card"><div class="st-dot" style="background:#4a86c5">T10</div><div><div class="nm">Toán · Lớp 10</div><div class="mt">T3, T6 · 10 học sinh</div></div><span class="bd" style="background:var(--honey100);color:var(--honey700)">2 nợ HP</span></div>
+      <div class="st-card"><div class="st-dot" style="background:#e07a5f">CN</div><div><div class="nm">Ôn thi · Lớp 12</div><div class="mt">CN · 9:00 · 5 học sinh</div></div><span class="bd">Báo cáo</span></div>
+    </div>
+    <div class="st-tab"><span>🏠</span><span>📚</span><span>👥</span><span>💰</span><span>📊</span></div>
+  </div></div></div>
+</div></header>
+
+<!-- PROBLEM -->
+<section class="blk"><div class="wrap">
+  <div class="prob">
+    <div class="it"><span class="ic">📒</span><div><b>Sổ sách rối</b><span>Điểm danh, học phí ghi tay mỗi nơi một kiểu, dễ sót.</span></div></div>
+    <div class="it"><span class="ic">💬</span><div><b>Zalo lộn xộn</b><span>Nhắc học phí, báo nghỉ, gửi báo cáo — trôi tin, quên ai đã nhắn.</span></div></div>
+    <div class="it"><span class="ic">😮‍💨</span><div><b>Cuối tháng mệt</b><span>Cộng học phí, nhớ ai nộp ai chưa, ai vắng nhiều — mất cả buổi tối.</span></div></div>
+  </div>
+</div></section>
+
+<!-- FEATURES -->
+<section class="blk" id="tinhnang"><div class="wrap">
+  <div class="center"><h2>Mọi việc của lớp, gọn trong một app</h2><p>Đúng những gì thầy cô dạy thêm cần — không thừa, không rối.</p></div>
+  <div class="feat">
+    <div class="fc"><div class="fi" style="background:var(--green100)">✅</div><h3>Điểm danh 1 chạm</h3><p>Mặc định cả lớp có mặt — chỉ chạm để đánh vắng. Tự lưu vào lịch sử mỗi em.</p></div>
+    <div class="fc"><div class="fi" style="background:var(--honey100)">💰</div><h3>Học phí &amp; nhắc nợ</h3><p>Theo dõi ai đã nộp, ai còn nợ. Soạn sẵn tin nhắc — nhẹ nhàng, trực tiếp, hoặc kèm số tài khoản.</p></div>
+    <div class="fc"><div class="fi" style="background:var(--coral100)">🗓️</div><h3>Lịch nhiều buổi/tuần</h3><p>Một lớp học nhiều ngày, <b>mỗi buổi giờ riêng</b>. Đếm ngược buổi tới, xem cả tuần trong một màn.</p></div>
+    <div class="fc"><div class="fi" style="background:var(--green100)">📊</div><h3>Báo cáo phụ huynh</h3><p>Chuyên cần, học phí, nhận xét — gói gọn thành tin nhắn đẹp, gửi Zalo trong 1 chạm.</p></div>
+    <div class="fc"><div class="fi" style="background:var(--honey100)">🔔</div><h3>Nhắc tự động</h3><p>Nhắc trước mỗi buổi đúng giờ từng ngày, nhắc thu học phí, nhắc gửi báo cáo cuối tuần.</p></div>
+    <div class="fc"><div class="fi" style="background:var(--coral100)">🧾</div><h3>Thuế TNCN</h3><p>Ước tính thuế thu nhập từ dạy thêm &amp; gợi ý tờ khai — để bạn chủ động, đỡ lo.</p></div>
+  </div>
+</div></section>
+
+<!-- STEPS -->
+<section class="blk" id="cachdung" style="background:var(--surfaceAlt)"><div class="wrap">
+  <div class="center"><h2>Bắt đầu trong 3 phút</h2><p>Không cần cài đặt phức tạp, không cần rành công nghệ.</p></div>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Tạo lớp</h3><p>Nhập tên lớp, chọn ngày &amp; giờ học, học phí mặc định. Xong trong 30 giây.</p></div>
+    <div class="step"><div class="n">2</div><h3>Thêm học sinh</h3><p>Thêm tên &amp; số Zalo phụ huynh. Cần gì nhập nấy, không bắt buộc.</p></div>
+    <div class="step"><div class="n">3</div><h3>Dạy &amp; để app lo</h3><p>Điểm danh, thu học phí, nhắc nhở, báo cáo — app tự sắp xếp, bạn chỉ chạm.</p></div>
+  </div>
+</div></section>
+
+<!-- ZALO band -->
+<section class="blk"><div class="wrap"><div class="band">
+  <div>
+    <h2>Gắn liền với Zalo — nơi phụ huynh đã ở sẵn</h2>
+    <p>GieoChữ soạn sẵn tin nhắn để bạn <b>tự sao chép và gửi</b> qua Zalo: báo nghỉ, khảo sát học bù, nhắc học phí, báo cáo tuần. Bạn giữ toàn quyền — app không tự gửi, không đọc tin riêng của bạn.</p>
+  </div>
+  <div class="chat">
+    <div class="bub">Cô ơi tuần này con nghỉ được không ạ?</div>
+    <div class="bub me">Lớp Toán 9 sẽ học bù Chủ nhật 9:00 nhé cả nhà 🌿</div>
+    <div class="bub me">Nhắc nhẹ: học phí tháng 7 của bé Minh là 800.000đ ạ 💚</div>
+  </div>
+</div></div></section>
+
+<!-- PRICING -->
+<section class="blk" id="giá"><div class="wrap">
+  <div class="center"><h2>Miễn phí cho người dùng sớm</h2><p>Tham gia bản dùng thử — góp ý để GieoChữ tốt hơn cho thầy cô Việt.</p></div>
+  <div class="price">
+    <div class="pill" style="margin-bottom:10px">🎁 Ưu đãi mở màn</div>
+    <div class="tag">Miễn phí</div>
+    <div style="color:var(--ts);font-size:14px">trọn đời cho giáo viên dùng thử sớm</div>
+    <ul>
+      <li>Không giới hạn lớp &amp; học sinh</li>
+      <li>Điểm danh, học phí, báo cáo, nhắc nhở</li>
+      <li>Lịch nhiều buổi/tuần &amp; công cụ thuế</li>
+      <li>Dữ liệu sao lưu hằng ngày, xoá bất cứ lúc nào</li>
+      <li>Hỗ trợ trực tiếp qua Zalo/email</li>
+    </ul>
+    <a href="#tai" class="btn btn-primary" style="width:100%;justify-content:center">Nhận app miễn phí</a>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section class="blk" style="background:var(--surfaceAlt)"><div class="wrap">
+  <div class="center"><h2>Câu hỏi thường gặp</h2></div>
+  <div class="faq">
+    <details><summary>App có an toàn cho dữ liệu học sinh không?</summary><p>Có. Dữ liệu lưu trên máy chủ riêng, chỉ tài khoản của bạn xem được. Chúng tôi không bán dữ liệu và không đọc tin nhắn Zalo riêng tư của bạn. Bạn có thể xoá toàn bộ dữ liệu bất cứ lúc nào.</p></details>
+    <details><summary>Tôi không rành công nghệ, dùng được không?</summary><p>Được. GieoChữ thiết kế cho thầy cô không rành tech: mặc định thông minh (cả lớp có mặt sẵn), chạm là xong, chữ to dễ đọc, tiếng Việt hoàn toàn.</p></details>
+    <details><summary>Có tốn phí không?</summary><p>Giai đoạn này miễn phí cho người dùng sớm. Bạn chỉ cần góp ý để app tốt hơn.</p></details>
+    <details><summary>Quên mật khẩu thì sao?</summary><p>Bạn nhắn cho bộ phận hỗ trợ (email/Zalo) kèm số điện thoại đăng ký, chúng tôi đặt lại và gửi mật khẩu mới cho bạn.</p></details>
+    <details><summary>Có bản iPhone chưa?</summary><p>Bản Android có sẵn ngay. Bản iPhone đang trên đường — để lại liên hệ để được báo khi có.</p></details>
+  </div>
+</div></section>
+
+<!-- FINAL CTA -->
+<section class="final" id="tai"><div class="wrap">
+  <span class="pill">📲 Sẵn sàng dùng thử</span>
+  <h2 style="margin-top:14px">Gieo con chữ, để GieoChữ lo phần sổ sách</h2>
+  <p style="color:var(--ts);max-width:520px;margin:0 auto 24px">Tải app Android và tạo lớp đầu tiên trong 3 phút. Miễn phí cho giáo viên dùng thử sớm.</p>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <a href="#" class="btn btn-primary" style="padding:15px 28px">📥 Tải app Android (.apk)</a>
+    <a href="mailto:support@gieochu.vn" class="btn btn-ghost" style="padding:15px 28px">Liên hệ hỗ trợ</a>
+  </div>
+</div></section>
+
+<footer><div class="wrap foot-in">
+  <div class="logo" style="font-size:16px"><span class="mark" style="width:28px;height:28px;font-size:15px">🌱</span> GieoChữ</div>
+  <div style="display:flex;gap:20px;flex-wrap:wrap">
+    <a href="/legal">Điều khoản</a>
+    <a href="/privacy">Bảo mật</a>
+    <a href="mailto:support@gieochu.vn">support@gieochu.vn</a>
+  </div>
+  <div>© 2026 GieoChữ · Made in Vietnam 🌿</div>
+</div></footer>
+
+</body>
+</html>
