@@ -263,6 +263,12 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
           </View>
         </ScrollView>
 
+        {days.length >= 2 && (
+          <Text style={s.perDayHint}>
+            Tất cả buổi dùng chung giờ này. Cần giờ riêng từng buổi? Đổi sau trong <Text style={{ fontWeight: '700', color: colors.green700 }}>Cài đặt lớp</Text> 🌿
+          </Text>
+        )}
+
         <Text style={[s.sectionHint, { marginTop: 14 }]}>Thời lượng</Text>
         <View style={s.chipWrap}>
           {DURATIONS.map(d => (
@@ -386,6 +392,7 @@ const s = StyleSheet.create({
   sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 20 },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.3, marginBottom: 10 },
   sectionHint: { fontSize: 12, color: colors.textMuted, marginBottom: 8 },
+  perDayHint: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, marginTop: 10, backgroundColor: colors.green50, borderRadius: 10, padding: 10 },
   customFeeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
   customFeeLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
   customFeeInput: { flex: 1, height: 44, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, fontSize: 15, color: colors.textPrimary, backgroundColor: 'white' },
