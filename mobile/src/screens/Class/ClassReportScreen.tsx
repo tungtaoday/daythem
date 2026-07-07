@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/Button';
 import { IconZalo, IconStar, IconWarn, IconBook } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { generateReport } from '../../api/reports';
+import { listSessions } from '../../api/attendance';
+import { getTuition } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
@@ -67,31 +69,68 @@ export function ClassReportScreen({ route }: any) {
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(!isDemo);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [tuitionRows, setTuitionRows] = useState<any[]>([]);
 
   const klass = classes.find(c => c.id === classId);
   const classStudents = students[classId] || [];
 
+  // Số liệu THẬT từng học sinh (điểm danh + học phí tháng này).
+  const realReport = classStudents.map(s => {
+    let marks = 0, present = 0;
+    for (const sess of sessions) {
+      const rec = sess.records?.find((r: any) => r.student_id === s.id);
+      if (rec) { marks++; if (rec.present) present++; }
+    }
+    const trow = tuitionRows.find((t: any) => t.student_id === s.id);
+    return {
+      name: s.name,
+      attend: marks ? Math.round(present / marks * 100) : 0,
+      paid: !!(trow && trow.paid),
+      hasData: marks > 0,
+    };
+  });
+
   const stuReport = isDemo
-    ? DEMO_STU_REPORT
-    : classStudents.map(s => ({ name: s.name, attend: 0, paid: false }));
+    ? DEMO_STU_REPORT.map(s => ({ ...s, hasData: true }))
+    : realReport;
 
   const totalCount = stuReport.length;
   const presentCount = stuReport.filter(s => s.attend === 100).length;
-  const absentCount = totalCount - presentCount;
-  const paidCount = stuReport.filter(s => s.paid).length;
 
-  // Tài khoản demo: số tiền minh hoạ (mỗi HS đã nộp = 500k). Tài khoản thật KHÔNG bịa số.
-  const demoAmount = paidCount * 500000;
-  const topStudent = isDemo ? DEMO_STU_REPORT.find(st => st.attend === 100 && st.paid) : undefined;
-  const watchStudent = isDemo
-    ? DEMO_STU_REPORT.reduce((lo, st) => (st.attend < lo.attend ? st : lo), DEMO_STU_REPORT[0])
+  // Số buổi đã dạy + chuyên cần trung bình + đã thu — THẬT (demo dùng số minh hoạ).
+  const sessionCount = isDemo ? 1 : sessions.length;
+  let totMarks = 0, totPresent = 0;
+  sessions.forEach(sess => sess.records?.forEach((r: any) => { totMarks++; if (r.present) totPresent++; }));
+  const avgAttendPct = isDemo
+    ? Math.round(DEMO_STU_REPORT.reduce((a, s) => a + s.attend, 0) / DEMO_STU_REPORT.length)
+    : (totMarks ? Math.round(totPresent / totMarks * 100) : 0);
+  const collected = isDemo
+    ? DEMO_STU_REPORT.filter(s => s.paid).length * 500000
+    : tuitionRows.filter((t: any) => t.paid).reduce((a: number, t: any) => a + (t.amount || 0), 0);
+
+  // Có số liệu thật để hiển thị? (đã điểm danh hoặc đã thu học phí)
+  const hasRealData = !isDemo && (sessions.length > 0 || collected > 0);
+
+  // Nổi bật (cả demo lẫn thật): chỉ xét học sinh CÓ dữ liệu.
+  const withData = stuReport.filter((s: any) => s.hasData);
+  const topStudent = (isDemo || hasRealData)
+    ? (withData.find((st: any) => st.attend === 100 && st.paid) || withData.find((st: any) => st.attend >= 90))
+    : undefined;
+  const watchStudent = (isDemo || hasRealData) && withData.length
+    ? withData.reduce((lo: any, st: any) => (st.attend < lo.attend ? st : lo), withData[0])
     : undefined;
 
   useEffect(() => {
     if (isDemo) return;
     let alive = true;
     setLoading(true);
-    Promise.resolve(fetchStudents(classId)).finally(() => { if (alive) setLoading(false); });
+    const month = new Date().toISOString().slice(0, 7);
+    Promise.all([
+      Promise.resolve(fetchStudents(classId)),
+      listSessions(classId).then((r: any) => { if (alive) setSessions(r || []); }).catch(() => {}),
+      getTuition(classId, month).then((r: any) => { if (alive) setTuitionRows(r || []); }).catch(() => {}),
+    ]).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [classId, isDemo]);
 
@@ -152,18 +191,18 @@ export function ClassReportScreen({ route }: any) {
           <Text style={s.heroEyebrow}>BÁO CÁO TUẦN · {weekLabel()}</Text>
           <Text style={s.heroTitle}>Tổng kết {className}</Text>
           <View style={s.heroStatsRow}>
-            <HeroStat label="Buổi dạy" value={isDemo ? '1' : 'Chưa có'} />
+            <HeroStat label="Buổi dạy" value={String(sessionCount)} />
             <View style={s.heroDivider} />
-            <HeroStat label="Có mặt" value={isDemo ? `${presentCount}/${totalCount}` : 'Chưa có'} />
+            <HeroStat label="Chuyên cần" value={isDemo ? `${presentCount}/${totalCount}` : (sessions.length ? `${avgAttendPct}%` : '—')} />
             <View style={s.heroDivider} />
-            <HeroStat label="Đã thu" value={isDemo ? VND(demoAmount) : 'Chưa có'} />
+            <HeroStat label="Đã thu" value={collected > 0 ? VND(collected) : '—'} />
           </View>
         </View>
 
         <View style={s.body}>
 
-          {/* Nổi bật tuần này — demo only (tài khoản thật không bịa số liệu) */}
-          {isDemo && topStudent && watchStudent && (
+          {/* Nổi bật tuần này — hiện khi có số liệu (demo hoặc thật) */}
+          {(isDemo || hasRealData) && topStudent && watchStudent && (
             <>
               <Text style={s.sectionLabel}>NỔI BẬT TUẦN NÀY</Text>
               <View style={s.highlightRow}>
@@ -173,7 +212,7 @@ export function ClassReportScreen({ route }: any) {
                   </View>
                   <Text style={[s.highlightKicker, { color: colors.green700 }]}>TIẾN BỘ NHẤT</Text>
                   <Text style={s.highlightName} numberOfLines={1}>{topStudent.name}</Text>
-                  <Text style={s.highlightSub}>Đi học đầy đủ, làm bài tốt</Text>
+                  <Text style={s.highlightSub}>Chuyên cần {topStudent.attend}%{topStudent.paid ? ', đã nộp phí' : ''}</Text>
                 </View>
                 <View style={[s.highlightCard, { backgroundColor: colors.coral50, borderColor: colors.coral100 }]}>
                   <View style={[s.highlightIcon, { backgroundColor: colors.coral100 }]}>
@@ -181,7 +220,7 @@ export function ClassReportScreen({ route }: any) {
                   </View>
                   <Text style={[s.highlightKicker, { color: colors.coral700 }]}>CẦN LƯU Ý</Text>
                   <Text style={s.highlightName} numberOfLines={1}>{watchStudent.name}</Text>
-                  <Text style={s.highlightSub}>Chuyên cần {watchStudent.attend}%, chưa nộp phí</Text>
+                  <Text style={s.highlightSub}>Chuyên cần {watchStudent.attend}%{!watchStudent.paid ? ', chưa nộp phí' : ''}</Text>
                 </View>
               </View>
             </>
@@ -205,8 +244,8 @@ export function ClassReportScreen({ route }: any) {
             </>
           )}
 
-          {/* Tài khoản thật chưa có số liệu — giữ hướng dẫn trung thực */}
-          {!isDemo && (
+          {/* Chỉ hiện khi THẬT SỰ chưa có số liệu (chưa điểm danh & chưa thu) */}
+          {!isDemo && !hasRealData && (
             <View style={[s.card, { padding: 16, alignItems: 'center' }]}>
               <Text style={s.emptyTitle}>Chưa có số liệu tuần này</Text>
               <Text style={s.emptySub}>Điểm danh và ghi nhận học phí để {pronoun} tổng kết tự động.</Text>
@@ -222,16 +261,16 @@ export function ClassReportScreen({ route }: any) {
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={s.stuName}>{stu.name}</Text>
                   <Text style={s.stuSub}>
-                    {isDemo
+                    {(isDemo || (stu as any).hasData)
                       ? (stu.attend === 100 ? 'Có mặt đầy đủ' : `Chuyên cần ${stu.attend}%`)
                       : 'Chưa có dữ liệu'}
                   </Text>
                 </View>
-                {isDemo && (
+                {(isDemo || (stu as any).hasData) && (
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <View style={[s.badge, { backgroundColor: stu.attend === 100 ? colors.green100 : colors.coral100 }]}>
-                      <Text style={[s.badgeText, { color: stu.attend === 100 ? colors.green700 : colors.coral700 }]}>
-                        {stu.attend === 100 ? 'Có mặt' : 'Vắng'}
+                    <View style={[s.badge, { backgroundColor: stu.attend >= 75 ? colors.green100 : colors.coral100 }]}>
+                      <Text style={[s.badgeText, { color: stu.attend >= 75 ? colors.green700 : colors.coral700 }]}>
+                        {stu.attend === 100 ? 'Có mặt' : stu.attend >= 75 ? 'Đi đều' : 'Vắng nhiều'}
                       </Text>
                     </View>
                     <View style={[s.badge, { backgroundColor: stu.paid ? colors.green50 : colors.coral50 }]}>
