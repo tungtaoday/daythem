@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GieoChữ — Quản lý lớp dạy thêm, nhẹ như nhắn Zalo</title>
+<meta name="description" content="GieoChữ: app quản lý lớp dạy thêm cho giáo viên. Điểm danh, thu học phí, báo nghỉ, nhắc phụ huynh — tất cả trong một chạm. Miễn phí cho lớp nhỏ.">
+<meta name="theme-color" content="#5a9e74">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GieoChữ — Quản lý lớp dạy thêm">
+<meta property="og:description" content="Điểm danh, thu học phí, báo nghỉ, nhắc phụ huynh — tất cả trong một chạm. GieoChữ lo sổ sách để thầy cô chỉ việc dạy.">
+<meta property="og:locale" content="vi_VN">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='22' cy='20' r='2.4' fill='%235a9e74'/%3E%3Ccircle cx='34' cy='14' r='2.4' fill='%235a9e74' opacity='0.85'/%3E%3Ccircle cx='44' cy='22' r='2.4' fill='%235a9e74' opacity='0.7'/%3E%3Cpath d='M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z' fill='%235a9e74' opacity='0.3'/%3E%3Cpath d='M32 52 L32 34' stroke='%235a9e74' stroke-width='3.5' stroke-linecap='round'/%3E%3Cpath d='M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z' fill='%235a9e74'/%3E%3Cpath d='M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z' fill='%235a9e74' opacity='0.85'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- ═══════════ GOOGLE ANALYTICS (dán Measurement ID G-XXXX vào đây để bật) ═══════════
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+════════════════════════════════════════════════════════════════════════════════════ -->
+
+<style>
+:root{
+  --g50:oklch(0.97 0.022 150);--g100:oklch(0.93 0.045 150);--g200:oklch(0.86 0.075 150);
+  --g500:oklch(0.62 0.13 150);--g600:oklch(0.55 0.13 150);--g700:oklch(0.45 0.10 150);--g900:oklch(0.28 0.05 150);
+  --honey100:oklch(0.95 0.05 85);--honey500:oklch(0.78 0.14 85);
+  --coral50:oklch(0.96 0.025 40);--coral100:oklch(0.92 0.05 40);--coral500:oklch(0.72 0.14 40);--coral700:oklch(0.55 0.14 40);
+  --ink900:oklch(0.22 0.012 150);--ink700:oklch(0.36 0.012 150);--ink500:oklch(0.55 0.01 150);
+  --ink200:oklch(0.88 0.006 150);--ink100:oklch(0.94 0.005 150);
+  --bg:oklch(0.985 0.008 95);--cream:oklch(0.97 0.015 90);--surfaceAlt:oklch(0.97 0.012 95);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Be Vietnam Pro',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--ink900);background:var(--bg);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+.btn{font-family:inherit;font-weight:700;border:none;border-radius:12px;cursor:pointer;display:inline-block;text-align:center}
+.btn-primary{background:var(--g500);color:#fff;padding:12px 22px;font-size:14.5px}
+.eyebrow{font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:14px}
+h1,h2,h3{letter-spacing:-1px}
+
+/* avatar */
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--a),var(--b))}
+
+/* nav */
+.nav{position:sticky;top:0;z-index:50;background:oklch(0.985 0.008 95 / 0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--ink100)}
+.nav .wrap{display:flex;align-items:center;gap:10px;padding-top:14px;padding-bottom:14px}
+.wordmark{font-size:20px;font-weight:700;color:var(--g900);letter-spacing:-0.5px}
+.wordmark b{color:var(--g500);font-weight:700}
+.navlinks{display:flex;gap:28px;align-items:center;margin-left:auto;margin-right:8px}
+.navlinks a{font-size:14.5px;font-weight:500;color:var(--ink700)}
+.navlinks a:hover{color:var(--g600)}
+
+/* hero */
+.hero{position:relative;background:linear-gradient(180deg,var(--cream),var(--bg));overflow:hidden}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.05fr 0.95fr;gap:40px;align-items:center;padding-top:64px;padding-bottom:40px}
+.blob{position:absolute;border-radius:50%;filter:blur(20px)}
+.badge-pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--g100);border-radius:999px;padding:7px 14px;margin-bottom:24px;box-shadow:0 2px 8px rgba(40,60,50,.05);font-size:13px;font-weight:600;color:var(--g700)}
+.hero h1{font-size:54px;font-weight:700;line-height:1.08;margin-bottom:20px}
+.hero h1 span{color:var(--g600)}
+.hero .lead{font-size:18.5px;line-height:1.6;color:var(--ink500);margin-bottom:32px;max-width:480px}
+.badges{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.store{display:flex;align-items:center;gap:9px;background:var(--ink900);color:#fff;border-radius:13px;padding:9px 16px}
+.store .l{line-height:1.1}.store .l .t{font-size:9px;opacity:.8}.store .l .b{font-size:15px;font-weight:700}
+.store.inv{background:#fff;color:var(--g900)}
+.socialproof{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--ink500)}
+.avstack{display:flex}.avstack .av{border:2px solid var(--bg)}.avstack .av+.av{margin-left:-8px}
+.socialproof b{color:var(--ink900)}
+.hero-art{display:flex;justify-content:center;position:relative}
+
+/* phone */
+.phone{width:270px;height:560px;border-radius:40px;background:#fff;padding:9px;box-shadow:0 40px 80px rgba(40,60,50,.22),0 0 0 1px rgba(0,0,0,.04);border:1px solid var(--ink100);flex-shrink:0}
+.phone .screen{width:100%;height:100%;border-radius:32px;overflow:hidden;position:relative;background:var(--bg);display:flex;flex-direction:column}
+.notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:88px;height:24px;border-radius:14px;background:#000;z-index:5}
+.phone-back{position:absolute;top:60px;left:-10px;z-index:1;transform:rotate(-7deg) scale(.86)}
+.phone-front{position:relative;z-index:2;transform:rotate(4deg)}
+
+/* mock screen internals */
+.mstatus{height:44px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 24px 4px;font-size:13px;font-weight:700}
+.mbody{flex:1;overflow:hidden;padding:4px 18px}
+.mcard-hero{border-radius:22px;padding:18px;color:#fff;margin-bottom:12px;position:relative;overflow:hidden}
+.mrow{display:flex;align-items:center;gap:10px}
+
+/* trust */
+.trust{background:var(--g900);color:#fff}
+.trust .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;padding-top:28px;padding-bottom:28px}
+.trust .num{font-size:26px;font-weight:700;color:oklch(0.85 0.10 150)}
+.trust .lbl{font-size:13px;opacity:.8;margin-top:4px}
+
+/* features */
+.feat{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.section{padding-top:90px;padding-bottom:90px}
+.feat h2{font-size:38px;font-weight:700;line-height:1.15;margin-bottom:18px}
+.feat p{font-size:17px;line-height:1.65;color:var(--ink500);margin-bottom:24px}
+.center-art{display:flex;justify-content:center}
+.featlist{display:flex;flex-direction:column;gap:12px}
+.featlist .li{display:flex;align-items:flex-start;gap:12px}
+.featlist .tick{width:24px;height:24px;border-radius:12px;background:var(--g100);color:var(--g700);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:700;margin-top:1px}
+.featlist .li span{font-size:15.5px;color:var(--ink700);line-height:1.45}
+.bg-cream{background:var(--cream)}
+
+/* how */
+.how{text-align:center}
+.how h2{font-size:40px;font-weight:700;margin-bottom:56px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+.step{background:#fff;border-radius:24px;padding:32px;border:1px solid var(--ink100);box-shadow:0 2px 10px rgba(40,60,50,.04);text-align:left}
+.step .n{width:48px;height:48px;border-radius:16px;background:var(--g500);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;margin-bottom:20px}
+.step h3{font-size:20px;font-weight:700;margin-bottom:10px}
+.step p{font-size:15px;line-height:1.6;color:var(--ink500)}
+
+/* testimonials */
+.testi{background:var(--g900);color:#fff;text-align:center}
+.testi h2{font-size:40px;font-weight:700;margin-bottom:56px}
+.tcard{background:rgba(255,255,255,.06);border-radius:24px;padding:28px;text-align:left;border:1px solid rgba(255,255,255,.08)}
+.tcard .stars{font-size:18px;margin-bottom:14px;color:var(--honey500)}
+.tcard p{font-size:15.5px;line-height:1.6;margin-bottom:20px;opacity:.95}
+.tcard .who{display:flex;align-items:center;gap:10px}
+.tcard .who .nm{font-size:14px;font-weight:700}.tcard .who .rl{font-size:12px;opacity:.7}
+
+/* pricing */
+.pricing{text-align:center}
+.pricing h2{font-size:40px;font-weight:700;margin-bottom:14px}
+.pricing .sub{font-size:17px;color:var(--ink500);margin-bottom:48px}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:760px;margin:0 auto}
+.plan{border-radius:28px;padding:36px;text-align:left}
+.plan.basic{background:#fff;border:1px solid var(--ink100)}
+.plan .kind{font-size:15px;font-weight:700;color:var(--ink700);margin-bottom:6px}
+.plan .price{font-size:44px;font-weight:700;letter-spacing:-1.5px}
+.plan .per{font-size:18px;font-weight:500;opacity:.8}
+.plan .note{font-size:14px;color:var(--ink500);margin-bottom:24px}
+.plan .cta{display:block;width:100%;margin-top:28px;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer}
+.plan.basic .cta{background:var(--g50);color:var(--g700);border:1px solid var(--g100)}
+.plan.pro{background:linear-gradient(160deg,var(--g600),var(--g900));color:#fff;position:relative;box-shadow:0 20px 50px rgba(70,120,90,.3)}
+.plan.pro .kind{color:#fff;opacity:.9}.plan.pro .note{color:#fff;opacity:.8}
+.plan.pro .tag{position:absolute;top:24px;right:24px;background:var(--honey500);color:var(--g900);font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px}
+.plan.pro .li .tick{background:rgba(255,255,255,.2);color:#fff}
+.plan.pro .li span{color:#fff;opacity:.95}
+.plan.pro .cta{background:#fff;color:var(--g700);border:none}
+
+/* faq */
+.faq{background:var(--cream)}
+.faq .wrap{max-width:760px}
+.faq .head{text-align:center;margin-bottom:48px}
+.faq h2{font-size:40px;font-weight:700}
+.qa{background:#fff;border-radius:18px;border:1px solid var(--ink100);margin-bottom:12px;overflow:hidden}
+.qa summary{list-style:none;display:flex;align-items:center;gap:16px;padding:20px 24px;cursor:pointer;font-size:16.5px;font-weight:700}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary .q{flex:1}
+.qa summary .pl{font-size:22px;color:var(--g600);transition:transform .2s;flex-shrink:0}
+.qa[open] summary .pl{transform:rotate(45deg)}
+.qa .a{font-size:15px;line-height:1.65;color:var(--ink500);padding:0 24px 20px}
+
+/* final cta */
+.finalcta{border-radius:40px;padding:64px 40px;text-align:center;color:#fff;position:relative;overflow:hidden;background:linear-gradient(160deg,var(--g500),var(--g700))}
+.finalcta .c{position:relative}
+.finalcta h2{font-size:44px;font-weight:700;line-height:1.15;margin:16px 0}
+.finalcta p{font-size:18px;opacity:.92;margin:0 auto 32px;max-width:460px}
+.finalcta .badges{justify-content:center}
+
+/* footer */
+.footer{background:var(--bg);border-top:1px solid var(--ink100)}
+.footcols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;padding:56px 0 32px}
+.footer .tagline{font-size:14px;color:var(--ink500);line-height:1.6;max-width:240px;margin-top:14px}
+.footer h4{font-size:13px;font-weight:700;margin-bottom:14px}
+.footer .fcol a{display:block;font-size:14px;color:var(--ink500);margin-bottom:10px}
+.footer .fcol a:hover{color:var(--g600)}
+.footbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding:20px 0;border-top:1px solid var(--ink100);font-size:13px;color:var(--ink500)}
+.footbar .soc{display:flex;gap:20px}
+.brandrow{display:flex;align-items:center;gap:8px}
+
+/* responsive */
+@media(max-width:900px){
+  .navlinks{display:none}
+  .hero .wrap{grid-template-columns:1fr;text-align:center;padding-top:44px}
+  .hero h1{font-size:38px}
+  .hero .lead{margin-left:auto;margin-right:auto}
+  .badge-pill{margin-left:auto;margin-right:auto}
+  .badges,.socialproof{justify-content:center}
+  .hero-art{margin-top:24px;min-height:520px}
+  .phone-back{display:none}
+  .phone-front{transform:none}
+  .trust .wrap{grid-template-columns:repeat(2,1fr);gap:24px}
+  .feat{grid-template-columns:1fr;gap:32px}
+  .feat .center-art{order:-1}
+  .feat h2{font-size:30px}
+  .steps,.plans,.footcols{grid-template-columns:1fr}
+  .testi .steps{grid-template-columns:1fr}
+  .how h2,.testi h2,.pricing h2,.faq h2{font-size:30px}
+  .finalcta h2{font-size:32px}
+  .section{padding-top:60px;padding-bottom:60px}
+  .footcols{gap:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGO svg reused via <svg> markup -->
+<div class="nav">
+  <div class="wrap">
+    <svg width="30" height="30" viewBox="0 0 64 64" fill="none" style="flex-shrink:0"><circle cx="22" cy="20" r="2.4" fill="var(--g500)"/><circle cx="34" cy="14" r="2.4" fill="var(--g500)" opacity=".85"/><circle cx="44" cy="22" r="2.4" fill="var(--g500)" opacity=".7"/><path d="M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z" fill="var(--g500)" opacity=".3"/><path d="M32 52 L32 34" stroke="var(--g500)" stroke-width="3.5" stroke-linecap="round"/><path d="M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z" fill="var(--g500)"/><path d="M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z" fill="var(--g500)" opacity=".85"/></svg>
+    <span class="wordmark">Gieo<b>Chữ</b></span>
+    <nav class="navlinks">
+      <a href="#tinh-nang">Tính năng</a>
+      <a href="#cach-dung">Cách dùng</a>
+      <a href="#hoc-phi">Học phí</a>
+      <a href="#hoi-dap">Hỏi đáp</a>
+    </nav>
+    <a class="btn btn-primary" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Tải miễn phí</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="blob" style="top:-120px;right:-100px;width:420px;height:420px;background:var(--g100);opacity:.5"></div>
+  <div class="blob" style="bottom:-160px;left:-120px;width:380px;height:380px;background:var(--honey100);opacity:.5"></div>
+  <div class="wrap">
+    <div>
+      <div class="badge-pill"><span>🌿</span><span>Dành cho giáo viên dạy thêm</span></div>
+      <h1>Quản lý lớp dạy thêm,<br><span>nhẹ như nhắn Zalo.</span></h1>
+      <p class="lead">Điểm danh, thu học phí, báo nghỉ, nhắc phụ huynh — tất cả trong một chạm. GieoChữ lo việc sổ sách để thầy cô chỉ việc dạy.</p>
+      <div class="badges">
+        <a class="store" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-2.07-.92-3.4-.9-1.75.03-3.36 1.02-4.26 2.58-1.82 3.16-.46 7.83 1.3 10.39.86 1.25 1.88 2.66 3.22 2.61 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.37.81 1.39-.03 2.27-1.28 3.12-2.54.98-1.46 1.38-2.87 1.4-2.94-.03-.01-2.69-1.03-2.72-4.08zM14.6 4.42c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44z"/></svg>
+          <span class="l"><span class="t">Tải trên</span><br><span class="b">App Store</span></span>
+        </a>
+        <a class="store" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">
+          <svg width="22" height="22" viewBox="0 0 24 24"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1 9.3-9.3v-.2L3.6 2.3z" fill="#34d058"/><path d="M16.3 15.3l-3.1-3.1v-.2l3.1-3.1.1.1 3.7 2.1c1 .6 1 1.6 0 2.2l-3.8 2z" fill="#fbbc04"/><path d="M16.4 15.2l-3.2-3.2-9.3 9.3c.4.4 1 .4 1.7.1l10.8-6.2" fill="#ea4335"/><path d="M16.4 8.8L5.6 2.6c-.7-.4-1.3-.3-1.7.1l9.3 9.3 3.2-3.2z" fill="#4285f4"/></svg>
+          <span class="l"><span class="t">Tải về từ</span><br><span class="b">Google Play</span></span>
+        </a>
+      </div>
+      <div class="socialproof">
+        <div class="avstack">
+          <div class="av" style="--a:#9bbed6;--b:#5d8aa8;width:28px;height:28px;font-size:11px">M</div>
+          <div class="av" style="--a:#7cc28a;--b:#4f9e6a;width:28px;height:28px;font-size:11px">T</div>
+          <div class="av" style="--a:#f0c862;--b:#d9a23b;width:28px;height:28px;font-size:11px">H</div>
+          <div class="av" style="--a:#f4a76b;--b:#d97742;width:28px;height:28px;font-size:11px">L</div>
+        </div>
+        <span><b>2.400+</b> thầy cô đang dùng</span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="phone-back">
+        <div class="phone">
+          <div class="screen"><div class="notch"></div>
+            <!-- MockTuition -->
+            <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
+            <div class="mbody">
+              <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g600),var(--g900));box-shadow:0 12px 28px rgba(70,120,90,.25)">
+                <div style="font-size:10px;font-weight:700;opacity:.85">THU HỌC PHÍ · THÁNG 5</div>
+                <div style="font-size:30px;font-weight:700;letter-spacing:-.8px;margin-top:6px">2.500.000đ</div>
+                <div style="font-size:12px;opacity:.9;margin-bottom:12px">đã thu · còn thiếu 1.500.000đ</div>
+                <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.2)"><div style="height:100%;width:62%;background:#fff;border-radius:3px"></div></div>
+              </div>
+              <div style="background:#fff;border-radius:18px;padding:6px;border:1px solid var(--ink100)">
+                <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">A</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Nguyễn Minh Anh</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="font-size:11px;font-weight:600;color:var(--g600)">✓ Đã nộp</div></div>
+                <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">L</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Trần Bảo Long</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
+                <div class="mrow" style="padding:10px"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">N</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Phạm Quỳnh Như</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
+              </div>
+            </div>
+            <div style="padding:10px 18px 20px"><div style="background:var(--g500);color:#fff;border-radius:16px;padding:14px 0;text-align:center;font-size:14px;font-weight:700">💬 Gửi nhắc 2 phụ huynh</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone-front">
+        <div class="phone">
+          <div class="screen"><div class="notch"></div>
+            <!-- MockHome -->
+            <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
+            <div class="mbody">
+              <div class="mrow" style="margin-bottom:16px"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">T</div><div style="flex:1"><div style="font-size:11px;color:var(--ink500);font-weight:600">Thứ 4, 20/05</div><div style="font-size:17px;font-weight:700">Chào thầy Tùng</div></div></div>
+              <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g500),var(--g700));box-shadow:0 12px 28px rgba(85,158,118,.25)">
+                <div style="font-size:10px;font-weight:700;opacity:.9;margin-bottom:6px">● BUỔI HỌC TỐI NAY · CÒN 4 GIỜ</div>
+                <div style="font-size:22px;font-weight:700;letter-spacing:-.4px">Lớp 9 · Toán</div>
+                <div style="font-size:12px;opacity:.9;margin-top:2px;margin-bottom:14px">18:30 – 20:00 · 7 học sinh</div>
+                <div style="background:#fff;color:var(--g700);border-radius:12px;padding:10px 0;text-align:center;font-size:13px;font-weight:700">Mở lớp hôm nay</div>
+              </div>
+              <div style="font-size:13px;color:var(--ink500);font-weight:600;margin-bottom:10px">Có 2 việc thầy nên xem:</div>
+              <div style="background:#fff;border-radius:18px;padding:16px;border:1px solid var(--ink100)">
+                <div class="mrow" style="margin-bottom:8px"><div style="width:28px;height:28px;border-radius:9px;background:var(--coral100);color:var(--coral700);display:flex;align-items:center;justify-content:center;font-size:14px">₫</div><div style="font-size:10px;font-weight:700;color:var(--coral700)">HỌC PHÍ</div></div>
+                <div style="font-size:14px;font-weight:700;margin-bottom:4px">3 phụ huynh chưa nộp tháng 5</div>
+                <div style="display:flex;gap:6px">
+                  <div style="flex:1;background:var(--g500);color:#fff;border-radius:10px;padding:9px 0;text-align:center;font-size:12px;font-weight:700">Gửi nhắc Zalo</div>
+                  <div style="background:var(--surfaceAlt);color:var(--ink500);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:600">Để sau</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<section class="trust">
+  <div class="wrap">
+    <div style="text-align:center"><div class="num">7 giây</div><div class="lbl">Điểm danh 1 lớp</div></div>
+    <div style="text-align:center"><div class="num">1 chạm</div><div class="lbl">Nhắc học phí Zalo</div></div>
+    <div style="text-align:center"><div class="num">Tự động</div><div class="lbl">Báo cáo phụ huynh</div></div>
+    <div style="text-align:center"><div class="num">0đ</div><div class="lbl">Dùng cơ bản</div></div>
+  </div>
+</section>
+
+<!-- FEATURE BIG -->
+<section class="section" id="tinh-nang"><div class="wrap">
+  <div class="feat">
+    <div class="center-art">
+      <div class="phone">
+        <div class="screen"><div class="notch"></div>
+          <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
+          <div class="mbody">
+            <div class="mrow" style="margin-bottom:16px"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">T</div><div style="flex:1"><div style="font-size:11px;color:var(--ink500);font-weight:600">Thứ 4, 20/05</div><div style="font-size:17px;font-weight:700">Chào thầy Tùng</div></div></div>
+            <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g500),var(--g700));box-shadow:0 12px 28px rgba(85,158,118,.25)">
+              <div style="font-size:10px;font-weight:700;opacity:.9;margin-bottom:6px">● BUỔI HỌC TỐI NAY · CÒN 4 GIỜ</div>
+              <div style="font-size:22px;font-weight:700;letter-spacing:-.4px">Lớp 9 · Toán</div>
+              <div style="font-size:12px;opacity:.9;margin-top:2px;margin-bottom:14px">18:30 – 20:00 · 7 học sinh</div>
+              <div style="background:#fff;color:var(--g700);border-radius:12px;padding:10px 0;text-align:center;font-size:13px;font-weight:700">Mở lớp hôm nay</div>
+            </div>
+            <div style="font-size:13px;color:var(--ink500);font-weight:600;margin-bottom:10px">Có 2 việc thầy nên xem:</div>
+            <div style="background:#fff;border-radius:18px;padding:16px;border:1px solid var(--ink100)">
+              <div class="mrow" style="margin-bottom:8px"><div style="width:28px;height:28px;border-radius:9px;background:var(--coral100);color:var(--coral700);display:flex;align-items:center;justify-content:center;font-size:14px">₫</div><div style="font-size:10px;font-weight:700;color:var(--coral700)">HỌC PHÍ</div></div>
+              <div style="font-size:14px;font-weight:700;margin-bottom:4px">3 phụ huynh chưa nộp tháng 5</div>
+              <div style="display:flex;gap:6px"><div style="flex:1;background:var(--g500);color:#fff;border-radius:10px;padding:9px 0;text-align:center;font-size:12px;font-weight:700">Gửi nhắc Zalo</div><div style="background:var(--surfaceAlt);color:var(--ink500);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:600">Để sau</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="eyebrow">Trợ lý mỗi sáng</div>
+      <h2>Mở app là biết<br>hôm nay cần làm gì</h2>
+      <p>Không phải bảng số liệu rối mắt. GieoChữ hỏi từng việc cụ thể — "3 phụ huynh chưa nộp, gửi nhắc chứ?" — thầy cô chỉ việc đồng ý hoặc để sau.</p>
+      <div class="featlist">
+        <div class="li"><div class="tick">✓</div><span>Nhắc buổi học sắp tới</span></div>
+        <div class="li"><div class="tick">✓</div><span>Phát hiện học sinh vắng nhiều, có nguy cơ bỏ học</span></div>
+        <div class="li"><div class="tick">✓</div><span>Gợi ý nhắc học phí đúng lúc</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- FEATURE ALT -->
+<section class="bg-cream" id="cach-dung"><div class="wrap section">
+  <div class="feat" style="margin-bottom:90px">
+    <div>
+      <div class="eyebrow">Điểm danh siêu nhanh</div>
+      <h2>Cả lớp có mặt sẵn.<br>Chỉ chạm vào bạn vắng.</h2>
+      <p>Mặc định mọi học sinh có mặt — thầy cô chỉ tích bạn nào nghỉ, ghi nhanh lý do. Xong một lớp trong vài giây, không cần sổ giấy.</p>
+      <div class="featlist">
+        <div class="li"><div class="tick">✓</div><span>Lưu lịch sử từng học sinh</span></div>
+        <div class="li"><div class="tick">✓</div><span>Tự cảnh báo khi vắng liên tiếp</span></div>
+        <div class="li"><div class="tick">✓</div><span>Đề xuất buổi học bù qua nhóm Zalo</span></div>
+      </div>
+    </div>
+    <div class="center-art">
+      <div class="phone">
+        <div class="screen"><div class="notch"></div>
+          <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
+          <div class="mbody">
+            <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g500),var(--g700));box-shadow:0 12px 28px rgba(85,158,118,.25);border-radius:20px">
+              <div style="font-size:10px;font-weight:700;opacity:.9">ĐIỂM DANH · LỚP 9</div>
+              <div class="mrow" style="gap:14px;margin-top:12px">
+                <div style="position:relative;width:56px;height:56px"><svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="23" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="6"/><circle cx="28" cy="28" r="23" fill="none" stroke="#fff" stroke-width="6" stroke-dasharray="123 144" stroke-linecap="round" transform="rotate(-90 28 28)"/></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700">6/7</div></div>
+                <div><div style="font-size:17px;font-weight:700">1 bạn vắng</div><div style="font-size:11px;opacity:.85">Chạm để đổi có mặt / vắng</div></div>
+              </div>
+            </div>
+            <div style="background:#fff;border-radius:18px;padding:6px;border:1px solid var(--ink100)">
+              <div class="mrow" style="padding:9px 10px;border-radius:12px"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">A</div><div style="flex:1;font-size:13px;font-weight:600">Nguyễn Minh Anh</div><div style="width:30px;height:30px;border-radius:10px;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700">✓</div></div>
+              <div class="mrow" style="padding:9px 10px;border-radius:12px;background:var(--coral50)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">L</div><div style="flex:1;font-size:13px;font-weight:600">Trần Bảo Long</div><div style="width:30px;height:30px;border-radius:10px;background:#fff;border:2px solid var(--coral500);display:flex;align-items:center;justify-content:center;color:var(--coral500);font-size:15px;font-weight:700">✕</div></div>
+              <div class="mrow" style="padding:9px 10px;border-radius:12px"><div class="av" style="--a:#d68d8d;--b:#a85e5e;width:36px;height:36px;font-size:14px">P</div><div style="flex:1;font-size:13px;font-weight:600">Lê Hoàng Phúc</div><div style="width:30px;height:30px;border-radius:10px;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700">✓</div></div>
+              <div class="mrow" style="padding:9px 10px;border-radius:12px"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">N</div><div style="flex:1;font-size:13px;font-weight:600">Phạm Quỳnh Như</div><div style="width:30px;height:30px;border-radius:10px;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700">✓</div></div>
+              <div class="mrow" style="padding:9px 10px;border-radius:12px"><div class="av" style="--a:#d68d8d;--b:#a85e5e;width:36px;height:36px;font-size:14px">K</div><div style="flex:1;font-size:13px;font-weight:600">Đỗ Minh Khôi</div><div style="width:30px;height:30px;border-radius:10px;background:var(--g500);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px;font-weight:700">✓</div></div>
+            </div>
+          </div>
+          <div style="padding:10px 18px 20px"><div style="background:var(--g500);color:#fff;border-radius:16px;padding:14px 0;text-align:center;font-size:15px;font-weight:700">Hoàn tất điểm danh</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feat">
+    <div class="center-art">
+      <div class="phone">
+        <div class="screen"><div class="notch"></div>
+          <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
+          <div class="mbody">
+            <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g600),var(--g900));box-shadow:0 12px 28px rgba(70,120,90,.25);border-radius:20px">
+              <div style="font-size:10px;font-weight:700;opacity:.85">THU HỌC PHÍ · THÁNG 5</div>
+              <div style="font-size:30px;font-weight:700;letter-spacing:-.8px;margin-top:6px">2.500.000đ</div>
+              <div style="font-size:12px;opacity:.9;margin-bottom:12px">đã thu · còn thiếu 1.500.000đ</div>
+              <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.2)"><div style="height:100%;width:62%;background:#fff;border-radius:3px"></div></div>
+            </div>
+            <div style="background:#fff;border-radius:18px;padding:6px;border:1px solid var(--ink100)">
+              <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">A</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Nguyễn Minh Anh</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="font-size:11px;font-weight:600;color:var(--g600)">✓ Đã nộp</div></div>
+              <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">L</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Trần Bảo Long</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
+              <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">N</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Phạm Quỳnh Như</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
+              <div class="mrow" style="padding:10px"><div class="av" style="--a:#d68d8d;--b:#a85e5e;width:36px;height:36px;font-size:14px">K</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Đỗ Minh Khôi</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="font-size:11px;font-weight:600;color:var(--g600)">✓ Đã nộp</div></div>
+            </div>
+          </div>
+          <div style="padding:10px 18px 20px"><div style="background:var(--g500);color:#fff;border-radius:16px;padding:14px 0;text-align:center;font-size:14px;font-weight:700">💬 Gửi nhắc 2 phụ huynh</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="eyebrow" style="color:var(--coral700)">Thu học phí · nhắc Zalo</div>
+      <h2>Nhắc nộp tiền mà<br>không ngại mặt</h2>
+      <p>Chọn phụ huynh chưa nộp, chọn mẫu tin lịch sự, gửi qua Zalo. Có sẵn cả số tài khoản và mã QR để phụ huynh chuyển khoản ngay.</p>
+      <div class="featlist">
+        <div class="li"><div class="tick">✓</div><span>3 mẫu tin nhắc từ nhẹ nhàng đến trực tiếp</span></div>
+        <div class="li"><div class="tick">✓</div><span>Kèm số tài khoản &amp; mã QR tự động</span></div>
+        <div class="li"><div class="tick">✓</div><span>Theo dõi ai đã nộp, ai còn nợ</span></div>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- HOW -->
+<section class="section how"><div class="wrap">
+  <div class="eyebrow">Bắt đầu dễ lắm</div>
+  <h2>Ba bước là xong</h2>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><h3>Tạo lớp trong 1 phút</h3><p>Đăng nhập bằng Zalo, chọn môn và khối — app gợi ý sẵn tên lớp, lịch học, học phí.</p></div>
+    <div class="step"><div class="n">2</div><h3>Thêm học sinh</h3><p>Gõ tên hoặc gửi link mời để phụ huynh tự điền. Đặt học phí riêng cho từng bạn nếu cần.</p></div>
+    <div class="step"><div class="n">3</div><h3>Dạy và để app lo phần còn lại</h3><p>Điểm danh, thu tiền, nhắc nhở, báo cáo — mọi thứ tự gọn lại mỗi tuần.</p></div>
+  </div>
+</div></section>
+
+<!-- TESTIMONIALS -->
+<section class="testi"><div class="wrap section">
+  <div class="eyebrow" style="color:oklch(0.82 0.10 150)">Thầy cô nói gì</div>
+  <h2>Được tin dùng khắp cả nước</h2>
+  <div class="steps">
+    <div class="tcard"><div class="stars">★★★★★</div><p>"Trước mình ghi sổ tay, hay quên ai nộp ai chưa. Giờ mở app là thấy hết, nhắc phụ huynh cũng đỡ ngại."</p><div class="who"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">M</div><div><div class="nm">Cô Mai</div><div class="rl">Toán · Hà Nội</div></div></div></div>
+    <div class="tcard"><div class="stars">★★★★★</div><p>"Điểm danh nhanh thật, sau buổi học tích vài cái là xong. Báo cáo gửi phụ huynh tự động, họ thích lắm."</p><div class="who"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">T</div><div><div class="nm">Thầy Tùng</div><div class="rl">Lý · Đà Nẵng</div></div></div></div>
+    <div class="tcard"><div class="stars">★★★★★</div><p>"Cái hay là nó nhắc mình học sinh nào hay vắng để mình gọi hỏi thăm sớm, không để mất học sinh."</p><div class="who"><div class="av" style="--a:#f0c862;--b:#d9a23b;width:40px;height:40px;font-size:16px">L</div><div><div class="nm">Cô Lan</div><div class="rl">Tiếng Anh · TP.HCM</div></div></div></div>
+  </div>
+</div></section>
+
+<!-- PRICING -->
+<section class="section pricing" id="hoc-phi"><div class="wrap">
+  <div class="eyebrow">Học phí minh bạch</div>
+  <h2>Bắt đầu hoàn toàn miễn phí</h2>
+  <p class="sub">Đủ dùng cho lớp nhỏ. Nâng cấp khi thầy cô cần nhiều hơn.</p>
+  <div class="plans">
+    <div class="plan basic">
+      <div class="kind">Cơ bản</div>
+      <div class="price">0đ</div>
+      <div class="note">mãi mãi</div>
+      <div class="featlist">
+        <div class="li"><div class="tick">✓</div><span>Tối đa 2 lớp</span></div>
+        <div class="li"><div class="tick">✓</div><span>Điểm danh &amp; học phí</span></div>
+        <div class="li"><div class="tick">✓</div><span>Nhắc Zalo cơ bản</span></div>
+      </div>
+      <a class="cta" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Tải miễn phí</a>
+    </div>
+    <div class="plan pro">
+      <div class="tag">PHỔ BIẾN</div>
+      <div class="kind">Pro</div>
+      <div class="price">49k<span class="per">/tháng</span></div>
+      <div class="note">cho lớp lớn &amp; trung tâm</div>
+      <div class="featlist">
+        <div class="li"><div class="tick">✓</div><span>Không giới hạn lớp</span></div>
+        <div class="li"><div class="tick">✓</div><span>Báo cáo tự động cho phụ huynh</span></div>
+        <div class="li"><div class="tick">✓</div><span>Mã QR &amp; quản lý thuế TNCN</span></div>
+        <div class="li"><div class="tick">✓</div><span>Hỗ trợ ưu tiên</span></div>
+      </div>
+      <a class="cta" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Dùng thử 14 ngày</a>
+    </div>
+  </div>
+</div></section>
+
+<!-- FAQ -->
+<section class="faq" id="hoi-dap"><div class="wrap section">
+  <div class="head"><div class="eyebrow">Hỏi đáp</div><h2>Thắc mắc thường gặp</h2></div>
+  <details class="qa" open><summary><span class="q">GieoChữ có miễn phí không?</span><span class="pl">+</span></summary><div class="a">Có. Gói cơ bản miễn phí mãi mãi, đủ dùng cho 2 lớp. Khi cần nhiều lớp hơn hoặc báo cáo tự động, thầy cô có thể nâng cấp Pro.</div></details>
+  <details class="qa"><summary><span class="q">App có gửi tin nhắn Zalo tự động không?</span><span class="pl">+</span></summary><div class="a">App soạn sẵn nội dung và số liệu, thầy cô copy rồi dán vào Zalo gửi — vẫn giữ quyền kiểm soát, không cần cấp quyền truy cập tin nhắn.</div></details>
+  <details class="qa"><summary><span class="q">Dữ liệu học sinh có an toàn không?</span><span class="pl">+</span></summary><div class="a">Dữ liệu được lưu trên máy chủ riêng, chỉ thầy cô đăng nhập mới xem được. Tin nhắn riêng giữa thầy cô và phụ huynh không bị app đọc.</div></details>
+  <details class="qa"><summary><span class="q">Tôi không rành công nghệ, dùng được không?</span><span class="pl">+</span></summary><div class="a">Được. GieoChữ thiết kế cho cả thầy cô lớn tuổi — chữ to, nút rõ, mỗi màn chỉ hỏi một việc. Đa số tạo xong lớp đầu trong dưới 2 phút.</div></details>
+  <details class="qa"><summary><span class="q">Phụ huynh có cần cài app không?</span><span class="pl">+</span></summary><div class="a">Không. Phụ huynh nhận tin qua Zalo như bình thường. Chỉ thầy cô cần cài GieoChữ.</div></details>
+</div></section>
+
+<!-- FINAL CTA -->
+<section class="section"><div class="wrap">
+  <div class="finalcta">
+    <div class="blob" style="top:-80px;right:-60px;width:280px;height:280px;background:rgba(255,255,255,.08);filter:none"></div>
+    <div class="blob" style="bottom:-100px;left:-70px;width:300px;height:300px;background:rgba(255,255,255,.06);filter:none"></div>
+    <div class="c">
+      <svg width="56" height="56" viewBox="0 0 64 64" fill="none" style="margin-bottom:24px"><circle cx="22" cy="20" r="2.4" fill="#fff"/><circle cx="34" cy="14" r="2.4" fill="#fff" opacity=".85"/><circle cx="44" cy="22" r="2.4" fill="#fff" opacity=".7"/><path d="M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z" fill="#fff" opacity=".3"/><path d="M32 52 L32 34" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><path d="M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z" fill="#fff"/><path d="M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z" fill="#fff" opacity=".85"/></svg>
+      <h2>Để GieoChữ lo sổ sách,<br>thầy cô chỉ việc dạy.</h2>
+      <p>Tải miễn phí hôm nay. Tạo lớp đầu tiên trong chưa đầy 2 phút.</p>
+      <div class="badges">
+        <a class="store inv" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-2.07-.92-3.4-.9-1.75.03-3.36 1.02-4.26 2.58-1.82 3.16-.46 7.83 1.3 10.39.86 1.25 1.88 2.66 3.22 2.61 1.29-.05 1.78-.83 3.34-.83 1.56 0 2 .83 3.37.81 1.39-.03 2.27-1.28 3.12-2.54.98-1.46 1.38-2.87 1.4-2.94-.03-.01-2.69-1.03-2.72-4.08zM14.6 4.42c.71-.86 1.19-2.06 1.06-3.25-1.02.04-2.26.68-2.99 1.54-.66.76-1.23 1.98-1.08 3.15 1.14.09 2.3-.58 3.01-1.44z"/></svg>
+          <span class="l"><span class="t">Tải trên</span><br><span class="b">App Store</span></span>
+        </a>
+        <a class="store inv" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">
+          <svg width="22" height="22" viewBox="0 0 24 24"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1 9.3-9.3v-.2L3.6 2.3z" fill="#34d058"/><path d="M16.3 15.3l-3.1-3.1v-.2l3.1-3.1.1.1 3.7 2.1c1 .6 1 1.6 0 2.2l-3.8 2z" fill="#fbbc04"/><path d="M16.4 15.2l-3.2-3.2-9.3 9.3c.4.4 1 .4 1.7.1l10.8-6.2" fill="#ea4335"/><path d="M16.4 8.8L5.6 2.6c-.7-.4-1.3-.3-1.7.1l9.3 9.3 3.2-3.2z" fill="#4285f4"/></svg>
+          <span class="l"><span class="t">Tải về từ</span><br><span class="b">Google Play</span></span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<!-- FOOTER -->
+<footer class="footer"><div class="wrap">
+  <div class="footcols">
+    <div>
+      <div class="brandrow">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none"><circle cx="22" cy="20" r="2.4" fill="var(--g500)"/><circle cx="34" cy="14" r="2.4" fill="var(--g500)" opacity=".85"/><circle cx="44" cy="22" r="2.4" fill="var(--g500)" opacity=".7"/><path d="M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z" fill="var(--g500)" opacity=".3"/><path d="M32 52 L32 34" stroke="var(--g500)" stroke-width="3.5" stroke-linecap="round"/><path d="M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z" fill="var(--g500)"/><path d="M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z" fill="var(--g500)" opacity=".85"/></svg>
+        <span class="wordmark" style="font-size:18px">Gieo<b>Chữ</b></span>
+      </div>
+      <p class="tagline">Trợ lý quản lý lớp dạy thêm cho thầy cô Việt Nam. Gieo chữ, ươm mầm tri thức.</p>
+    </div>
+    <div class="fcol"><h4>Sản phẩm</h4><a href="#tinh-nang">Tính năng</a><a href="#hoc-phi">Học phí</a><a href="#">Cập nhật</a><a href="#">Bảo mật</a></div>
+    <div class="fcol"><h4>Hỗ trợ</h4><a href="#">Hướng dẫn</a><a href="#hoi-dap">Hỏi đáp</a><a href="#">Liên hệ</a><a href="#">Zalo OA</a></div>
+    <div class="fcol"><h4>Công ty</h4><a href="#">Về chúng tôi</a><a href="#">Blog</a><a href="#">Tuyển dụng</a><a href="#">Điều khoản</a></div>
+  </div>
+  <div class="footbar">
+    <span>© 2026 GieoChữ. Made with 🌿 in Vietnam.</span>
+    <div class="soc"><a href="#">Facebook</a><a href="#">Zalo</a><a href="#">YouTube</a></div>
+  </div>
+</div></footer>
+
+</body>
+</html>

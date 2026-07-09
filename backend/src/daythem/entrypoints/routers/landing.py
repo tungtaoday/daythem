@@ -6,9 +6,11 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(tags=["landing"])
 
 _WEB = Path(__file__).resolve().parent.parent.parent / "web"
-# Landing chính = bản xuất từ Claude Design (standalone, đầy đủ).
-_LANDING = _WEB / "gieochu-landing.html"
-# Bản hand-build (dự phòng / so sánh).
+# Landing chính = bản HTML/CSS tĩnh (nhẹ ~40KB, mở tức thì, SEO tốt).
+_LANDING = _WEB / "gieochu.html"
+# Bản Claude Design standalone (nặng 1.5MB) — giữ để đối chiếu.
+_LANDING_CLAUDE = _WEB / "gieochu-landing.html"
+# Bản hand-build cũ (dự phòng / so sánh).
 _LANDING_V1 = _WEB / "landing.html"
 
 
@@ -28,3 +30,8 @@ def landing_page() -> str:
 @router.get("/landing-v1", response_class=HTMLResponse)
 def landing_v1() -> str:
     return _serve(_LANDING_V1)
+
+
+@router.get("/landing-claude", response_class=HTMLResponse)
+def landing_claude() -> str:
+    return _serve(_LANDING_CLAUDE)
