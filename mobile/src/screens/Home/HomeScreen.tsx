@@ -18,8 +18,22 @@ import {
   IconChevron,
 } from '../../components/icons';
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
+import { getHomeSummary, HomeSummary } from '../../api/home';
 
 // ── Helpers ──────────────────────────────────────────────────
+
+const formatVND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+const lastName = (full: string) => full.trim().split(/\s+/).slice(-1)[0];
+
+// Demo feed khớp landing: 3 phụ huynh chưa nộp + 1 học sinh vắng liên tiếp.
+const DEMO_SUMMARY: HomeSummary = {
+  month: '2026-05',
+  unpaid: { count: 3, amount: 1500000 },
+  at_risk: [
+    { student_id: 'd2', name: 'Trần Bảo Long', class_id: 'demo', class_name: 'Lớp 9 · Toán', absent_streak: 2 },
+  ],
+  at_risk_total: 1,
+};
 
 function greeting(hour: number, g: string) {
   if (hour < 11) return { text: 'Chào buổi sáng', sub: `${g} có vài việc nho nhỏ` };
@@ -377,8 +391,20 @@ export function HomeScreen({ navigation }: any) {
 
   const [cards, setCards] = useState<any[]>([]);
   const [totalCards, setTotalCards] = useState(0);
+  const [summary, setSummary] = useState<HomeSummary | null>(null);
 
   useEffect(() => { fetchClasses(); }, []);
+
+  // Số liệu trợ lý (chưa nộp + vắng liên tiếp). Demo → dữ liệu mẫu; thật → gọi API.
+  useEffect(() => {
+    if (isDemo) { setSummary(DEMO_SUMMARY); return; }
+    if (isLoading) return;
+    const hasStu = classes.reduce((t, c) => t + (c.student_count || 0), 0) > 0;
+    if (!hasStu) { setSummary(null); return; }
+    let alive = true;
+    getHomeSummary().then(s => { if (alive) setSummary(s); }).catch(() => { if (alive) setSummary(null); });
+    return () => { alive = false; };
+  }, [classes, isLoading, isDemo]);
 
   // Reschedule local notifications from server config whenever classes change (real accounts).
   useEffect(() => {
@@ -427,15 +453,51 @@ export function HomeScreen({ navigation }: any) {
       }
     }
 
-    if (classes.length > 0 && (isDemo || hasStudents)) {
+    // Card cảnh báo vắng liên tiếp (nguy cơ bỏ học) — ưu tiên ngay sau buổi hôm nay.
+    const atRisk = summary?.at_risk ?? [];
+    const atRiskTotal = summary?.at_risk_total ?? atRisk.length;
+    if (atRisk.length > 0) {
+      const first = atRisk[0];
+      const single = atRiskTotal === 1;
       generated.push({
-        id: 'unpaid',
-        kind: 'money',
-        title: 'Kiểm tra học phí tháng này',
-        body: 'Xem ai chưa nộp và gửi nhắc nhẹ nhàng qua Zalo — đã có mẫu tin sẵn rồi.',
-        primary: { label: 'Xem học phí', icon: 'send' },
+        id: 'risk',
+        kind: 'risk',
+        title: single
+          ? `${lastName(first.name)} vắng ${first.absent_streak} buổi liên tiếp`
+          : `${atRiskTotal} học sinh vắng liên tiếp`,
+        body: single
+          ? `${first.name} (${first.class_name}) vắng ${first.absent_streak} buổi gần đây liên tiếp — nhắn Zalo hỏi thăm phụ huynh sớm kẻo bé bỏ học nhé.`
+          : `${atRisk.slice(0, 3).map(a => lastName(a.name)).join(', ')}… đang vắng nhiều buổi liên tiếp, có nguy cơ bỏ học. Gọi hỏi thăm sớm nhé ${gw}.`,
+        meta: 'Cần quan tâm',
+        avatarNames: atRisk.slice(0, 4).map(a => a.name),
+        classId: first.class_id,
+        className: first.class_name,
+        primary: { label: 'Xem lớp', icon: 'check' },
         secondary: { label: 'Để sau' },
       });
+    }
+
+    // Card học phí — hiện SỐ chưa nộp thật (trợ lý biết đếm ngay ở feed).
+    if (classes.length > 0 && (isDemo || hasStudents)) {
+      const unpaidCount = summary?.unpaid?.count ?? null;
+      const unpaidAmount = summary?.unpaid?.amount ?? 0;
+      const hasData = unpaidCount !== null;
+      // Có số liệu mà không ai thiếu → khỏi nhắc. Chưa có số liệu → thẻ chung.
+      if (!hasData || unpaidCount > 0) {
+        generated.push({
+          id: 'unpaid',
+          kind: 'money',
+          title: hasData
+            ? `${unpaidCount} phụ huynh chưa nộp học phí tháng này`
+            : 'Kiểm tra học phí tháng này',
+          body: hasData
+            ? `Còn thiếu ${formatVND(unpaidAmount)}. Gửi nhắc nhẹ nhàng qua Zalo — đã có mẫu tin sẵn rồi.`
+            : 'Xem ai chưa nộp và gửi nhắc nhẹ nhàng qua Zalo — đã có mẫu tin sẵn rồi.',
+          meta: hasData ? `${unpaidCount} chưa nộp` : undefined,
+          primary: { label: 'Xem & nhắc', icon: 'send' },
+          secondary: { label: 'Để sau' },
+        });
+      }
     }
 
     const dayOfWeek = now.getDay();
@@ -452,7 +514,7 @@ export function HomeScreen({ navigation }: any) {
 
     setCards(generated);
     setTotalCards(generated.length);
-  }, [classes, isLoading, teacher, isDemo]);
+  }, [classes, isLoading, teacher, isDemo, summary]);
 
   const dismiss = (id: string) => {
     setCards(prev => prev.filter(c => c.id !== id));
@@ -462,6 +524,8 @@ export function HomeScreen({ navigation }: any) {
     dismiss(card.id);
     if (card.kind === 'class' && card.classId) {
       navigation.navigate('ClassDetail', { classId: card.classId, className: card.className });
+    } else if (card.kind === 'risk' && card.classId && card.classId !== 'demo') {
+      navigation.navigate('ClassStudents', { classId: card.classId, className: card.className });
     } else if (card.kind === 'money') {
       navigation.navigate('Tuition');
     } else if (card.kind === 'report') {
