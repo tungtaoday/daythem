@@ -138,6 +138,16 @@ h1,h2,h3{letter-spacing:-1px}
 .plan.pro .li span{color:#fff;opacity:.95}
 .plan.pro .cta{background:#fff;color:var(--g700);border:none}
 
+/* free card */
+.freecard{max-width:540px;margin:0 auto;background:#fff;border:1px solid var(--ink100);border-radius:28px;padding:44px 38px;text-align:center;box-shadow:0 10px 34px rgba(40,60,50,.07);position:relative;overflow:hidden}
+.freecard .fblob{position:absolute;top:-70px;right:-50px;width:200px;height:200px;border-radius:50%;background:var(--g50)}
+.freeprice{font-size:64px;font-weight:700;letter-spacing:-2.5px;color:var(--g600);line-height:1;position:relative}
+.freeper{font-size:18px;font-weight:500;color:var(--ink500);letter-spacing:0}
+.freetag{display:inline-block;background:var(--g50);color:var(--g700);font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;margin:14px 0 26px;position:relative}
+.freefeats{text-align:left;max-width:360px;margin:0 auto 30px;position:relative}
+.freecard .cta{display:block;background:var(--g500);color:#fff;border:none;border-radius:14px;padding:15px;font-size:15.5px;font-weight:700;position:relative}
+.freenote{font-size:13px;color:var(--ink500);margin-top:14px;position:relative}
+
 /* faq */
 .faq{background:var(--cream)}
 .faq .wrap{max-width:760px}
@@ -203,7 +213,7 @@ h1,h2,h3{letter-spacing:-1px}
     <nav class="navlinks">
       <a href="#tinh-nang">Tính năng</a>
       <a href="#cach-dung">Cách dùng</a>
-      <a href="#hoc-phi">Học phí</a>
+      <a href="#hoc-phi">Miễn phí</a>
       <a href="#hoi-dap">Hỏi đáp</a>
     </nav>
     <a class="btn btn-primary" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Tải miễn phí</a>
@@ -298,7 +308,7 @@ h1,h2,h3{letter-spacing:-1px}
     <div style="text-align:center"><div class="num">7 giây</div><div class="lbl">Điểm danh 1 lớp</div></div>
     <div style="text-align:center"><div class="num">1 chạm</div><div class="lbl">Nhắc học phí Zalo</div></div>
     <div style="text-align:center"><div class="num">Tự động</div><div class="lbl">Báo cáo phụ huynh</div></div>
-    <div style="text-align:center"><div class="num">0đ</div><div class="lbl">Dùng cơ bản</div></div>
+    <div style="text-align:center"><div class="num">0đ</div><div class="lbl">Miễn phí trọn đời</div></div>
   </div>
 </section>
 
@@ -439,41 +449,30 @@ h1,h2,h3{letter-spacing:-1px}
 
 <!-- PRICING -->
 <section class="section pricing" id="hoc-phi"><div class="wrap">
-  <div class="eyebrow">Học phí minh bạch</div>
-  <h2>Bắt đầu hoàn toàn miễn phí</h2>
-  <p class="sub">Đủ dùng cho lớp nhỏ. Nâng cấp khi thầy cô cần nhiều hơn.</p>
-  <div class="plans">
-    <div class="plan basic">
-      <div class="kind">Cơ bản</div>
-      <div class="price">0đ</div>
-      <div class="note">mãi mãi</div>
-      <div class="featlist">
-        <div class="li"><div class="tick">✓</div><span>Tối đa 2 lớp</span></div>
-        <div class="li"><div class="tick">✓</div><span>Điểm danh &amp; học phí</span></div>
-        <div class="li"><div class="tick">✓</div><span>Nhắc Zalo cơ bản</span></div>
-      </div>
-      <a class="cta" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Tải miễn phí</a>
+  <div class="eyebrow">Miễn phí trọn đời</div>
+  <h2>Miễn phí 100%, mãi mãi</h2>
+  <p class="sub">GieoChữ làm ra để đỡ đần thầy cô — không thu tiền, không phí ẩn, không giới hạn.</p>
+  <div class="freecard">
+    <div class="fblob"></div>
+    <div class="freeprice">0đ</div>
+    <div class="freetag">🌿 Tất cả tính năng · Không giới hạn</div>
+    <div class="featlist freefeats">
+      <div class="li"><div class="tick">✓</div><span>Không giới hạn lớp &amp; học sinh</span></div>
+      <div class="li"><div class="tick">✓</div><span>Điểm danh, thu học phí, báo nghỉ, học bù</span></div>
+      <div class="li"><div class="tick">✓</div><span>Nhắc phụ huynh qua Zalo — có mẫu tin sẵn</span></div>
+      <div class="li"><div class="tick">✓</div><span>Báo cáo tự động gửi phụ huynh mỗi tuần</span></div>
+      <div class="li"><div class="tick">✓</div><span>Mã QR chuyển khoản &amp; quản lý thuế TNCN</span></div>
+      <div class="li"><div class="tick">✓</div><span>Cập nhật tính năng mới — luôn miễn phí</span></div>
     </div>
-    <div class="plan pro">
-      <div class="tag">PHỔ BIẾN</div>
-      <div class="kind">Pro</div>
-      <div class="price">49k<span class="per">/tháng</span></div>
-      <div class="note">cho lớp lớn &amp; trung tâm</div>
-      <div class="featlist">
-        <div class="li"><div class="tick">✓</div><span>Không giới hạn lớp</span></div>
-        <div class="li"><div class="tick">✓</div><span>Báo cáo tự động cho phụ huynh</span></div>
-        <div class="li"><div class="tick">✓</div><span>Mã QR &amp; quản lý thuế TNCN</span></div>
-        <div class="li"><div class="tick">✓</div><span>Hỗ trợ ưu tiên</span></div>
-      </div>
-      <a class="cta" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Dùng thử 14 ngày</a>
-    </div>
+    <a class="cta" href="https://expo.dev/artifacts/eas/8kUHFqUIgGLmzOgJOJk0m0xczXmRM1J88P2kgGe9Rfw.apk">Tải miễn phí ngay</a>
+    <div class="freenote">Không cần thẻ tín dụng · Không ràng buộc</div>
   </div>
 </div></section>
 
 <!-- FAQ -->
 <section class="faq" id="hoi-dap"><div class="wrap section">
   <div class="head"><div class="eyebrow">Hỏi đáp</div><h2>Thắc mắc thường gặp</h2></div>
-  <details class="qa" open><summary><span class="q">GieoChữ có miễn phí không?</span><span class="pl">+</span></summary><div class="a">Có. Gói cơ bản miễn phí mãi mãi, đủ dùng cho 2 lớp. Khi cần nhiều lớp hơn hoặc báo cáo tự động, thầy cô có thể nâng cấp Pro.</div></details>
+  <details class="qa" open><summary><span class="q">GieoChữ có miễn phí không?</span><span class="pl">+</span></summary><div class="a">Có — hoàn toàn miễn phí, mãi mãi. Không giới hạn số lớp, không phí ẩn, không thu tiền. GieoChữ làm ra để giúp thầy cô đỡ vất vả việc sổ sách, không bán gói trả phí nào cả.</div></details>
   <details class="qa"><summary><span class="q">App có gửi tin nhắn Zalo tự động không?</span><span class="pl">+</span></summary><div class="a">App soạn sẵn nội dung và số liệu, thầy cô copy rồi dán vào Zalo gửi — vẫn giữ quyền kiểm soát, không cần cấp quyền truy cập tin nhắn.</div></details>
   <details class="qa"><summary><span class="q">Dữ liệu học sinh có an toàn không?</span><span class="pl">+</span></summary><div class="a">Dữ liệu được lưu trên máy chủ riêng, chỉ thầy cô đăng nhập mới xem được. Tin nhắn riêng giữa thầy cô và phụ huynh không bị app đọc.</div></details>
   <details class="qa"><summary><span class="q">Tôi không rành công nghệ, dùng được không?</span><span class="pl">+</span></summary><div class="a">Được. GieoChữ thiết kế cho cả thầy cô lớn tuổi — chữ to, nút rõ, mỗi màn chỉ hỏi một việc. Đa số tạo xong lớp đầu trong dưới 2 phút.</div></details>
@@ -513,7 +512,7 @@ h1,h2,h3{letter-spacing:-1px}
       </div>
       <p class="tagline">Trợ lý quản lý lớp dạy thêm cho thầy cô Việt Nam. Gieo chữ, ươm mầm tri thức.</p>
     </div>
-    <div class="fcol"><h4>Sản phẩm</h4><a href="#tinh-nang">Tính năng</a><a href="#hoc-phi">Học phí</a><a href="#">Cập nhật</a><a href="#">Bảo mật</a></div>
+    <div class="fcol"><h4>Sản phẩm</h4><a href="#tinh-nang">Tính năng</a><a href="#hoc-phi">Miễn phí</a><a href="#">Cập nhật</a><a href="#">Bảo mật</a></div>
     <div class="fcol"><h4>Hỗ trợ</h4><a href="#">Hướng dẫn</a><a href="#hoi-dap">Hỏi đáp</a><a href="#">Liên hệ</a><a href="#">Zalo OA</a></div>
     <div class="fcol"><h4>Công ty</h4><a href="#">Về chúng tôi</a><a href="#">Blog</a><a href="#">Tuyển dụng</a><a href="#">Điều khoản</a></div>
   </div>
