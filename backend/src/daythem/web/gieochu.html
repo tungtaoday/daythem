@@ -26,7 +26,7 @@
   --g500:oklch(0.62 0.13 150);--g600:oklch(0.55 0.13 150);--g700:oklch(0.45 0.10 150);--g900:oklch(0.28 0.05 150);
   --honey100:oklch(0.95 0.05 85);--honey500:oklch(0.78 0.14 85);
   --coral50:oklch(0.96 0.025 40);--coral100:oklch(0.92 0.05 40);--coral500:oklch(0.72 0.14 40);--coral700:oklch(0.55 0.14 40);
-  --ink900:oklch(0.22 0.012 150);--ink700:oklch(0.36 0.012 150);--ink500:oklch(0.55 0.01 150);
+  --ink900:oklch(0.22 0.012 150);--ink700:oklch(0.36 0.012 150);--ink500:oklch(0.46 0.012 150);
   --ink200:oklch(0.88 0.006 150);--ink100:oklch(0.94 0.005 150);
   --bg:oklch(0.985 0.008 95);--cream:oklch(0.97 0.015 90);--surfaceAlt:oklch(0.97 0.012 95);
 }
@@ -114,7 +114,9 @@ h1,h2,h3{letter-spacing:-1px}
 .testi h2{font-size:40px;font-weight:700;margin-bottom:56px}
 .tcard{background:rgba(255,255,255,.06);border-radius:24px;padding:28px;text-align:left;border:1px solid rgba(255,255,255,.08)}
 .tcard .stars{font-size:18px;margin-bottom:14px;color:var(--honey500)}
-.tcard p{font-size:15.5px;line-height:1.6;margin-bottom:20px;opacity:.95}
+.tcard .ticon{font-size:30px;margin-bottom:14px;line-height:1}
+.tcard .tname{font-size:17px;font-weight:700;color:#fff;margin-bottom:8px;letter-spacing:-0.2px}
+.tcard p{font-size:15.5px;line-height:1.6;margin-bottom:0;opacity:.92}
 .tcard .who{display:flex;align-items:center;gap:10px}
 .tcard .who .nm{font-size:14px;font-weight:700}.tcard .who .rl{font-size:12px;opacity:.7}
 
@@ -170,7 +172,7 @@ h1,h2,h3{letter-spacing:-1px}
 
 /* footer */
 .footer{background:var(--bg);border-top:1px solid var(--ink100)}
-.footcols{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px;padding:56px 0 32px}
+.footcols{display:grid;grid-template-columns:1.8fr 1fr 1fr;gap:32px;padding:56px 0 32px}
 .footer .tagline{font-size:14px;color:var(--ink500);line-height:1.6;max-width:240px;margin-top:14px}
 .footer h4{font-size:13px;font-weight:700;margin-bottom:14px}
 .footer .fcol a{display:block;font-size:14px;color:var(--ink500);margin-bottom:10px}
@@ -246,7 +248,7 @@ h1,h2,h3{letter-spacing:-1px}
           <div class="av" style="--a:#f0c862;--b:#d9a23b;width:28px;height:28px;font-size:11px">H</div>
           <div class="av" style="--a:#f4a76b;--b:#d97742;width:28px;height:28px;font-size:11px">L</div>
         </div>
-        <span><b>2.400+</b> thầy cô đang dùng</span>
+        <span>Những thầy cô đầu tiên đang trải nghiệm 🌿</span>
       </div>
     </div>
     <div class="hero-art">
@@ -438,12 +440,24 @@ h1,h2,h3{letter-spacing:-1px}
 
 <!-- TESTIMONIALS -->
 <section class="testi"><div class="wrap section">
-  <div class="eyebrow" style="color:oklch(0.82 0.10 150)">Thầy cô nói gì</div>
-  <h2>Được tin dùng khắp cả nước</h2>
+  <div class="eyebrow" style="color:oklch(0.82 0.10 150)">Hợp với ai</div>
+  <h2>Làm cho mọi kiểu lớp dạy thêm</h2>
   <div class="steps">
-    <div class="tcard"><div class="stars">★★★★★</div><p>"Trước mình ghi sổ tay, hay quên ai nộp ai chưa. Giờ mở app là thấy hết, nhắc phụ huynh cũng đỡ ngại."</p><div class="who"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">M</div><div><div class="nm">Cô Mai</div><div class="rl">Toán · Hà Nội</div></div></div></div>
-    <div class="tcard"><div class="stars">★★★★★</div><p>"Điểm danh nhanh thật, sau buổi học tích vài cái là xong. Báo cáo gửi phụ huynh tự động, họ thích lắm."</p><div class="who"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">T</div><div><div class="nm">Thầy Tùng</div><div class="rl">Lý · Đà Nẵng</div></div></div></div>
-    <div class="tcard"><div class="stars">★★★★★</div><p>"Cái hay là nó nhắc mình học sinh nào hay vắng để mình gọi hỏi thăm sớm, không để mất học sinh."</p><div class="who"><div class="av" style="--a:#f0c862;--b:#d9a23b;width:40px;height:40px;font-size:16px">L</div><div><div class="nm">Cô Lan</div><div class="rl">Tiếng Anh · TP.HCM</div></div></div></div>
+    <div class="tcard">
+      <div class="ticon">🏠</div>
+      <div class="tname">Cô dạy tại nhà, lớp nhỏ</div>
+      <p>Hay ghi sổ tay nên dễ quên ai nộp, ai vắng. GieoChữ nhớ giúp và nhắc phụ huynh qua Zalo — đỡ ngại, đỡ sót.</p>
+    </div>
+    <div class="tcard">
+      <div class="ticon">⚡</div>
+      <div class="tname">Thầy dạy nhiều lớp, thích nhanh</div>
+      <p>Điểm danh 7 giây một lớp, báo cáo tuần tự gửi phụ huynh, xuất Excel khi cần. Mở app là biết việc hôm nay.</p>
+    </div>
+    <div class="tcard">
+      <div class="ticon">🏫</div>
+      <div class="tname">Trung tâm nhỏ, đông học sinh</div>
+      <p>Nhiều lớp, hàng trăm học sinh gọn trong một app — kèm mã QR thu tiền và quản lý thuế TNCN.</p>
+    </div>
   </div>
 </div></section>
 
@@ -512,13 +526,11 @@ h1,h2,h3{letter-spacing:-1px}
       </div>
       <p class="tagline">Trợ lý quản lý lớp dạy thêm cho thầy cô Việt Nam. Gieo chữ, ươm mầm tri thức.</p>
     </div>
-    <div class="fcol"><h4>Sản phẩm</h4><a href="#tinh-nang">Tính năng</a><a href="#hoc-phi">Miễn phí</a><a href="#">Cập nhật</a><a href="#">Bảo mật</a></div>
-    <div class="fcol"><h4>Hỗ trợ</h4><a href="#">Hướng dẫn</a><a href="#hoi-dap">Hỏi đáp</a><a href="#">Liên hệ</a><a href="#">Zalo OA</a></div>
-    <div class="fcol"><h4>Công ty</h4><a href="#">Về chúng tôi</a><a href="#">Blog</a><a href="#">Tuyển dụng</a><a href="#">Điều khoản</a></div>
+    <div class="fcol"><h4>Sản phẩm</h4><a href="#tinh-nang">Tính năng</a><a href="#hoc-phi">Miễn phí</a><a href="#hoi-dap">Hỏi đáp</a></div>
+    <div class="fcol"><h4>Pháp lý</h4><a href="/terms">Điều khoản</a><a href="/privacy">Bảo mật</a></div>
   </div>
   <div class="footbar">
     <span>© 2026 GieoChữ. Made with 🌿 in Vietnam.</span>
-    <div class="soc"><a href="#">Facebook</a><a href="#">Zalo</a><a href="#">YouTube</a></div>
   </div>
 </div></footer>
 
