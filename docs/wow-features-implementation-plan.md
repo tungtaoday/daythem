@@ -21,9 +21,9 @@
 | ⭐ 2.1 | **Zalo 1-chạm** (mở đúng chat + tin đã sẵn) | Activation + **vòng lặp hằng ngày** + kênh referral | Trung bình | ✅ Signature |
 | ⭐ 2.2 | **Thiệp báo cáo phụ huynh** (ảnh đẹp, có brand) | **K-factor** (phụ huynh thấy → hỏi → WOM) | Trung bình | ✅ nếu kịp |
 | 2.3 | **Chốt sổ cuối tháng** (Wrapped mini) | Retention (thói quen tháng) + shareable | Nhỏ | ➕ quick win |
-| 2.4 | **Nhập cả lớp bằng dán danh sách** | **Activation** (time-to-value <10') | Nhỏ (bản dán) | ➕ quick win |
+| 2.4 | **Nhập cả lớp** (dán text + ảnh OCR Gemini) | **Activation** (time-to-value <10') | Nhỏ (dán) / TB (OCR) | ➕ dán ngay, OCR fast-follow |
 | ✔ (đã có) | Trợ lý cảnh báo bỏ học + đếm chưa nộp | Retention + lõi VP | — | Xong |
-| ⏳ later | ZNS auto-gửi Zalo · OCR ảnh danh sách | tự động hoá vòng lặp | Lớn | Phase 2 |
+| ⏳ sau | Thiệp động nhiều mẫu · gợi ý pattern nộp trễ | tự động hoá vòng lặp | Lớn | Phase 2 |
 
 **Chọn 1 signature để dồn lực:** **2.1 Zalo 1-chạm** — vì nó nằm trong việc GV làm *mỗi ngày* (nhắc học phí / hỏi thăm), biến điểm ma sát lớn nhất thành khoảnh khắc mượt. Cộng với **2.2 thiệp phụ huynh** (đòn viral) là bộ đôi đủ tạo truyền miệng.
 
@@ -42,11 +42,11 @@
 | Tier | Cơ chế | Trải nghiệm | Khả thi |
 |------|--------|-------------|---------|
 | 0 (hiện tại) | `ZaloCopySheet` copy clipboard | GV tự mở Zalo, tự tìm người, dán | Đã có |
-| **1 (MVP wow)** | Deep-link `https://zalo.me/<parent_phone>` **+ tự copy nội dung** vào clipboard trước khi mở | Bấm 1 lần → **Zalo mở đúng chat** phụ huynh → dán 1 chạm | ✅ **2 tuần** |
-| 1b | OS share-sheet → chọn Zalo (khi không có số) | Zalo mở, text sẵn, chọn người/nhóm | ✅ |
-| 2 (phép thuật) | **Zalo OA + ZNS** (Zalo Notification Service) template | Phụ huynh **tự nhận** nhắc học phí/báo cáo, GV không làm gì | ⏳ Phase 2 — *tốn phí + duyệt template + xác minh doanh nghiệp* |
+| **1 (LÀM)** | Deep-link `https://zalo.me/<parent_phone>` **+ tự copy nội dung** vào clipboard trước khi mở | Bấm 1 lần → **Zalo mở đúng chat** phụ huynh → dán 1 chạm | ✅ **2 tuần** |
+| **1b (LÀM)** | OS share-sheet (`Share.share`) → chọn Zalo (khi không có số) | Zalo mở, text sẵn, chọn người/nhóm | ✅ |
+| ~~2 (ZNS auto-gửi)~~ | ~~Zalo OA + ZNS template~~ | ~~phụ huynh tự nhận~~ | ❌ **KHÔNG LÀM** — dự án **không có Zalo OA/API** |
 
-> **KHÔNG hứa:** API công khai **không** cho prefill/tự gửi tin nhắn Zalo *cá nhân*. Đường "tự gửi" duy nhất hợp lệ = **ZNS** (transactional, trả phí, phải duyệt) → để Phase 2.
+> **Chốt phạm vi:** chỉ làm **deep-link** (Tier 1 + 1b). Auto-gửi (ZNS) cần Zalo OA + API mà mình **không có** → bỏ hẳn. Marketing/landing mô tả đúng mức **"mở sẵn đúng chat, dán 1 chạm"** — KHÔNG nói "tự gửi".
 
 **Scope MVP (Tier 1):** nâng cấp `ZaloCopySheet`: nếu có `parent_phone` → nút **"Mở Zalo phụ huynh"** = auto-copy nội dung + mở `zalo.me/<phone>`; nếu không có số → giữ share-sheet/copy. Áp cho: nhắc học phí (ClassTuition + card Home), hỏi thăm HS vắng (Attendance), báo cáo.
 
@@ -90,16 +90,22 @@
 
 ---
 
-### 2.4 Nhập cả lớp bằng dán danh sách — ACTIVATION quick win
-**User story:** lúc tạo lớp, GV **dán cả danh sách tên** (mỗi dòng 1 HS) → app tách thành từng học sinh → xong cả lớp trong 10 giây, thay vì gõ tay từng bé.
+### 2.4 Nhập cả lớp (dán danh sách + chụp ảnh OCR) — ACTIVATION quick win
+**User story:** lúc tạo lớp, GV **dán danh sách tên** (mỗi dòng 1 HS) HOẶC **chụp ảnh danh sách** → app tách thành từng học sinh → xong cả lớp trong ~10 giây, thay vì gõ tay từng bé.
 
 **Đòn bẩy GTM:** **Activation/time-to-value** — GTM coi activation 24h là "sinh tử" (Mục 47, 141). Đây là nơi 98% user rơi; bỏ việc nhập tay chán nhất = tăng activation trực tiếp.
 
-**Kỹ thuật:** ô textarea → split theo dòng → tạo hàng loạt qua API `POST students` (loop hoặc endpoint bulk). Bản **dán text** = nhỏ; **OCR ảnh** (chụp danh sách) = Phase 2 (ML Kit/expo).
+**2.4a — Dán text (MVP, ~1–2 ngày):** ô textarea → split theo dòng → tạo hàng loạt qua `POST students` (loop hoặc endpoint bulk). Đơn giản, không phụ thuộc dịch vụ ngoài.
 
-**Effort:** ~1–2 ngày (bản dán). OCR ảnh: +nhiều, để sau.
+**2.4b — Chụp ảnh → OCR bằng Gemini (fast-follow):**
+- **Luồng:** app chụp/chọn ảnh (`expo-image-picker`) → gửi **backend** `POST /students/ocr` (base64/multipart) → backend gọi **Gemini vision** với prompt "trích họ tên đầy đủ mỗi HS" + `responseSchema` JSON → trả `["Nguyễn Văn A", …]` → app hiện **danh sách sửa được** → xác nhận → bulk create. (Luôn cho sửa trước khi tạo — OCR không bao giờ 100%.)
+- **Model:** **Gemini Flash** (multimodal, rẻ, nhanh — vd `gemini-2.5-flash`; kiểm tra ID hiện hành trên Google AI Studio). Hơn OCR truyền thống: hiểu ngữ cảnh, đọc được **chữ viết tay**, tự bỏ số thứ tự/tiêu đề, chuẩn hoá **tên tiếng Việt có dấu**.
+- **Khoá API:** `GEMINI_API_KEY` (Google AI Studio, **có free tier**) — **ĐỂ Ở BACKEND, không nhúng app** (lộ key). Đúng kiến trúc mobile → FastAPI → adapter.
+- **Chi phí:** 1 ảnh + vài trăm token output → **~0đ** cho quy mô "thi thoảng nhập lớp".
+- **⚠️ Riêng tư (bắt buộc xử lý):** ảnh chứa **tên học sinh** gửi lên Google → (1) ghi rõ trong **Chính sách bảo mật**, (2) **không lưu ảnh** sau khi trích xong, (3) để OCR là **tuỳ chọn** (mặc định vẫn dán/nhập tay) — vì app định vị "dữ liệu an toàn".
+- **Effort:** ~2–3 ngày (image-picker + endpoint gọi Gemini + màn xác nhận danh sách).
 
-**Acceptance:** dán 10 dòng tên → tạo 10 HS trong lớp, 1 xác nhận.
+**Acceptance:** (a) dán 10 dòng → tạo 10 HS, 1 xác nhận; (b) chụp 1 ảnh danh sách → ra danh sách tên sửa được → tạo hàng loạt.
 
 ---
 
@@ -143,5 +149,7 @@ LIVE. Đây là **wow nền** (VP "app nghĩ hộ"). Giữ & khuếch đại tro
 
 ---
 
-## 6. Ngoài phạm vi (Phase 2+)
-ZNS auto-gửi Zalo (phụ huynh tự nhận) · OCR ảnh danh sách · thiệp nhiều template/động · gợi ý pattern ("bé Long thường nộp trễ 5 ngày").
+## 6. Ngoài phạm vi
+- **Bỏ hẳn:** ZNS auto-gửi Zalo cho phụ huynh — không có Zalo OA/API.
+- **Fast-follow (đã specced ở 2.4b):** OCR ảnh danh sách bằng Gemini.
+- **Phase 2:** thiệp nhiều template/động · gợi ý pattern ("bé Long thường nộp trễ 5 ngày").

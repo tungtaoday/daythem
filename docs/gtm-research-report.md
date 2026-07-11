@@ -151,7 +151,7 @@ Mục 6 là **kênh** (content/community/referral). Nhưng activation, K-factor,
 - Referral cần *yếu tố cộng tác* (Mục 49) → **"Thiệp phụ huynh"** biến mỗi báo cáo thành 1 điểm chạm brand tới phụ huynh = **động cơ K-factor thật** (giống ClassDojo kiếm tăng trưởng từ phía phụ huynh), mạnh hơn nút "Mời đồng nghiệp" đơn thuần.
 - **Trợ lý cảnh báo bỏ học** = khác biệt lõi để content/demo có cái "khoe" (đối thủ chỉ ghi sổ thụ động).
 
-> ⚠️ **Ranh giới trung thực (để content/landing không hứa vống):** "Zalo 1-chạm" bản khả thi 2 tuần = *mở đúng chat + tin đã sẵn để dán*, **KHÔNG** phải tự-gửi. Tự-gửi cho phụ huynh chỉ hợp lệ qua **ZNS** (trả phí, duyệt template) → Phase 2. Mô tả marketing phải dừng đúng mức này.
+> ⚠️ **Ranh giới trung thực (để content/landing không hứa vống):** "Zalo 1-chạm" = *mở đúng chat + tin đã sẵn để dán*, **KHÔNG** phải tự-gửi. Auto-gửi (ZNS) cần Zalo OA/API mà dự án **không có → bỏ hẳn**. Marketing dừng đúng mức "mở sẵn chat, dán 1 chạm".
 
 ---
 
