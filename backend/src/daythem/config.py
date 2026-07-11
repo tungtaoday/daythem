@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Owner-controlled notification config (defaults/groups/contact policy) + marketing campaigns.
     NOTIFY_CONFIG_PATH: str = "notify_config.json"
     NOTIFY_CAMPAIGNS_PATH: str = "notify_campaigns.json"
+    # Gemini (Google AI Studio) — OCR nhập danh sách học sinh từ ảnh. Rỗng = OCR tắt.
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash"
 
     model_config = {"env_file": ".env"}
 

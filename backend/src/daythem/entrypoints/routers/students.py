@@ -50,6 +50,15 @@ class SetFeeBody(BaseModel):
     note: Optional[str] = None
 
 
+class OcrBody(BaseModel):
+    image_base64: str
+    mime_type: str = "image/jpeg"
+
+
+class BulkAddBody(BaseModel):
+    names: list[str]
+
+
 @router.get("/classes/{class_id}/students")
 def list_students(
     class_id: str,
@@ -78,6 +87,43 @@ def add_student(
 
     student = handle_add_student(AddStudentCommand(class_id=class_id, **body.model_dump()), uow)
     return student_out(student)
+
+
+@router.post("/students/ocr")
+def ocr_student_names(
+    body: OcrBody,
+    teacher: TeacherORM = Depends(get_current_teacher),
+):
+    """Quét ảnh danh sách → trả danh sách tên (KHÔNG tạo học sinh). App cho GV sửa rồi mới tạo."""
+    from daythem.adapters.gemini import extract_student_names
+    try:
+        names = extract_student_names(body.image_base64, body.mime_type)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"names": names}
+
+
+@router.post("/classes/{class_id}/students/bulk", status_code=201)
+def bulk_add_students(
+    class_id: str,
+    body: BulkAddBody,
+    teacher: TeacherORM = Depends(get_current_teacher),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Tạo hàng loạt học sinh từ danh sách tên (dán text hoặc kết quả OCR)."""
+    with uow:
+        klass = uow.classes.get(class_id)
+        if not klass or klass.teacher_id != teacher.id:
+            raise HTTPException(404, "Class not found")
+
+    created = []
+    for raw in body.names:
+        name = " ".join((raw or "").split())
+        if not name:
+            continue
+        student = handle_add_student(AddStudentCommand(class_id=class_id, name=name), uow)
+        created.append(student_out(student))
+    return {"items": created, "total": len(created)}
 
 
 @router.get("/students/{student_id}")

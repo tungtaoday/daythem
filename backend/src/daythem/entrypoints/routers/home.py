@@ -101,3 +101,41 @@ def home_summary(
             "at_risk": at_risk[:MAX_AT_RISK],
             "at_risk_total": len(at_risk),
         }
+
+
+@router.get("/home/monthly-wrap")
+def monthly_wrap(
+    month: str | None = None,
+    teacher: TeacherORM = Depends(get_current_teacher),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Chốt sổ 1 tháng: đã thu, số buổi, chuyên cần %, số lớp/HS — cho thẻ tổng kết tháng."""
+    m = month or _vn_month()
+    with uow:
+        classes = uow.classes.list_by_teacher(teacher.id)
+        collected = 0.0
+        sessions_count = 0
+        present = 0
+        total_marks = 0
+        students_total = 0
+        for klass in classes:
+            students = uow.students.list_by_class(klass.id)
+            students_total += len(students)
+            for t in uow.tuitions.list_by_class_month(klass.id, m):
+                if t.paid:
+                    collected += t.amount
+            for sess in uow.attendance.list_sessions(klass.id):
+                if sess.session_date.startswith(m):
+                    sessions_count += 1
+                    for r in sess.records:
+                        total_marks += 1
+                        if r.present:
+                            present += 1
+        return {
+            "month": m,
+            "collected": collected,
+            "sessions": sessions_count,
+            "attendance_pct": round(present / total_marks * 100) if total_marks else None,
+            "classes": len(classes),
+            "students": students_total,
+        }
