@@ -18,3 +18,16 @@ export type HomeSummary = {
 // Số liệu trợ lý cho Home: chưa nộp học phí + học sinh vắng liên tiếp.
 export const getHomeSummary = (): Promise<HomeSummary> =>
   api.get('/home/summary').then(r => r.data);
+
+export type MonthlyWrap = {
+  month: string;
+  collected: number;
+  sessions: number;
+  attendance_pct: number | null;
+  classes: number;
+  students: number;
+};
+
+// Chốt sổ 1 tháng (mặc định tháng hiện tại nếu không truyền).
+export const getMonthlyWrap = (month?: string): Promise<MonthlyWrap> =>
+  api.get('/home/monthly-wrap', { params: month ? { month } : {} }).then(r => r.data);

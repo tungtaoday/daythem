@@ -18,7 +18,8 @@ import {
   IconChevron,
 } from '../../components/icons';
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
-import { getHomeSummary, HomeSummary } from '../../api/home';
+import { getHomeSummary, HomeSummary, getMonthlyWrap, MonthlyWrap } from '../../api/home';
+import { ThiepShareSheet, WrapThiep } from '../../components/ui/ThiepShare';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -392,8 +393,21 @@ export function HomeScreen({ navigation }: any) {
   const [cards, setCards] = useState<any[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
+  const [wrap, setWrap] = useState<MonthlyWrap | null>(null);
+  const [showWrapShare, setShowWrapShare] = useState(false);
 
   useEffect(() => { fetchClasses(); }, []);
+
+  // Chốt sổ tháng (số thật). Demo → mẫu.
+  useEffect(() => {
+    if (isDemo) { setWrap({ month: '2026-07', collected: 5400000, sessions: 18, attendance_pct: 92, classes: 2, students: 17 }); return; }
+    if (isLoading) return;
+    const hasStu = classes.reduce((t, c) => t + (c.student_count || 0), 0) > 0;
+    if (!hasStu) { setWrap(null); return; }
+    let alive = true;
+    getMonthlyWrap().then(w => { if (alive) setWrap(w); }).catch(() => { if (alive) setWrap(null); });
+    return () => { alive = false; };
+  }, [classes, isLoading, isDemo]);
 
   // Số liệu trợ lý (chưa nộp + vắng liên tiếp). Demo → dữ liệu mẫu; thật → gọi API.
   useEffect(() => {
@@ -577,6 +591,20 @@ export function HomeScreen({ navigation }: any) {
                 : 'Cùng xử lý gọn vài việc hôm nay nhé 🌿'}
         </Text>
 
+        {/* ── Chốt sổ tháng (bấm để chia sẻ thiệp) ── */}
+        {wrap && (wrap.collected > 0 || wrap.sessions > 0) && (
+          <TouchableOpacity style={s.wrapCard} activeOpacity={0.9} onPress={() => setShowWrapShare(true)}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.wrapEyebrow}>CHỐT SỔ THÁNG {wrap.month.split('-')[1].replace(/^0/, '')}</Text>
+              <Text style={s.wrapAmount}>{wrap.collected.toLocaleString('vi-VN')}đ</Text>
+              <Text style={s.wrapSub}>
+                {wrap.sessions} buổi{wrap.attendance_pct != null ? ` · ${wrap.attendance_pct}% chuyên cần` : ''}
+              </Text>
+            </View>
+            <Text style={s.wrapShare}>Chia sẻ ›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Owner promo banner (server-driven, dismissible) ── */}
         <PromoBanner />
 
@@ -617,6 +645,19 @@ export function HomeScreen({ navigation }: any) {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      {showWrapShare && wrap && (
+        <ThiepShareSheet onClose={() => setShowWrapShare(false)}>
+          <WrapThiep
+            monthLabel={`Tháng ${wrap.month.split('-')[1].replace(/^0/, '')}`}
+            collected={wrap.collected}
+            sessions={wrap.sessions}
+            attendancePct={wrap.attendance_pct}
+            students={wrap.students}
+            teacher={teacher?.name ? `${genderStr === 'thầy' ? 'Thầy' : 'Cô'} ${teacher.name.split(/\s+/).pop()}` : undefined}
+          />
+        </ThiepShareSheet>
+      )}
     </View>
   );
 }
@@ -632,6 +673,13 @@ const s = StyleSheet.create({
   calBtn: { width: 40, height: 40, borderRadius: 13, backgroundColor: colors.surface, borderWidth: 1, borderColor: '#e8e4da', alignItems: 'center', justifyContent: 'center' },
   greetTitle: { fontSize: 26, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.5, lineHeight: 30, marginBottom: 4 },
   greetSub: { fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 22 },
+
+  // Chốt sổ tháng
+  wrapCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.honey100, borderRadius: 18, padding: 16, marginBottom: 4, borderWidth: 1, borderColor: '#f0d99a' },
+  wrapEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6, color: '#a9791f' },
+  wrapAmount: { fontSize: 24, fontWeight: '800', letterSpacing: -0.6, color: '#5e4715', marginTop: 3 },
+  wrapSub: { fontSize: 12.5, fontWeight: '600', color: '#8a6d30', marginTop: 2 },
+  wrapShare: { fontSize: 13, fontWeight: '700', color: '#a9791f' },
 
   // Feed
   feed: { gap: 12 },

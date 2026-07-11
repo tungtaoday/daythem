@@ -211,6 +211,7 @@ export function AttendanceScreen({ route, navigation }: any) {
       {showZalo && firstAbsent && (
         <ZaloCopySheet
           title="Hỏi thăm học sinh vắng"
+          phone={firstAbsent.parent_phone || undefined}
           recipient={`Phụ huynh của ${firstAbsent.name}`}
           message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} buổi vừa rồi không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
           hint={`phụ huynh của ${firstAbsent.name}`}

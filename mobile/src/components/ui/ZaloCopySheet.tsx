@@ -15,12 +15,13 @@ type Props = {
   recipient: string;          // e.g. "7 phụ huynh chưa nộp" or "Nhóm Lớp 9 · Toán"
   message: string;            // initial message text
   hint?: string;              // shown in the "Mở Zalo → dán vào…" instruction
+  phone?: string;             // SĐT phụ huynh → mở đúng chat (1 chạm); rỗng → share/copy
   templates?: ZaloTemplate[]; // optional tone selector
   onConfirm: () => void;
   onClose: () => void;
 };
 
-export function ZaloCopySheet({ title, recipient, message, hint, templates, onConfirm, onClose }: Props) {
+export function ZaloCopySheet({ title, recipient, message, hint, phone, templates, onConfirm, onClose }: Props) {
   const [tpl, setTpl] = useState(0);
   const [text, setText] = useState(
     templates ? templates[0].body : message
@@ -121,19 +122,23 @@ export function ZaloCopySheet({ title, recipient, message, hint, templates, onCo
               <Text style={s.copiedText}>Đã copy vào bộ nhớ tạm</Text>
             </View>
             <Text style={s.hintText}>
-              Mở Zalo → tìm {hint ? `"${hint}"` : 'nhóm lớp'} → dán (giữ ô nhập tin) → Gửi
+              {phone
+                ? 'Bấm "Mở Zalo phụ huynh" → đúng chat mở ra → dán (giữ ô nhập tin) → Gửi'
+                : `Mở Zalo → tìm ${hint ? `"${hint}"` : 'nhóm lớp'} → dán (giữ ô nhập tin) → Gửi`}
             </Text>
           </View>
         )}
 
-        {/* Open Zalo — the actual send happens here, in Zalo */}
+        {/* Open Zalo — mở đúng chat (nếu có SĐT) + tự copy nội dung; gửi thật diễn ra trong Zalo */}
         <TouchableOpacity
-          style={[s.zaloBtn, !copied && s.zaloBtnMuted]}
-          onPress={() => { openZalo(); }}
+          style={s.zaloBtn}
+          onPress={async () => { await openZalo(phone, text); setCopied(true); }}
           activeOpacity={0.85}
         >
-          <IconZalo size={18} color={copied ? 'white' : '#3a7dd3'} />
-          <Text style={[s.zaloBtnText, !copied && { color: '#3a7dd3' }]}>Mở Zalo để dán &amp; gửi</Text>
+          <IconZalo size={18} color="white" />
+          <Text style={s.zaloBtnText}>
+            {phone ? 'Mở Zalo phụ huynh (đã copy tin)' : 'Mở Zalo để dán & gửi'}
+          </Text>
         </TouchableOpacity>
 
         {/* Self-confirmation — teacher tells the app she already sent it */}

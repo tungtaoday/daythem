@@ -9,11 +9,16 @@ import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
+import { ThiepShareSheet, ReportThiep } from '../../components/ui/ThiepShare';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
+import { bulkAddStudents, ocrStudentNames } from '../../api/students';
 import { exportStudentsExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import * as ImagePicker from 'expo-image-picker';
+
+const countNames = (t: string) => t.split('\n').map(n => n.trim()).filter(Boolean);
 
 // ── Types & demo data ─────────────────────────────────────────
 
@@ -126,6 +131,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
   const fmtDate = (s: string) => { const p = s.split('-'); return `${p[2]}/${p[1]}`; };
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
+  const [showThiep, setShowThiep] = useState(false);
   const teacher = useAuthStore(s => s.teacher);
   const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
 
@@ -289,6 +295,10 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
                 <Text style={[pp.btnSecondaryText, { color: hero.fg }]}>Gọi</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity style={[pp.thiepBtn, { backgroundColor: hero.btnBg }]} onPress={() => setShowThiep(true)} activeOpacity={0.85}>
+              <Text style={[pp.thiepBtnText, { color: hero.fg }]}>🌿  Gửi thiệp báo cáo cho phụ huynh</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -529,6 +539,21 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
           onClose={() => setShowZalo(false)}
         />
       )}
+
+      {showThiep && (
+        <ThiepShareSheet onClose={() => setShowThiep(false)}>
+          <ReportThiep
+            name={student.name}
+            meta={metaLine}
+            attendancePct={isDemo ? student.attend : rPct}
+            present={isDemo ? 6 : rPresent}
+            absent={isDemo ? 2 : rAbsent}
+            paid={isDemo ? student.debt === 0 : undefined}
+            note={note}
+            teacher={teacher?.name ? `${gw === 'thầy' ? 'Thầy' : 'Cô'} ${teacher.name.split(' ').pop()}` : undefined}
+          />
+        </ThiepShareSheet>
+      )}
     </View>
   );
 }
@@ -570,6 +595,8 @@ const pp = StyleSheet.create({
   btnPrimaryText: { fontSize: 14, fontWeight: '700' },
   btnSecondary: { flex: 1, height: 44, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   btnSecondaryText: { fontSize: 14, fontWeight: '600' },
+  thiepBtn: { alignSelf: 'stretch', marginTop: 8, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  thiepBtnText: { fontSize: 13.5, fontWeight: '700' },
   riskBadge: { position: 'absolute', bottom: 0, right: -2, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.coral500, borderWidth: 3, borderColor: 'white', alignItems: 'center', justifyContent: 'center' },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.border, paddingHorizontal: 20 },
   tab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
@@ -677,8 +704,50 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   const [addPhone, setAddPhone] = useState('');
   const [addNote, setAddNote] = useState('');
   const [loading, setLoading] = useState(!isDemo);
+  const [showBulk, setShowBulk] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const resetAddForm = () => { setAddName(''); setAddParentName(''); setAddPhone(''); setAddNote(''); };
+
+  // Chụp/chọn ảnh danh sách → Gemini OCR → điền vào ô nhập (GV sửa trước khi thêm).
+  const pickAndOcr = async (fromCamera: boolean) => {
+    try {
+      const perm = fromCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { Alert.alert('Cần quyền truy cập', 'Cho phép dùng ảnh/máy ảnh để quét danh sách.'); return; }
+      const res = fromCamera
+        ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 })
+        : await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      if (res.canceled || !res.assets?.[0]?.base64) return;
+      const asset = res.assets[0];
+      setOcrLoading(true);
+      const names = await ocrStudentNames(asset.base64!, asset.mimeType || 'image/jpeg');
+      if (names.length === 0) { Alert.alert('Không đọc được tên', 'Thử chụp rõ hơn, hoặc dán danh sách bằng tay.'); return; }
+      setBulkText(prev => (prev.trim() ? prev.trim() + '\n' : '') + names.join('\n'));
+    } catch {
+      Alert.alert('Lỗi', 'Không quét được ảnh, thử lại sau.');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const handleBulkAdd = async () => {
+    const names = countNames(bulkText);
+    if (names.length === 0) return;
+    setBulkSaving(true);
+    try {
+      await bulkAddStudents(classId, names);
+      await fetchStudents(classId);
+      setBulkText(''); setShowBulk(false);
+    } catch {
+      Alert.alert('Lỗi', 'Không thêm được danh sách. Thử lại.');
+    } finally {
+      setBulkSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (isDemo) return;
@@ -766,9 +835,14 @@ export function ClassStudentsScreen({ route, navigation }: any) {
               </TouchableOpacity>
             )}
             {!isDemo && (
-              <TouchableOpacity onPress={() => setShowAdd(true)}>
-                <Text style={s.addLink}>+ Thêm</Text>
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity onPress={() => setShowBulk(true)}>
+                  <Text style={s.addLink}>Nhập nhanh</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowAdd(true)}>
+                  <Text style={s.addLink}>+ Thêm</Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         </View>
@@ -842,6 +916,50 @@ export function ClassStudentsScreen({ route, navigation }: any) {
           />
         </View>
       </Modal>
+
+      {/* Bulk import modal — dán danh sách / chụp ảnh OCR */}
+      <Modal visible={showBulk} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowBulk(false)}>
+        <View style={s.modal}>
+          <View style={s.modalHeader}>
+            <Text style={s.modalTitle}>Nhập nhanh cả lớp</Text>
+            <TouchableOpacity onPress={() => setShowBulk(false)}>
+              <Text style={s.modalClose}>Huỷ</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={s.bulkHint}>Dán danh sách tên (mỗi dòng 1 học sinh), hoặc chụp ảnh danh sách để tự nhận diện tên.</Text>
+          <View style={s.ocrRow}>
+            <TouchableOpacity style={s.ocrBtn} onPress={() => pickAndOcr(true)} disabled={ocrLoading} activeOpacity={0.85}>
+              <Text style={s.ocrBtnText}>📷  Chụp danh sách</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.ocrBtn} onPress={() => pickAndOcr(false)} disabled={ocrLoading} activeOpacity={0.85}>
+              <Text style={s.ocrBtnText}>🖼  Chọn ảnh</Text>
+            </TouchableOpacity>
+          </View>
+          {ocrLoading && (
+            <View style={s.ocrLoading}>
+              <ActivityIndicator color={colors.green600} />
+              <Text style={s.ocrLoadingText}>Đang đọc tên từ ảnh…</Text>
+            </View>
+          )}
+          <TextInput
+            style={s.bulkInput}
+            value={bulkText}
+            onChangeText={setBulkText}
+            multiline
+            placeholder={'Nguyễn Minh Anh\nTrần Bảo Long\nLê Hoàng Phúc\n…'}
+            placeholderTextColor={colors.textMuted}
+          />
+          <Text style={s.bulkCount}>{countNames(bulkText).length} học sinh sẽ được thêm</Text>
+          <Button
+            label={bulkSaving ? 'Đang thêm…' : `Thêm ${countNames(bulkText).length || ''} học sinh`}
+            onPress={handleBulkAdd}
+            loading={bulkSaving}
+            disabled={countNames(bulkText).length === 0 || bulkSaving}
+            style={{ marginTop: 8 }}
+          />
+          <Text style={s.ocrPrivacy}>🔒 Ảnh chỉ dùng để nhận tên, không lưu lại.</Text>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -870,4 +988,13 @@ const s = StyleSheet.create({
   fieldLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6, marginLeft: 2 },
   saveBtn: { backgroundColor: colors.green500, padding: 16, borderRadius: 16, alignItems: 'center', marginTop: 8 },
   saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
+  bulkHint: { fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginBottom: 14 },
+  ocrRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  ocrBtn: { flex: 1, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  ocrBtnText: { fontSize: 14, fontWeight: '700', color: colors.green700 },
+  ocrLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  ocrLoadingText: { fontSize: 13, color: colors.green700, fontWeight: '600' },
+  bulkInput: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 14, fontSize: 15, lineHeight: 24, color: colors.textPrimary, minHeight: 180, textAlignVertical: 'top' },
+  bulkCount: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginTop: 8, marginBottom: 4 },
+  ocrPrivacy: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: 12 },
 });

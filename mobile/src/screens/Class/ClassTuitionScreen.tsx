@@ -22,7 +22,7 @@ const buildZaloTemplates = (gw: string) => {
   ];
 };
 
-type Item = { student_id: string; student_name: string; amount: number; paid: boolean };
+type Item = { student_id: string; student_name: string; amount: number; paid: boolean; parent_phone?: string | null };
 
 const DEMO_ITEMS: Item[] = [
   { student_id: 'd1', student_name: 'Nguyễn Minh Anh', amount: 500000, paid: true },
@@ -45,6 +45,7 @@ export function ClassTuitionScreen({ route }: any) {
   const [loading, setLoading] = useState(!isDemo);
   const [error, setError] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
+  const [reminder, setReminder] = useState<Item | null>(null);
   const [sent, setSent] = useState(false);
   const month = new Date().toISOString().slice(0, 7);
   const monthLabel = `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
@@ -62,6 +63,7 @@ export function ClassTuitionScreen({ route }: any) {
           student_name: r.student_name,
           amount: r.amount,
           paid: r.paid,
+          parent_phone: r.parent_phone,
         })));
       })
       .catch(() => { if (alive) setError(true); })
@@ -152,10 +154,15 @@ export function ClassTuitionScreen({ route }: any) {
                     <Text style={s.stuName}>{d.student_name}</Text>
                     <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
                   </View>
-                  <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
-                    <IconCheck size={13} color="white" />
-                    <Text style={s.tickBtnText}>Tick thu</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityLabel="Nhắc Zalo phụ huynh">
+                      <IconZalo size={16} color="#3a7dd3" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
+                      <IconCheck size={13} color="white" />
+                      <Text style={s.tickBtnText}>Tick thu</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))}
             </View>
@@ -216,6 +223,18 @@ export function ClassTuitionScreen({ route }: any) {
           onClose={() => setShowZalo(false)}
         />
       )}
+
+      {reminder && (
+        <ZaloCopySheet
+          title="Nhắc học phí"
+          phone={reminder.parent_phone || undefined}
+          recipient={`Phụ huynh ${reminder.student_name}`}
+          message={`Chào anh/chị, ${gw} nhắc học phí tháng này của ${reminder.student_name} là ${VND_FULL(reminder.amount)}. Anh/chị gửi ${gw} khi tiện nhé, cảm ơn anh/chị 🌿`}
+          hint={`phụ huynh ${reminder.student_name}`}
+          onConfirm={() => setReminder(null)}
+          onClose={() => setReminder(null)}
+        />
+      )}
     </View>
   );
 }
@@ -244,6 +263,7 @@ const s = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   stuName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   stuSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  zaloRowBtn: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
   tickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 11, backgroundColor: colors.green500 },
   tickBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
   paidBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.green500, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
