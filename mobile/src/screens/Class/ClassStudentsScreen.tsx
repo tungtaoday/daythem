@@ -487,7 +487,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
 
       {/* Edit student modal (real accounts only) */}
       <Modal visible={showEdit} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowEdit(false)}>
-        <View style={s.modal}>
+        <View style={[s.modal, { paddingTop: Math.max(insets.top, 24) + 12 }]}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Sửa thông tin</Text>
             <TouchableOpacity onPress={() => setShowEdit(false)}>
@@ -641,8 +641,10 @@ const fe = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────
 
 export function ClassStudentsScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { classId, className } = route.params;
   const openStudentId: string | undefined = route.params?.openStudentId;
+  const openBulkParam: boolean | undefined = route.params?.openBulk;
   const { classes, students, fetchStudents, addStudent, setStudentFee, updateStudent, removeStudent } = useClassesStore();
   const isDemo = isDemoToken(useAuthStore(st => st.token));
 
@@ -801,6 +803,11 @@ export function ClassStudentsScreen({ route, navigation }: any) {
     }
   }, [openStudentId, displayStus.length]);
 
+  // Điều hướng kèm openBulk (từ Chi tiết lớp) → mở thẳng "Nhập nhanh cả lớp".
+  useEffect(() => {
+    if (openBulkParam) { setShowBulk(true); navigation.setParams({ openBulk: undefined }); }
+  }, [openBulkParam]);
+
   // Đang xem hồ sơ → ẩn header gốc + nút back Android đóng hồ sơ (không thoát lớp).
   useEffect(() => {
     navigation.setOptions({ headerShown: !profileStu });
@@ -864,8 +871,8 @@ export function ClassStudentsScreen({ route, navigation }: any) {
             )}
             {!isDemo && (
               <>
-                <TouchableOpacity onPress={() => setShowBulk(true)}>
-                  <Text style={s.addLink}>Nhập nhanh</Text>
+                <TouchableOpacity style={s.bulkPill} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
+                  <Text style={s.bulkPillText}>⚡ Nhập nhanh</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setShowAdd(true)}>
                   <Text style={s.addLink}>+ Thêm</Text>
@@ -889,9 +896,17 @@ export function ClassStudentsScreen({ route, navigation }: any) {
             ))}
           </View>
         ) : (
-          <TouchableOpacity style={s.emptyCard} onPress={() => setShowAdd(true)}>
-            <Text style={s.emptyText}>+ Thêm học sinh đầu tiên vào lớp</Text>
-          </TouchableOpacity>
+          <View style={s.emptyCard}>
+            <Text style={s.emptyTitle2}>Chưa có học sinh nào</Text>
+            <Text style={s.emptySubline}>Thêm cả lớp trong 10 giây</Text>
+            <TouchableOpacity style={s.emptyPrimary} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
+              <Text style={s.emptyPrimaryText}>⚡  Nhập nhanh cả lớp</Text>
+              <Text style={s.emptyPrimarySub}>Chụp ảnh · chọn file Excel / Word / PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowAdd(true)} style={{ marginTop: 14 }}>
+              <Text style={s.emptySecondary}>hoặc thêm từng em →</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {!isDemo && displayStus.length > 0 && (
@@ -905,7 +920,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
 
       {/* Add student modal */}
       <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet">
-        <View style={s.modal}>
+        <View style={[s.modal, { paddingTop: Math.max(insets.top, 24) + 12 }]}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Thêm học sinh</Text>
             <TouchableOpacity onPress={() => { setShowAdd(false); resetAddForm(); }}>
@@ -947,7 +962,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
 
       {/* Bulk import modal — dán danh sách / chụp ảnh OCR */}
       <Modal visible={showBulk} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowBulk(false)}>
-        <View style={s.modal}>
+        <View style={[s.modal, { paddingTop: Math.max(insets.top, 24) + 12 }]}>
           <View style={s.modalHeader}>
             <Text style={s.modalTitle}>Nhập nhanh cả lớp</Text>
             <TouchableOpacity onPress={() => setShowBulk(false)}>
@@ -1004,14 +1019,22 @@ const s = StyleSheet.create({
   summaryBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   summaryText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
+  bulkPill: { backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  bulkPillText: { color: 'white', fontSize: 13, fontWeight: '700' },
   card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  emptyCard: { backgroundColor: colors.green50, borderRadius: 14, borderWidth: 1, borderColor: colors.green200, paddingVertical: 20, alignItems: 'center' },
+  emptyCard: { backgroundColor: colors.green50, borderRadius: 18, borderWidth: 1, borderColor: colors.green200, paddingVertical: 28, paddingHorizontal: 20, alignItems: 'center' },
   emptyText: { fontSize: 14, fontWeight: '600', color: colors.green600 },
+  emptyTitle2: { fontSize: 16, fontWeight: '700', color: colors.textPrimary },
+  emptySubline: { fontSize: 13, color: colors.textSecondary, marginTop: 3, marginBottom: 16 },
+  emptyPrimary: { backgroundColor: colors.green500, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', alignSelf: 'stretch' },
+  emptyPrimaryText: { color: 'white', fontSize: 15.5, fontWeight: '700' },
+  emptyPrimarySub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 3 },
+  emptySecondary: { fontSize: 13.5, fontWeight: '600', color: colors.green700 },
   addInlineBtn: { marginTop: 10, paddingVertical: 10, alignItems: 'center' },
   addInlineBtnText: { fontSize: 13, color: colors.green600, fontWeight: '600' },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, borderWidth: 1, borderColor: colors.green200, backgroundColor: colors.green50 },
   exportBtnText: { fontSize: 12, fontWeight: '600', color: colors.green700 },
-  modal: { flex: 1, padding: 24, backgroundColor: colors.bg },
+  modal: { flex: 1, paddingHorizontal: 24, paddingBottom: 24, backgroundColor: colors.bg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   modalClose: { fontSize: 16, color: colors.green600, fontWeight: '600' },

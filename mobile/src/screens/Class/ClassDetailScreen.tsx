@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, typography, radius } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
@@ -35,6 +36,7 @@ const TILES: Tile[] = [
 ];
 
 export function ClassDetailScreen({ route, navigation }: any) {
+  const insets = useSafeAreaInsets();
   const { classId } = route.params;
   const { classes, students, fetchStudents, addStudent } = useClassesStore();
   const teacher = useAuthStore(st => st.teacher);
@@ -112,6 +114,9 @@ export function ClassDetailScreen({ route, navigation }: any) {
     }
   };
 
+  // Sang màn Học sinh và mở thẳng "Nhập nhanh cả lớp" (ảnh/Excel/Word/PDF).
+  const goBulk = () => navigation.navigate('ClassStudents', { classId, className: klass.name, openBulk: true });
+
   // ── countdown line: "THỨ 4 · 18:30 – 20:00 · CÒN 4 NGÀY" (buổi gần nhất) ──
   // Giờ + địa điểm lấy từ ĐÚNG buổi sắp tới (mỗi buổi có giờ/địa điểm riêng).
   const occ = nextOccurrence(klass.schedule);
@@ -183,15 +188,28 @@ export function ClassDetailScreen({ route, navigation }: any) {
       {/* Student section — tappable rows + inline add */}
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Học sinh ({classStudents.length})</Text>
-        <TouchableOpacity onPress={() => setShowAdd(true)}>
-          <Text style={styles.addLink}>+ Thêm</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <TouchableOpacity style={styles.bulkPill} onPress={goBulk} activeOpacity={0.85}>
+            <Text style={styles.bulkPillText}>⚡ Nhập nhanh</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowAdd(true)}>
+            <Text style={styles.addLink}>+ Thêm</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <Card>
         {classStudents.length === 0 ? (
-          <TouchableOpacity style={styles.emptyRow} onPress={() => setShowAdd(true)}>
-            <Text style={styles.emptyText}>+ Lớp của {tchTitle} chưa có học sinh — thêm em đầu tiên nhé</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyTitle}>Lớp của {tchTitle} chưa có học sinh</Text>
+            <Text style={styles.emptySub}>Thêm cả lớp trong 10 giây</Text>
+            <TouchableOpacity style={styles.emptyPrimary} onPress={goBulk} activeOpacity={0.85}>
+              <Text style={styles.emptyPrimaryText}>⚡  Nhập nhanh cả lớp</Text>
+              <Text style={styles.emptyPrimarySub}>Chụp ảnh · chọn file Excel / Word / PDF</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowAdd(true)} style={{ marginTop: 12 }}>
+              <Text style={styles.emptySecondary}>hoặc thêm từng em →</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           classStudents.map((s, i) => (
             <TouchableOpacity
@@ -212,8 +230,8 @@ export function ClassDetailScreen({ route, navigation }: any) {
       </Card>
 
       {/* Add student modal */}
-      <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modal}>
+      <Modal visible={showAdd} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAdd(false)}>
+        <View style={[styles.modal, { paddingTop: Math.max(insets.top, 24) + 12 }]}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Thêm học sinh</Text>
             <TouchableOpacity onPress={() => { setShowAdd(false); resetAddForm(); }}>
@@ -278,15 +296,22 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...typography.h3 },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
-  emptyRow: { paddingVertical: spacing.md, alignItems: 'center' },
-  emptyText: { ...typography.caption, color: colors.green600, fontWeight: '600' },
+  bulkPill: { backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  bulkPillText: { color: 'white', fontSize: 13, fontWeight: '700' },
+  emptyBox: { paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' },
+  emptyTitle: { fontSize: 15.5, fontWeight: '700', color: colors.textPrimary },
+  emptySub: { fontSize: 13, color: colors.textSecondary, marginTop: 3, marginBottom: 16 },
+  emptyPrimary: { backgroundColor: colors.green500, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', alignSelf: 'stretch' },
+  emptyPrimaryText: { color: 'white', fontSize: 15.5, fontWeight: '700' },
+  emptyPrimarySub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 3 },
+  emptySecondary: { fontSize: 13.5, fontWeight: '600', color: colors.green700 },
   studentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm },
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   studentInfo: { flex: 1 },
   studentName: { ...typography.bodyMedium },
   studentPhone: { ...typography.caption },
   chevron: { fontSize: 20, color: colors.textMuted },
-  modal: { flex: 1, padding: 24, backgroundColor: colors.bg },
+  modal: { flex: 1, paddingHorizontal: 24, paddingBottom: 24, backgroundColor: colors.bg },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   modalClose: { fontSize: 16, color: colors.green600, fontWeight: '600' },
