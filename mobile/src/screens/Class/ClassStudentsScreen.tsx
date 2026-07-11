@@ -13,10 +13,12 @@ import { ThiepShareSheet, ReportThiep } from '../../components/ui/ThiepShare';
 import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
-import { bulkAddStudents, ocrStudentNames } from '../../api/students';
+import { bulkAddStudents, importStudentNames } from '../../api/students';
 import { exportStudentsExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 const countNames = (t: string) => t.split('\n').map(n => n.trim()).filter(Boolean);
 
@@ -724,11 +726,37 @@ export function ClassStudentsScreen({ route, navigation }: any) {
       if (res.canceled || !res.assets?.[0]?.base64) return;
       const asset = res.assets[0];
       setOcrLoading(true);
-      const names = await ocrStudentNames(asset.base64!, asset.mimeType || 'image/jpeg');
+      const names = await importStudentNames(asset.base64!, asset.mimeType || 'image/jpeg', asset.fileName || 'photo.jpg');
       if (names.length === 0) { Alert.alert('Không đọc được tên', 'Thử chụp rõ hơn, hoặc dán danh sách bằng tay.'); return; }
       setBulkText(prev => (prev.trim() ? prev.trim() + '\n' : '') + names.join('\n'));
     } catch {
       Alert.alert('Lỗi', 'Không quét được ảnh, thử lại sau.');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  // Chọn file Word/Excel/PDF/CSV → backend trích tên (Gemini) → điền vào ô nhập.
+  const pickDocument = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',        // .xlsx
+          'application/vnd.ms-excel', 'text/csv', 'text/plain',
+        ],
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      setOcrLoading(true);
+      const b64 = await FileSystem.readAsStringAsync(a.uri, { encoding: 'base64' });
+      const names = await importStudentNames(b64, a.mimeType || '', a.name || '');
+      if (names.length === 0) { Alert.alert('Không đọc được tên', 'File chưa có danh sách tên rõ ràng — thử file khác hoặc dán tay.'); return; }
+      setBulkText(prev => (prev.trim() ? prev.trim() + '\n' : '') + names.join('\n'));
+    } catch {
+      Alert.alert('Lỗi', 'Không đọc được file, thử lại.');
     } finally {
       setOcrLoading(false);
     }
@@ -926,7 +954,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
               <Text style={s.modalClose}>Huỷ</Text>
             </TouchableOpacity>
           </View>
-          <Text style={s.bulkHint}>Dán danh sách tên (mỗi dòng 1 học sinh), hoặc chụp ảnh danh sách để tự nhận diện tên.</Text>
+          <Text style={s.bulkHint}>Dán danh sách tên (mỗi dòng 1 HS), hoặc để app tự nhận diện từ ảnh / file Word, Excel, PDF.</Text>
           <View style={s.ocrRow}>
             <TouchableOpacity style={s.ocrBtn} onPress={() => pickAndOcr(true)} disabled={ocrLoading} activeOpacity={0.85}>
               <Text style={s.ocrBtnText}>📷  Chụp danh sách</Text>
@@ -935,6 +963,9 @@ export function ClassStudentsScreen({ route, navigation }: any) {
               <Text style={s.ocrBtnText}>🖼  Chọn ảnh</Text>
             </TouchableOpacity>
           </View>
+          <TouchableOpacity style={s.fileBtn} onPress={pickDocument} disabled={ocrLoading} activeOpacity={0.85}>
+            <Text style={s.fileBtnText}>📄  Chọn file (Word · Excel · PDF · CSV)</Text>
+          </TouchableOpacity>
           {ocrLoading && (
             <View style={s.ocrLoading}>
               <ActivityIndicator color={colors.green600} />
@@ -992,6 +1023,8 @@ const s = StyleSheet.create({
   ocrRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   ocrBtn: { flex: 1, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   ocrBtnText: { fontSize: 14, fontWeight: '700', color: colors.green700 },
+  fileBtn: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 13, alignItems: 'center', marginBottom: 12 },
+  fileBtnText: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary },
   ocrLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   ocrLoadingText: { fontSize: 13, color: colors.green700, fontWeight: '600' },
   bulkInput: { backgroundColor: 'white', borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, padding: 14, fontSize: 15, lineHeight: 24, color: colors.textPrimary, minHeight: 180, textAlignVertical: 'top' },

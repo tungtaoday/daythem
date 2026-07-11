@@ -18,6 +18,7 @@ export const setStudentFee = (id: string, body: { fee_type: string; amount?: num
 export const bulkAddStudents = (classId: string, names: string[]) =>
   api.post(`/classes/${classId}/students/bulk`, { names }).then(r => r.data as { items: any[]; total: number });
 
-// Quét ảnh danh sách → trả danh sách tên (chưa tạo, để GV sửa trước).
-export const ocrStudentNames = (imageBase64: string, mimeType = 'image/jpeg') =>
-  api.post('/students/ocr', { image_base64: imageBase64, mime_type: mimeType }).then(r => r.data.names as string[]);
+// Nhập từ FILE bất kỳ (ảnh/pdf/docx/xlsx/csv/txt) → trả danh sách tên (chưa tạo, GV sửa trước).
+export const importStudentNames = (fileBase64: string, mimeType = '', filename = '') =>
+  api.post('/students/import', { file_base64: fileBase64, mime_type: mimeType, filename })
+    .then(r => r.data.names as string[]);

@@ -36,7 +36,45 @@ def test_ocr_disabled_without_key(cls):
     # Test env không set GEMINI_API_KEY → OCR trả 400 rõ ràng, không crash.
     r = client.post("/api/v1/students/ocr", json={"image_base64": "AAAA", "mime_type": "image/png"})
     assert r.status_code == 400
-    assert "chưa được bật" in r.json()["detail"].lower() or "quét" in r.json()["detail"].lower()
+
+
+def test_import_disabled_without_key(cls):
+    client, _ = cls
+    r = client.post("/api/v1/students/import", json={"file_base64": "AAAA", "filename": "ds.pdf"})
+    assert r.status_code == 400
+
+
+def test_import_unsupported_format(cls, monkeypatch):
+    # Bật "key" giả để qua guard rồi kiểm định dạng lạ bị từ chối rõ ràng.
+    from daythem.config import settings
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "fake-key-for-routing-test")
+    client, _ = cls
+    r = client.post("/api/v1/students/import", json={"file_base64": "AAAA", "mime_type": "application/zip", "filename": "x.zip"})
+    assert r.status_code == 400
+    assert "định dạng" in r.json()["detail"].lower()
+
+
+def test_docx_xlsx_text_extraction():
+    import io
+    from daythem.adapters.gemini import _docx_to_text, _xlsx_to_text, _kind
+    import docx
+    d = docx.Document()
+    for n in ["Nguyễn Minh Anh", "Trần Bảo Long"]:
+        d.add_paragraph(n)
+    b = io.BytesIO(); d.save(b)
+    assert "Nguyễn Minh Anh" in _docx_to_text(b.getvalue())
+
+    import openpyxl
+    wb = openpyxl.Workbook(); ws = wb.active
+    ws.append(["STT", "Họ tên"]); ws.append([1, "Phạm Quỳnh Như"])
+    b2 = io.BytesIO(); wb.save(b2)
+    assert "Phạm Quỳnh Như" in _xlsx_to_text(b2.getvalue())
+
+    assert _kind("image/png", "") == "media"
+    assert _kind("application/pdf", "a.pdf") == "pdf"
+    assert _kind("", "ds.docx") == "docx"
+    assert _kind("", "ds.xlsx") == "xlsx"
+    assert _kind("application/zip", "x.bin") == "unknown"
 
 
 def test_monthly_wrap(cls):

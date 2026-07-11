@@ -55,6 +55,12 @@ class OcrBody(BaseModel):
     mime_type: str = "image/jpeg"
 
 
+class ImportBody(BaseModel):
+    file_base64: str
+    mime_type: str = ""
+    filename: str = ""
+
+
 class BulkAddBody(BaseModel):
     names: list[str]
 
@@ -89,15 +95,32 @@ def add_student(
     return student_out(student)
 
 
+@router.post("/students/import")
+def import_student_names(
+    body: ImportBody,
+    teacher: TeacherORM = Depends(get_current_teacher),
+):
+    """Nhập từ FILE bất kỳ (ảnh/pdf/docx/xlsx/csv/txt) → trả danh sách tên.
+
+    KHÔNG tạo học sinh — app cho GV sửa rồi mới bulk create. Không lưu file.
+    """
+    from daythem.adapters.gemini import extract_student_names
+    try:
+        names = extract_student_names(body.file_base64, body.mime_type, body.filename)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"names": names}
+
+
 @router.post("/students/ocr")
 def ocr_student_names(
     body: OcrBody,
     teacher: TeacherORM = Depends(get_current_teacher),
 ):
-    """Quét ảnh danh sách → trả danh sách tên (KHÔNG tạo học sinh). App cho GV sửa rồi mới tạo."""
+    """Alias tương thích: quét ẢNH danh sách → trả danh sách tên."""
     from daythem.adapters.gemini import extract_student_names
     try:
-        names = extract_student_names(body.image_base64, body.mime_type)
+        names = extract_student_names(body.image_base64, body.mime_type, "")
     except ValueError as e:
         raise HTTPException(400, str(e))
     return {"names": names}
