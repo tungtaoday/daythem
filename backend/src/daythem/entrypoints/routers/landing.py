@@ -1,9 +1,25 @@
 from pathlib import Path
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 
 router = APIRouter(tags=["landing"])
+
+_SITE = "https://gieochu.vn"
+
+_ROBOTS = f"""User-agent: *
+Allow: /
+
+Sitemap: {_SITE}/sitemap.xml
+"""
+
+_SITEMAP = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>{_SITE}/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>{_SITE}/terms</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+  <url><loc>{_SITE}/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>
+</urlset>
+"""
 
 _WEB = Path(__file__).resolve().parent.parent.parent / "web"
 # Landing chính = bản HTML/CSS tĩnh (nhẹ ~40KB, mở tức thì, SEO tốt).
@@ -35,3 +51,13 @@ def landing_v1() -> str:
 @router.get("/landing-claude", response_class=HTMLResponse)
 def landing_claude() -> str:
     return _serve(_LANDING_CLAUDE)
+
+
+@router.get("/robots.txt", response_class=PlainTextResponse)
+def robots() -> str:
+    return _ROBOTS
+
+
+@router.get("/sitemap.xml")
+def sitemap() -> Response:
+    return Response(content=_SITEMAP, media_type="application/xml")
