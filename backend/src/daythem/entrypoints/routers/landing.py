@@ -53,6 +53,12 @@ def landing_claude() -> str:
     return _serve(_LANDING_CLAUDE)
 
 
+@router.get("/google6484d2edca309cd5.html", response_class=PlainTextResponse)
+def google_site_verification() -> str:
+    # Xác minh sở hữu website với Google Search Console (phương thức file HTML).
+    return "google-site-verification: google6484d2edca309cd5.html"
+
+
 @router.get("/robots.txt", response_class=PlainTextResponse)
 def robots() -> str:
     return _ROBOTS
