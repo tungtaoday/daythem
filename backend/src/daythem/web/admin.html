@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>GieoChữ · Quản trị</title>
+<style>
+  :root{--g:#409858;--g7:#2f6849;--ink:#22302a;--mut:#6b7a70;--bg:#f6f5f0;--line:#e6e3da}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  .wrap{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:18px;margin-bottom:20px}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:var(--g);display:flex;align-items:center;justify-content:center;color:#fff;font-size:15px}
+  /* login */
+  #login{max-width:360px;margin:12vh auto 0;background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px}
+  #login h1{font-size:19px;margin-bottom:6px}
+  #login p{font-size:13px;color:var(--mut);margin-bottom:18px}
+  input{width:100%;height:46px;border:1.5px solid var(--line);border-radius:12px;padding:0 14px;font-size:15px;outline:none}
+  input:focus{border-color:var(--g)}
+  button{cursor:pointer;font-family:inherit;font-weight:700;border:none}
+  .btn{width:100%;height:46px;border-radius:12px;background:var(--g);color:#fff;font-size:15px;margin-top:12px}
+  .err{color:#c2401f;font-size:13px;margin-top:10px;min-height:18px}
+  /* dashboard */
+  .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .bar .actions{display:flex;gap:8px}
+  .sbtn{height:36px;padding:0 14px;border-radius:10px;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:13px}
+  .sbtn.primary{background:var(--g);color:#fff;border:none}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}
+  .card .n{font-size:28px;font-weight:800;letter-spacing:-1px;color:var(--g7)}
+  .card .l{font-size:12px;color:var(--mut);font-weight:600;margin-top:2px}
+  .card.hl .n{color:var(--g)}
+  h2{font-size:14px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  th,td{text-align:left;padding:12px 14px;font-size:13.5px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;text-transform:uppercase;color:var(--mut);letter-spacing:.4px;background:#faf9f5}
+  tr:last-child td{border-bottom:none}
+  td .ph{color:var(--mut);font-size:12px}
+  .muted{color:var(--mut);font-size:13px;padding:16px;text-align:center}
+  .hide{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="dot">🌱</span> GieoChữ · Quản trị</div>
+
+  <!-- LOGIN -->
+  <div id="login">
+    <h1>Đăng nhập quản trị</h1>
+    <p>Chỉ dành cho chủ sở hữu app.</p>
+    <input id="pw" type="password" placeholder="Mật khẩu quản trị" autocomplete="current-password">
+    <button class="btn" onclick="login()">Vào</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dash" class="hide">
+    <div class="bar">
+      <h2 style="margin:0">Tổng quan</h2>
+      <div class="actions">
+        <button class="sbtn primary" onclick="load()">↻ Làm mới</button>
+        <button class="sbtn" onclick="logout()">Đăng xuất</button>
+      </div>
+    </div>
+    <div class="cards" id="cards"></div>
+    <h2>Giáo viên mới nhất</h2>
+    <div id="teachers"></div>
+  </div>
+</div>
+
+<script>
+const KEY='gc_admin_token';
+const tok=()=>localStorage.getItem(KEY);
+const hdr=()=>({'Authorization':'Bearer '+tok()});
+
+function show(dash){document.getElementById('login').classList.toggle('hide',dash);document.getElementById('dash').classList.toggle('hide',!dash);}
+
+async function login(){
+  const pw=document.getElementById('pw').value;
+  const err=document.getElementById('loginErr'); err.textContent='';
+  try{
+    const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+    if(!r.ok){err.textContent='Sai mật khẩu.';return;}
+    const d=await r.json(); localStorage.setItem(KEY,d.token); show(true); load();
+  }catch(e){err.textContent='Lỗi kết nối.';}
+}
+function logout(){localStorage.removeItem(KEY);show(false);}
+
+function fmtDate(iso){const d=new Date(iso);return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
+
+async function load(){
+  try{
+    const [s,t]=await Promise.all([
+      fetch('/admin/stats',{headers:hdr()}),
+      fetch('/admin/teachers?limit=50',{headers:hdr()}),
+    ]);
+    if(s.status===401||t.status===401){logout();return;}
+    const st=await s.json(), tj=await t.json();
+    document.getElementById('cards').innerHTML=[
+      ['hl',st.new_today,'Mới hôm nay'],
+      ['hl',st.new_this_week,'Mới 7 ngày'],
+      ['',st.teachers,'Tổng giáo viên'],
+      ['',st.classes,'Tổng lớp'],
+      ['',st.students,'Tổng học sinh'],
+    ].map(([c,n,l])=>`<div class="card ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+    const rows=(tj.items||[]).map(x=>`<tr><td>${x.name?escapeHtml(x.name):'<span class="ph">(chưa đặt tên)</span>'}<div class="ph">${x.phone||''}</div></td><td>${x.classes}</td><td class="ph">${fmtDate(x.created_at)}</td></tr>`).join('');
+    document.getElementById('teachers').innerHTML=rows
+      ? `<table><thead><tr><th>Giáo viên</th><th>Lớp</th><th>Ngày tạo</th></tr></thead><tbody>${rows}</tbody></table>`
+      : '<div class="muted">Chưa có giáo viên nào.</div>';
+  }catch(e){document.getElementById('teachers').innerHTML='<div class="muted">Lỗi tải dữ liệu.</div>';}
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+if(tok()){show(true);load();}else{show(false);}
+document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+</script>
+</body>
+</html>

@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     # Gemini (Google AI Studio) — OCR nhập danh sách học sinh từ ảnh. Rỗng = OCR tắt.
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    # Owner admin dashboard: mật khẩu owner (rỗng = admin tắt).
+    ADMIN_PASSWORD: str = ""
+    # Telegram — báo owner khi có user mới (rỗng = tắt).
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
 
     model_config = {"env_file": ".env"}
 

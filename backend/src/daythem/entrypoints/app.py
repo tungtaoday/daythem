@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from daythem.adapters.database import create_tables
 from daythem.config import settings
-from daythem.entrypoints.routers import auth, classes, students, attendance, tuition, announcements, reports, tax, promo, notify, legal, landing, home
+from daythem.entrypoints.routers import auth, classes, students, attendance, tuition, announcements, reports, tax, promo, notify, legal, landing, home, admin
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("daythem")
@@ -58,6 +58,7 @@ app.include_router(tuition.router, prefix="/api/v1")
 app.include_router(announcements.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(home.router, prefix="/api/v1")
+app.include_router(admin.router)  # /admin/* (dashboard owner — auth riêng, không prefix /api/v1)
 app.include_router(tax.router, prefix="/api/v1")
 app.include_router(promo.router, prefix="/api/v1")
 app.include_router(notify.router, prefix="/api/v1")

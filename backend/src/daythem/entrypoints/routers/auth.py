@@ -88,6 +88,17 @@ def login_with_password(body: LoginBody, request: Request, uow: SqlAlchemyUnitOf
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
     token = create_token(teacher.id)
+
+    # Tài khoản vừa tạo (đăng nhập lần đầu) → báo owner qua Telegram.
+    try:
+        from datetime import datetime
+        from daythem.adapters.telegram import notify
+        age = (datetime.utcnow() - teacher.created_at.replace(tzinfo=None)).total_seconds()
+        if age < 15:
+            notify(f"🌱 <b>GieoChữ — user mới</b>\nSĐT: {teacher.phone}\nID: {teacher.id[:8]}")
+    except Exception:
+        pass
+
     return {"token": token, "teacher": teacher_out(teacher)}
 
 
