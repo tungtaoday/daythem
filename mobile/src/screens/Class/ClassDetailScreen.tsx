@@ -13,7 +13,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
 import { listSessions } from '../../api/attendance';
 import {
-  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
+  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock, IconFlash,
 } from '../../components/icons';
 import { getDays, nextOccurrence, sessionTimeStr, daysLabel, DAY_FULL } from '../../utils/schedule';
 
@@ -190,7 +190,8 @@ export function ClassDetailScreen({ route, navigation }: any) {
         <Text style={styles.sectionTitle}>Học sinh ({classStudents.length})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity style={styles.bulkPill} onPress={goBulk} activeOpacity={0.85}>
-            <Text style={styles.bulkPillText}>⚡ Nhập nhanh</Text>
+            <IconFlash size={14} color="#fff" />
+            <Text style={styles.bulkPillText}>Nhập nhanh</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowAdd(true)}>
             <Text style={styles.addLink}>+ Thêm</Text>
@@ -203,7 +204,10 @@ export function ClassDetailScreen({ route, navigation }: any) {
             <Text style={styles.emptyTitle}>Lớp của {tchTitle} chưa có học sinh</Text>
             <Text style={styles.emptySub}>Thêm cả lớp trong 10 giây</Text>
             <TouchableOpacity style={styles.emptyPrimary} onPress={goBulk} activeOpacity={0.85}>
-              <Text style={styles.emptyPrimaryText}>⚡  Nhập nhanh cả lớp</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                <IconFlash size={18} color="#fff" />
+                <Text style={styles.emptyPrimaryText}>Nhập nhanh cả lớp</Text>
+              </View>
               <Text style={styles.emptyPrimarySub}>Chụp ảnh · chọn file Excel / Word / PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAdd(true)} style={{ marginTop: 12 }}>
@@ -296,7 +300,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...typography.h3 },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
-  bulkPill: { backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  bulkPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
   bulkPillText: { color: 'white', fontSize: 13, fontWeight: '700' },
   emptyBox: { paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: colors.textPrimary },

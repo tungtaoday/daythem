@@ -482,7 +482,7 @@ export function HomeScreen({ navigation }: any) {
         body: single
           ? `${first.name} (${first.class_name}) vắng ${first.absent_streak} buổi gần đây liên tiếp — nhắn Zalo hỏi thăm phụ huynh sớm kẻo bé bỏ học nhé.`
           : `${atRisk.slice(0, 3).map(a => lastName(a.name)).join(', ')}… đang vắng nhiều buổi liên tiếp, có nguy cơ bỏ học. Gọi hỏi thăm sớm nhé ${gw}.`,
-        meta: 'Cần quan tâm',
+        meta: single ? `${first.absent_streak} buổi` : `${atRiskTotal} bạn`,
         avatarNames: atRisk.slice(0, 4).map(a => a.name),
         classId: first.class_id,
         className: first.class_name,

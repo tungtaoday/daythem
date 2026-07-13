@@ -53,7 +53,7 @@ function TabIcon({ label, Icon, focused }: TabIconProps) {
 
 const tb = StyleSheet.create({
   tab: { alignItems: 'center', gap: 2, paddingTop: 6 },
-  label: { fontSize: 10, fontWeight: '500', color: '#9e9e9e' },
+  label: { fontSize: 11, fontWeight: '500', color: '#9e9e9e' },
   labelActive: { color: '#3d8760', fontWeight: '700' },
 });
 
