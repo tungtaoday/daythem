@@ -173,7 +173,10 @@ def test_tax_declaration_with_tax_id(auth_client):
     assert data["fields"]["mst"] == "8012345678"
     assert "8012345678" in data["declaration_text"]
     assert "Nguyễn Thị Lan" in data["declaration_text"]
-    assert "09/KK-TNCN" in data["declaration_text"]
+    # Không thu nhập → doanh thu 0 ≤ ngưỡng → dùng mẫu 01/TKN-CNKD (KHÔNG phải 09/KK-TNCN).
+    assert "01/TKN-CNKD" in data["declaration_text"]
+    assert "09/KK-TNCN" not in data["declaration_text"]
+    assert data["fields"]["form_code"] == "01/TKN-CNKD"
 
 
 def test_tax_declaration_fields_no_income(auth_client):
@@ -194,6 +197,26 @@ def test_tax_declaration_calculates_tax_owed(auth_client):
     # 2% of the whole 120M revenue (over the 100M threshold)
     assert data["fields"]["so_thue_phai_nop"] == pytest.approx(2_400_000, abs=1)
     assert "Cần nộp thuế" in data["declaration_text"]
+    # Vượt ngưỡng → mẫu 01/CNKD (khai tháng/quý)
+    assert data["fields"]["form_code"] == "01/CNKD"
+
+
+def test_tax_declaration_docx_export(auth_client):
+    client, _ = auth_client
+    client.put("/api/v1/auth/profile", json={"tax_id": "8012345678", "full_legal_name": "Nguyễn Thị Lan"})
+    r = client.get(f"/api/v1/tax/declaration/docx?year={CURRENT_YEAR}")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["filename"].endswith(".docx")
+    import base64
+    raw = base64.b64decode(d["content_base64"])
+    assert raw[:2] == b"PK"        # DOCX = zip container
+    assert len(raw) > 800
+
+
+def test_tax_declaration_docx_requires_tax_id(auth_client):
+    client, _ = auth_client
+    assert client.get(f"/api/v1/tax/declaration/docx?year={CURRENT_YEAR}").status_code == 422
 
 
 # ── Tax profile (PUT /auth/profile) ─────────────────────────────────────────

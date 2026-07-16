@@ -10,7 +10,7 @@ import { useAuthStore, Gender } from '../../store/auth';
 import { changePassword, deleteAccount } from '../../api/auth';
 import { useClassesStore } from '../../store/classes';
 import { storage } from '../../store/storage';
-import { IconChevron, IconWallet } from '../../components/icons';
+import { IconChevron, IconWallet, IconCheck } from '../../components/icons';
 
 // ── Static sub-components ─────────────────────────────────────
 
@@ -84,7 +84,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
   const [done, setDone] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const valid = current.length >= 4 && next.length >= 6 && next === confirm;
+  const valid = current.length >= 6 && next.length >= 6 && next === confirm;
 
   const handleSave = async () => {
     if (next !== confirm) { Alert.alert('Mật khẩu không khớp', 'Mật khẩu mới và xác nhận phải giống nhau.'); return; }
@@ -108,7 +108,9 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
         <View style={cp.handle} />
         {done ? (
           <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-            <Text style={{ fontSize: 36, marginBottom: 12 }}>✓</Text>
+            <View style={{ marginBottom: 12 }}>
+              <IconCheck size={36} color={colors.green500} />
+            </View>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.green700 }}>Đã đổi mật khẩu!</Text>
           </View>
         ) : (
@@ -260,6 +262,7 @@ export function ProfileScreen({ navigation }: any) {
           style={s.editBtn}
           onPress={editing ? handleSave : handleEdit}
           disabled={saving}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Text style={[s.editBtnText, editing && { color: colors.green600, fontWeight: '700' }]}>
             {editing ? (saving ? 'Đang lưu...' : 'Lưu') : 'Chỉnh sửa'}
@@ -375,6 +378,7 @@ export function ProfileScreen({ navigation }: any) {
                     placeholderTextColor={colors.textMuted}
                     keyboardType="numeric"
                   />
+                  <Text style={s.bankWarn}>Lưu trên máy này — đổi điện thoại sẽ mất, nhớ ghi lại.</Text>
                 </>
               ) : hasBank ? (
                 <Text style={s.bankName}>{bankName} · {bankNumber}</Text>
@@ -404,7 +408,7 @@ export function ProfileScreen({ navigation }: any) {
         <SectionHeader>THUẾ THU NHẬP CÁ NHÂN</SectionHeader>
         <View style={s.card}>
           <TouchableOpacity style={s.row} onPress={() => navigation.navigate('Tax')}>
-            <Text style={s.rowLabel}>Thuế TNCN & tờ khai 09/KK-TNCN</Text>
+            <Text style={s.rowLabel}>Thuế TNCN & tờ khai 01/TKN-CNKD</Text>
             <IconChevron size={16} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
@@ -507,7 +511,7 @@ const s = StyleSheet.create({
   },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   soonBadge: { backgroundColor: colors.honey100, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 8 },
-  soonBadgeText: { fontSize: 10, fontWeight: '700', color: '#8a6d30' },
+  soonBadgeText: { fontSize: 10, fontWeight: '700', color: colors.honey700 },
   card: {
     backgroundColor: 'white', borderRadius: 18,
     borderWidth: 1, borderColor: colors.border,
@@ -531,6 +535,7 @@ const s = StyleSheet.create({
   bankIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   bankName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   bankSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+  bankWarn: { fontSize: 12, color: colors.textSecondary, marginTop: 6 },
   bankInput: {
     fontSize: 14, fontWeight: '500', color: colors.textPrimary,
     borderWidth: 1, borderColor: colors.border, borderRadius: 10,

@@ -4,9 +4,10 @@ import {
   ActivityIndicator, Alert, Platform,
 } from 'react-native';
 import { colors } from '../../theme';
-import { getTaxSummary, getTaxDeclaration, TaxSummary } from '../../api/tax';
+import { getTaxSummary, getTaxDeclaration, getTaxDeclarationDocx, TaxSummary } from '../../api/tax';
 import { useAuthStore } from '../../store/auth';
 import { copyToClipboard } from '../../utils/clipboard';
+import { exportDocxBase64 } from '../../utils/exportDocx';
 
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 const CUR_YEAR = new Date().getFullYear();
@@ -31,6 +32,9 @@ export function TaxScreen() {
 
   const [declaration, setDeclaration] = useState<string | null>(null);
   const [genLoading, setGenLoading] = useState(false);
+  const [docxLoading, setDocxLoading] = useState(false);
+
+  const [reloadKey, setReloadKey] = useState(0); // nút "Thử lại" khi tải lỗi
 
   useEffect(() => {
     let alive = true;
@@ -41,7 +45,7 @@ export function TaxScreen() {
       .catch(() => { if (alive) setError(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [year]);
+  }, [year, reloadKey]);
 
   const saveProfile = async () => {
     setSavingProfile(true);
@@ -78,6 +82,19 @@ export function TaxScreen() {
     }
   };
 
+  const exportDocx = async () => {
+    setDocxLoading(true);
+    try {
+      const d = await getTaxDeclarationDocx(year);
+      await exportDocxBase64(d.content_base64, d.filename);
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail ?? 'Không tạo được file DOCX. Thử lại.';
+      Alert.alert('Lỗi', String(msg));
+    } finally {
+      setDocxLoading(false);
+    }
+  };
+
   const copyDeclaration = async () => {
     if (!declaration) return;
     const ok = await copyToClipboard(declaration);
@@ -110,6 +127,9 @@ export function TaxScreen() {
         <View style={s.center}>
           <Text style={s.emptyTitle}>Không tải được dữ liệu thuế</Text>
           <Text style={s.emptySub}>Kiểm tra kết nối mạng rồi thử lại.</Text>
+          <TouchableOpacity style={s.retryBtn} onPress={() => setReloadKey(k => k + 1)}>
+            <Text style={s.retryBtnText}>Thử lại</Text>
+          </TouchableOpacity>
         </View>
       ) : summary && (
         <>
@@ -178,7 +198,7 @@ export function TaxScreen() {
       </TouchableOpacity>
 
       {/* Declaration */}
-      <Text style={s.sectionLabel}>TỜ KHAI 09/KK-TNCN</Text>
+      <Text style={s.sectionLabel}>TỜ KHAI THUẾ (HỘ KINH DOANH)</Text>
       <TouchableOpacity style={[s.btnOutline, genLoading && s.btnDisabled]} onPress={generateDeclaration} disabled={genLoading}>
         {genLoading ? <ActivityIndicator color={colors.green700} /> : <Text style={s.btnOutlineText}>Tạo tờ khai năm {year}</Text>}
       </TouchableOpacity>
@@ -186,12 +206,17 @@ export function TaxScreen() {
       {declaration && (
         <View style={s.declarationBox}>
           <Text style={s.declarationNote}>
-            Đây là bản nháp để tham khảo. GieoChữ không tự nộp thay bạn — bạn nộp tại
-            thuedientu.gdt.gov.vn hoặc tại chi cục thuế. Hạn nộp thường là cuối tháng 3 năm sau.
+            Bản nháp tham khảo — mẫu 01/TKN-CNKD (doanh thu ≤ 1 tỷ/năm, khai năm, hạn 31/01 năm sau)
+            hoặc 01/CNKD (trên 1 tỷ). Dạy học miễn thuế GTGT, chỉ tính 2% TNCN. Chính sách thuế 2026
+            đổi liên tục — hãy đối chiếu mẫu & ngưỡng mới nhất tại gdt.gov.vn hoặc chi cục thuế. GieoChữ
+            không tự nộp thay bạn.
           </Text>
           <Text style={s.declarationText}>{declaration}</Text>
+          <TouchableOpacity style={[s.docxBtn, docxLoading && s.btnDisabled]} onPress={exportDocx} disabled={docxLoading}>
+            {docxLoading ? <ActivityIndicator color="white" /> : <Text style={s.docxBtnText}>Xuất file DOCX</Text>}
+          </TouchableOpacity>
           <TouchableOpacity style={s.copyBtn} onPress={copyDeclaration}>
-            <Text style={s.copyBtnText}>Sao chép tờ khai</Text>
+            <Text style={s.copyBtnText}>Sao chép nội dung</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -223,6 +248,8 @@ const s = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
+  retryBtn: { marginTop: 14, backgroundColor: colors.green500, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 11 },
+  retryBtnText: { color: 'white', fontSize: 14, fontWeight: '700' },
 
   yearRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 4 },
   yearChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
@@ -261,6 +288,8 @@ const s = StyleSheet.create({
   declarationBox: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: colors.border, margin: 16, padding: 16 },
   declarationNote: { fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 12, backgroundColor: colors.honey100, padding: 10, borderRadius: 10 },
   declarationText: { fontSize: 13, color: colors.textPrimary, lineHeight: 20, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
-  copyBtn: { marginTop: 14, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  docxBtn: { marginTop: 14, backgroundColor: colors.green500, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  docxBtnText: { color: 'white', fontWeight: '700', fontSize: 14 },
+  copyBtn: { marginTop: 10, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   copyBtnText: { color: colors.green700, fontWeight: '600', fontSize: 13 },
 });

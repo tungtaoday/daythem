@@ -316,6 +316,24 @@ def handle_get_tax_declaration(cmd: GetTaxDeclarationCommand, uow: SqlAlchemyUni
         total = sum(t.amount for t in tuitions)
         taxable, tax_owed, _status = _compute_tax(total, threshold)
 
+        # Chọn ĐÚNG mẫu theo doanh thu (hộ/cá nhân kinh doanh — Thông tư 29/2024):
+        #   ≤ ngưỡng (1 tỷ/năm 2026) → 01/TKN-CNKD (thông báo doanh thu, khai NĂM, hạn 31/01 năm sau)
+        #   > ngưỡng                 → 01/CNKD (khai tháng/quý)
+        # KHÔNG dùng 09/KK-TNCN (mẫu đó cho quyết toán TIỀN LƯƠNG/TIỀN CÔNG, không phải HKD).
+        if total > threshold:
+            form_code = "01/CNKD"
+            ky_khai = "tháng hoặc quý"
+            deadline = "chậm nhất ngày cuối tháng sau kỳ khai (tháng/quý)"
+        else:
+            form_code = "01/TKN-CNKD"
+            ky_khai = "năm"
+            deadline = f"31/01/{cmd.year + 1}"
+
+        status_text = (
+            "Không phát sinh nghĩa vụ thuế" if tax_owed == 0
+            else f"Cần nộp thuế: {tax_owed:,.0f}đ"
+        )
+
         fields = {
             "mst": teacher.tax_id,
             "full_name": teacher.full_legal_name or teacher.name or "",
@@ -323,33 +341,49 @@ def handle_get_tax_declaration(cmd: GetTaxDeclarationCommand, uow: SqlAlchemyUni
             "date_of_birth": teacher.date_of_birth or "",
             "address": teacher.address or "",
             "year": cmd.year,
+            "form_code": form_code,
+            "ky_khai": ky_khai,
+            "deadline": deadline,
+            "business_type": "Dịch vụ dạy học (giáo dục) — không chịu thuế GTGT",
             "tong_thu_nhap": total,
             "nguong_mien_thue": threshold,
             "thu_nhap_chiu_thue": taxable,
+            "gtgt_suat": 0.0,
+            "thue_gtgt": 0.0,
             "thue_suat": _TAX_RATE,
             "so_thue_phai_nop": tax_owed,
+            "status_text": status_text,
         }
 
-        status_text = (
-            "Không phát sinh nghĩa vụ thuế" if tax_owed == 0
-            else f"Cần nộp thuế: {tax_owed:,.0f}đ"
-        )
-
         declaration_text = (
-            f"TỜ KHAI THUẾ THU NHẬP CÁ NHÂN\n"
-            f"Mẫu 09/KK-TNCN (Dành cho cá nhân có thu nhập từ kinh doanh)\n\n"
-            f"Kỳ tính thuế: Năm {cmd.year}\n"
-            f"Họ và tên: {fields['full_name']}\n"
-            f"MST: {teacher.tax_id}\n"
-            f"CMND/CCCD: {fields['id_number'] or '...'}\n"
+            f"TỜ KHAI THUẾ — HỘ/CÁ NHÂN KINH DOANH\n"
+            f"Mẫu số: {form_code}\n"
+            f"(Giáo viên dạy thêm đã đăng ký hộ kinh doanh theo Thông tư 29/2024)\n\n"
+            f"Kỳ tính thuế: Năm {cmd.year}   ·   Kỳ khai: {ky_khai}\n"
+            f"Người nộp thuế: {fields['full_name']}\n"
+            f"Mã số thuế: {teacher.tax_id}\n"
+            f"CCCD/CMND: {fields['id_number'] or '...'}\n"
             f"Ngày sinh: {fields['date_of_birth'] or '...'}\n"
-            f"Địa chỉ: {fields['address'] or '...'}\n\n"
-            f"Tổng doanh thu: {total:,.0f}đ\n"
-            f"Ngưỡng miễn thuế: {threshold:,.0f}đ\n"
-            f"Thu nhập chịu thuế: {taxable:,.0f}đ\n"
-            f"Thuế suất: {_TAX_RATE*100:.0f}%\n"
-            f"Số thuế phải nộp: {tax_owed:,.0f}đ\n\n"
-            f"{status_text}"
+            f"Địa chỉ: {fields['address'] or '...'}\n"
+            f"Ngành nghề: Dịch vụ dạy học (giáo dục)\n\n"
+            f"── TÍNH THUẾ ──\n"
+            f"Tổng doanh thu năm: {total:,.0f}đ\n"
+            f"Ngưỡng doanh thu miễn thuế: {threshold:,.0f}đ (Nghị định 141/2026 — 1 tỷ/năm)\n"
+            f"Thuế GTGT: 0đ (dạy học thuộc diện KHÔNG chịu thuế GTGT)\n"
+            f"Doanh thu tính thuế TNCN: {taxable:,.0f}đ\n"
+            f"Tỷ lệ thuế TNCN: {_TAX_RATE*100:.0f}%\n"
+            f"Số thuế TNCN phải nộp: {tax_owed:,.0f}đ\n\n"
+            f"Tổng số thuế phải nộp: {tax_owed:,.0f}đ\n"
+            f"{status_text}\n"
+            f"Hạn nộp tờ khai: {deadline}\n\n"
+            f"⚠ LƯU Ý (đọc kỹ trước khi nộp):\n"
+            f"• Kết quả chỉ mang tính THAM KHẢO, không thay thế tư vấn của cơ quan thuế/kế toán.\n"
+            f"• Chính sách thuế hộ kinh doanh thay đổi liên tục năm 2026 (NĐ 68/2026, 141/2026; "
+            f"TT 18/2026, 50/2026). Đối chiếu mẫu & ngưỡng mới nhất tại gdt.gov.vn hoặc chi cục thuế.\n"
+            f"• Thuế khoán đã bãi bỏ từ 01/01/2026 — hộ kinh doanh khai theo phương pháp KÊ KHAI.\n"
+            f"• Mẫu này áp dụng khi bạn ĐÃ đăng ký hộ kinh doanh. Nếu chỉ nhận tiền công từ trung tâm "
+            f"(làm thuê) thì đó là thu nhập tiền lương/tiền công — cơ chế khác.\n"
+            f"• GieoChữ không tự nộp thay bạn."
         )
 
         return {"year": cmd.year, "fields": fields, "declaration_text": declaration_text}

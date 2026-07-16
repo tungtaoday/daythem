@@ -23,3 +23,9 @@ export const getTaxSummary = (year: number): Promise<TaxSummary> =>
 
 export const getTaxDeclaration = (year: number): Promise<TaxDeclaration> =>
   api.get('/tax/declaration', { params: { year } }).then(r => r.data);
+
+export type TaxDeclarationDocx = { filename: string; content_base64: string };
+
+// Xuất tờ khai ra file .docx (bản nháp). Backend trả base64 để tải/chia sẻ.
+export const getTaxDeclarationDocx = (year: number): Promise<TaxDeclarationDocx> =>
+  api.get('/tax/declaration/docx', { params: { year } }).then(r => r.data);

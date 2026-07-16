@@ -77,7 +77,7 @@ export function LegalScreen({ navigation }: any) {
 
         <Heading>5. Tính năng thuế</Heading>
         <Body>
-          Công cụ tính thuế thu nhập cá nhân và tờ khai 09/KK-TNCN chỉ mang tính tham
+          Công cụ tính thuế thu nhập cá nhân và tờ khai 01/TKN-CNKD chỉ mang tính tham
           khảo, giúp bạn ước tính. Bạn nên tự kiểm tra lại với quy định hiện hành hoặc
           cơ quan thuế trước khi kê khai chính thức. GieoChữ không chịu trách nhiệm pháp
           lý cho các con số bạn kê khai.
