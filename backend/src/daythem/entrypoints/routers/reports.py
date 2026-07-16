@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from daythem.entrypoints.deps import get_uow, get_current_teacher
 from daythem.service.handlers import GenerateReportCommand, handle_generate_report
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
+from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM
 
 router = APIRouter(tags=["reports"])
@@ -52,6 +53,7 @@ def generate_report(
         GenerateReportCommand(class_id=class_id, week_start=body.week_start),
         uow,
     )
+    record_event(uow._session_factory, teacher.id, "report_generated")
     return report_out(report)
 
 

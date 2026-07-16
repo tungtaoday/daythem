@@ -64,6 +64,10 @@
       </div>
     </div>
     <div class="cards" id="cards"></div>
+    <h2>Phễu kích hoạt (activation)</h2>
+    <div class="cards" id="funnel"></div>
+    <h2>Yêu cầu đặt lại mật khẩu</h2>
+    <div id="resets"></div>
     <h2>Giáo viên mới nhất</h2>
     <div id="teachers"></div>
   </div>
@@ -91,9 +95,11 @@ function fmtDate(iso){const d=new Date(iso);return d.toLocaleString('vi-VN',{day
 
 async function load(){
   try{
-    const [s,t]=await Promise.all([
+    const [s,t,a,rr]=await Promise.all([
       fetch('/admin/stats',{headers:hdr()}),
       fetch('/admin/teachers?limit=50',{headers:hdr()}),
+      fetch('/admin/activation',{headers:hdr()}),
+      fetch('/admin/reset-requests',{headers:hdr()}),
     ]);
     if(s.status===401||t.status===401){logout();return;}
     const st=await s.json(), tj=await t.json();
@@ -104,6 +110,25 @@ async function load(){
       ['',st.classes,'Tổng lớp'],
       ['',st.students,'Tổng học sinh'],
     ].map(([c,n,l])=>`<div class="card ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+    try{
+      const af=await a.json();
+      document.getElementById('funnel').innerHTML=[
+        ['hl',`${af.created_class_pct}%`,`Tạo ≥1 lớp (${af.created_class}/${af.total_teachers})`],
+        ['hl',`${af.did_core_action_pct}%`,`Làm hành động lõi (${af.did_core_action})`],
+        ['',`${af.activated_24h_pct}%`,`Kích hoạt trong 24h (${af.activated_24h})`],
+      ].map(([c,n,l])=>`<div class="card ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+    }catch(e){document.getElementById('funnel').innerHTML='<div class="muted">Chưa có dữ liệu kích hoạt.</div>';}
+    try{
+      const rj=await rr.json();
+      const rows=(rj.items||[]).map(x=>`<tr>`
+        +`<td>${x.phone}${x.name?' <span class="ph">('+escapeHtml(x.name)+')</span>':(x.exists?'':' <span class="ph">— chưa có tài khoản</span>')}${x.note?'<div class="ph">'+escapeHtml(x.note)+'</div>':''}</td>`
+        +`<td class="ph">${fmtDate(x.created_at)}</td>`
+        +`<td><button class="sbtn primary" onclick="resetPw('${x.phone}')" ${x.exists?'':'disabled'}>Đặt lại</button></td>`
+        +`</tr>`).join('');
+      document.getElementById('resets').innerHTML=rows
+        ? `<table><thead><tr><th>SĐT / Ghi chú</th><th>Lúc</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+        : '<div class="muted">Không có yêu cầu nào đang chờ.</div>';
+    }catch(e){document.getElementById('resets').innerHTML='<div class="muted">Lỗi tải yêu cầu.</div>';}
     const rows=(tj.items||[]).map(x=>`<tr><td>${x.name?escapeHtml(x.name):'<span class="ph">(chưa đặt tên)</span>'}<div class="ph">${x.phone||''}</div></td><td>${x.classes}</td><td class="ph">${fmtDate(x.created_at)}</td></tr>`).join('');
     document.getElementById('teachers').innerHTML=rows
       ? `<table><thead><tr><th>Giáo viên</th><th>Lớp</th><th>Ngày tạo</th></tr></thead><tbody>${rows}</tbody></table>`
@@ -111,6 +136,19 @@ async function load(){
   }catch(e){document.getElementById('teachers').innerHTML='<div class="muted">Lỗi tải dữ liệu.</div>';}
 }
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+async function resetPw(phone){
+  const pw=prompt('Mật khẩu mới cho '+phone+' (ít nhất 6 ký tự):');
+  if(!pw) return;
+  if(pw.length<6){alert('Mật khẩu phải có ít nhất 6 ký tự.');return;}
+  try{
+    const r=await fetch('/admin/reset-password',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({phone:phone,new_password:pw})});
+    if(!r.ok){const d=await r.json().catch(()=>({}));alert('Lỗi: '+(d.detail||r.status));return;}
+    const d=await r.json();
+    alert('✓ Đã đặt lại mật khẩu cho '+(d.name||phone)+'.\n\nSĐT: '+phone+'\nMật khẩu mới: '+pw+'\n\nHãy gửi cho giáo viên qua Zalo/điện thoại.');
+    load();
+  }catch(e){alert('Lỗi kết nối.');}
+}
 
 if(tok()){show(true);load();}else{show(false);}
 document.getElementById('pw').addEventListener('keydown',e=>{if(e.key==='Enter')login();});

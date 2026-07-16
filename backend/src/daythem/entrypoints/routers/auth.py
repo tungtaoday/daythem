@@ -1,6 +1,9 @@
+import uuid
+
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from daythem.entrypoints.deps import get_uow, get_current_teacher
+from daythem.adapters.telegram import notify
 from daythem.entrypoints.security import create_token
 from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.service.handlers import (
@@ -11,7 +14,7 @@ from daythem.service.handlers import (
     handle_reset_password,
 )
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
-from daythem.adapters.orm import TeacherORM
+from daythem.adapters.orm import TeacherORM, PasswordResetRequestORM
 from daythem.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -140,6 +143,42 @@ def reset_password(body: ResetPasswordBody, request: Request, uow: SqlAlchemyUni
         handle_reset_password(body.phone, body.code, body.new_password, uow)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}
+
+
+class CheckPhoneBody(BaseModel):
+    phone: str
+
+
+@router.post("/check-phone")
+def check_phone(body: CheckPhoneBody, request: Request, uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Cho màn nhập mật khẩu biết SĐT đã có tài khoản chưa → tách UI 'Tạo mật khẩu'
+    (có ô nhập lại, chống gõ nhầm) khỏi UI 'Nhập mật khẩu'. Rate-limit chống dò số."""
+    rate_limit("check_phone_ip", _client_ip(request), limit=30, window_seconds=600)
+    with uow:
+        teacher = uow.teachers.get_by_phone((body.phone or "").strip())
+        return {"exists": teacher is not None and teacher.password_hash is not None}
+
+
+class ResetRequestBody(BaseModel):
+    phone: str
+    note: str | None = None
+
+
+@router.post("/reset-request")
+def reset_request(body: ResetRequestBody, request: Request, uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """GV quên mật khẩu gửi yêu cầu từ app → vào hàng chờ để owner xử lý trên admin dashboard.
+    Không cần email/SMS: owner thấy yêu cầu trong dashboard (+ Telegram nếu đã bật)."""
+    rate_limit("reset_req_ip", _client_ip(request), limit=10, window_seconds=3600)
+    rate_limit("reset_req_phone", body.phone, limit=3, window_seconds=600)
+    phone = (body.phone or "").strip()
+    if not phone:
+        raise HTTPException(status_code=422, detail="Vui lòng nhập số điện thoại đăng ký")
+    note = (body.note or "").strip() or None
+    with uow:
+        uow._session.add(PasswordResetRequestORM(id=str(uuid.uuid4()), phone=phone, note=note))
+        uow.commit()
+    notify("🔑 <b>Yêu cầu đặt lại mật khẩu</b>\nSĐT: " + phone + (f"\nGhi chú: {note}" if note else ""))
     return {"ok": True}
 
 

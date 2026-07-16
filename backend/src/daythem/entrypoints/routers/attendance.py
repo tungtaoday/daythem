@@ -4,6 +4,7 @@ from typing import Optional
 from daythem.entrypoints.deps import get_uow, get_current_teacher
 from daythem.service.handlers import RecordAttendanceCommand, handle_record_attendance
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
+from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM
 
 router = APIRouter(prefix="/classes/{class_id}/attendance", tags=["attendance"])
@@ -76,6 +77,7 @@ def record_attendance(
         ),
         uow,
     )
+    record_event(uow._session_factory, teacher.id, "attendance_submitted")
     return session_out(session)
 
 

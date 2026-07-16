@@ -17,7 +17,9 @@ from daythem.entrypoints.security import create_token, decode_token
 from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.entrypoints.deps import get_uow
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
-from daythem.adapters.orm import TeacherORM, ClassORM, StudentORM
+from daythem.service.activity import activation_funnel
+from daythem.service.handlers import _hash_password
+from daythem.adapters.orm import TeacherORM, ClassORM, StudentORM, PasswordResetRequestORM
 
 router = APIRouter(tags=["admin"])
 _bearer = HTTPBearer()
@@ -62,6 +64,12 @@ def admin_stats(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = De
         }
 
 
+@router.get("/admin/activation")
+def admin_activation(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Phễu kích hoạt GV (BƯỚC 1 GTM): % tạo lớp, % làm hành động lõi, % kích hoạt trong 24h."""
+    return activation_funnel(uow._session_factory)
+
+
 @router.get("/admin/teachers")
 def admin_teachers(limit: int = 50, _: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
     limit = max(1, min(limit, 200))
@@ -78,6 +86,65 @@ def admin_teachers(limit: int = 50, _: bool = Depends(require_admin), uow: SqlAl
                 "created_at": t.created_at.isoformat(),
             })
         return {"items": items, "total": len(items)}
+
+
+@router.get("/admin/reset-requests")
+def admin_reset_requests(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Hàng chờ yêu cầu đặt lại mật khẩu (GV gửi từ app)."""
+    with uow:
+        s = uow._session
+        rows = s.scalars(
+            select(PasswordResetRequestORM)
+            .where(PasswordResetRequestORM.status == "pending")
+            .order_by(desc(PasswordResetRequestORM.created_at))
+            .limit(50)
+        ).all()
+        items = []
+        for r in rows:
+            t = s.scalar(select(TeacherORM).where(TeacherORM.phone == r.phone))
+            items.append({
+                "id": r.id,
+                "phone": r.phone,
+                "note": r.note,
+                "name": t.name if t else None,
+                "exists": t is not None,
+                "created_at": r.created_at.isoformat(),
+            })
+        return {"items": items, "total": len(items)}
+
+
+class AdminResetBody(BaseModel):
+    phone: str
+    new_password: str
+
+
+@router.post("/admin/reset-password")
+def admin_reset_password(
+    body: AdminResetBody,
+    _: bool = Depends(require_admin),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Owner đặt lại mật khẩu cho GV (không cần OTP) + đánh dấu yêu cầu đã xử lý."""
+    if len(body.new_password) < 6:
+        raise HTTPException(422, "Mật khẩu mới phải có ít nhất 6 ký tự")
+    phone = (body.phone or "").strip()
+    with uow:
+        s = uow._session
+        teacher = s.scalar(select(TeacherORM).where(TeacherORM.phone == phone))
+        if not teacher:
+            raise HTTPException(404, f"Không tìm thấy giáo viên với SĐT {phone}")
+        teacher.password_hash = _hash_password(body.new_password)
+        reqs = s.scalars(
+            select(PasswordResetRequestORM).where(
+                PasswordResetRequestORM.phone == phone,
+                PasswordResetRequestORM.status == "pending",
+            )
+        ).all()
+        for r in reqs:
+            r.status = "done"
+            r.handled_at = datetime.utcnow()
+        uow.commit()
+        return {"ok": True, "name": teacher.name or ""}
 
 
 @router.get("/admin", response_class=HTMLResponse)

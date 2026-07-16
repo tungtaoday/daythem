@@ -7,6 +7,7 @@ from daythem.service.handlers import (
     handle_add_student, handle_update_student, handle_set_student_fee,
 )
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
+from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM
 
 router = APIRouter(tags=["students"])
@@ -146,6 +147,8 @@ def bulk_add_students(
             continue
         student = handle_add_student(AddStudentCommand(class_id=class_id, name=name), uow)
         created.append(student_out(student))
+    if created:
+        record_event(uow._session_factory, teacher.id, "students_bulk_added")
     return {"items": created, "total": len(created)}
 
 

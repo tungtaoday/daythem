@@ -7,6 +7,7 @@ from daythem.service.handlers import (
     handle_create_class, handle_update_class,
 )
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
+from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM, ClassORM
 
 router = APIRouter(prefix="/classes", tags=["classes"])
@@ -75,6 +76,7 @@ def create_class(
         CreateClassCommand(teacher_id=teacher.id, **body.model_dump()),
         uow,
     )
+    record_event(uow._session_factory, teacher.id, "class_created")
     return class_out(klass, 0)
 
 

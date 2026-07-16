@@ -3,6 +3,10 @@ import api from './client';
 export const loginWithPassword = (phone: string, password: string) =>
   api.post('/auth/login', { phone, password }).then(r => r.data);
 
+// SĐT đã có tài khoản chưa → màn mật khẩu tách UI "tạo mới" (có ô nhập lại) khỏi "đăng nhập".
+export const checkPhone = (phone: string): Promise<{ exists: boolean }> =>
+  api.post('/auth/check-phone', { phone }).then(r => r.data);
+
 export const getMe = () =>
   api.get('/auth/me').then(r => r.data);
 
@@ -31,3 +35,7 @@ export const requestOtp = (phone: string) =>
 
 export const resetPassword = (phone: string, code: string, new_password: string) =>
   api.post('/auth/reset-password', { phone, code, new_password }).then(r => r.data);
+
+// GV quên mật khẩu gửi yêu cầu → vào hàng chờ admin (owner đặt lại + gửi lại qua Zalo).
+export const requestPasswordReset = (phone: string, note?: string) =>
+  api.post('/auth/reset-request', { phone, note }).then(r => r.data);

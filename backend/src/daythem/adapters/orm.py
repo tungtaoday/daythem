@@ -197,3 +197,24 @@ class NotifEventORM(Base):
     rule: Mapped[Optional[str]] = mapped_column(String(40))  # rule id / campaign id
     event_type: Mapped[str] = mapped_column(String(20))    # delivered | opened | dismissed
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+
+
+class ActivityEventORM(Base):
+    """Activation event log — đo phễu kích hoạt GV (tạo lớp, điểm danh, thu phí,
+    tạo báo cáo, nhập HS hàng loạt, chia sẻ thiệp). Phục vụ mục tiêu đo lường BƯỚC 1 GTM."""
+    __tablename__ = "activity_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    teacher_id: Mapped[str] = mapped_column(String(36), ForeignKey("teachers.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(40), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+
+
+class PasswordResetRequestORM(Base):
+    """Yêu cầu đặt lại mật khẩu do GV gửi từ app — owner xử lý trên admin dashboard."""
+    __tablename__ = "password_reset_requests"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    phone: Mapped[str] = mapped_column(String(20), index=True)
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="pending", index=True)  # pending | done
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+    handled_at: Mapped[Optional[datetime]] = mapped_column(DateTime)

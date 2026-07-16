@@ -4,6 +4,7 @@ from typing import Optional
 from daythem.entrypoints.deps import get_uow, get_current_teacher
 from daythem.service.handlers import RecordPaymentCommand, handle_record_payment, _vn_month
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
+from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM
 
 router = APIRouter(tags=["tuition"])
@@ -87,4 +88,6 @@ def record_payment(
         ),
         uow,
     )
+    if body.paid:
+        record_event(uow._session_factory, teacher.id, "tuition_paid")
     return tuition_out(tuition)
