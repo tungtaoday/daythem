@@ -142,8 +142,9 @@ export function WelcomeScreen({ navigation }: any) {
 
       <Text style={[s.terms, { marginBottom: Math.max(insets.bottom + 8, 24) }]}>
         Tiếp tục đồng nghĩa với việc bạn đồng ý{'\n'}
-        <Text style={s.termsLink}>Điều khoản</Text>{'  ·  '}
-        <Text style={s.termsLink}>Chính sách bảo mật</Text>
+        {/* Link phải BẤM ĐƯỢC (trước đây chỉ là chữ trông như link) */}
+        <Text style={s.termsLink} onPress={() => navigation.navigate('Legal')}>Điều khoản</Text>{'  ·  '}
+        <Text style={s.termsLink} onPress={() => navigation.navigate('Legal')}>Chính sách bảo mật</Text>
       </Text>
 
       {/* Social loading overlay */}

@@ -13,9 +13,10 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
 import { listSessions } from '../../api/attendance';
 import {
-  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock, IconFlash,
+  IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
 } from '../../components/icons';
-import { getDays, nextOccurrence, sessionTimeStr, daysLabel, DAY_FULL } from '../../utils/schedule';
+import { getDays, nextOccurrence, sessionTimeStr, daysLabel, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
+import { localMonth, localDate } from '../../utils/date';
 
 // ── day / time / countdown helpers ───────────────────────────
 function countdownWord(delta: number): string {
@@ -46,6 +47,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
   const [loaded, setLoaded] = useState(false);
   const [tuition, setTuition] = useState<{ paid: number; total: number } | null>(null);
   const [attendedToday, setAttendedToday] = useState(false);
+  const [attendPct, setAttendPct] = useState<number | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
   const [addParentName, setAddParentName] = useState('');
@@ -61,14 +63,20 @@ export function ClassDetailScreen({ route, navigation }: any) {
   // Học phí tháng này (stat "Đã nộp") + đã điểm danh hôm nay chưa.
   // Nạp lại mỗi khi màn được focus (vd quay lại sau khi điểm danh) để cập nhật ngay.
   useFocusEffect(useCallback(() => {
-    const month = new Date().toISOString().slice(0, 7);
+    const month = localMonth(); // tháng LOCAL — không lệch múi giờ sáng mùng 1
     getTuition(classId, month)
       .then((data: any[]) => { if (Array.isArray(data)) setTuition({ paid: data.filter(d => d.paid).length, total: data.length }); })
       .catch(() => {});
-    const d = new Date();
-    const todayYmd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const todayYmd = localDate();
     listSessions(classId)
-      .then((arr: any[]) => setAttendedToday(Array.isArray(arr) && arr.some(sx => sx.session_date === todayYmd)))
+      .then((arr: any[]) => {
+        if (!Array.isArray(arr)) return;
+        setAttendedToday(arr.some(sx => sx.session_date === todayYmd));
+        // Chuyên cần THẬT từ các buổi đã điểm danh (không còn "Chưa có" vĩnh viễn).
+        let marks = 0, present = 0;
+        arr.forEach((sx: any) => sx.records?.forEach((r: any) => { marks++; if (r.present) present++; }));
+        setAttendPct(marks > 0 ? Math.round((present / marks) * 100) : null);
+      })
       .catch(() => {});
   }, [classId]));
 
@@ -157,14 +165,16 @@ export function ClassDetailScreen({ route, navigation }: any) {
         }
         stats={[
           { value: String(studentN), label: 'Học sinh' },
-          { value: isDemo ? '96%' : 'Chưa có', label: 'Chuyên cần' },
+          { value: isDemo ? '96%' : (attendPct !== null ? `${attendPct}%` : 'Chưa có'), label: 'Chuyên cần' },
           { value: tuition ? `${tuition.paid}/${tuition.total}` : 'Chưa có', label: 'Đã nộp' },
         ]}
       />
 
       {/* ── PRIMARY action ── */}
       <Button
-        label={attendedToday ? '✓ Đã điểm danh hôm nay — xem/sửa' : 'Điểm danh buổi hôm nay'}
+        label={attendedToday
+          ? '✓ Đã điểm danh hôm nay — xem/sửa'
+          : hasClassOnDayN(klass.schedule, todayDayN()) ? 'Điểm danh buổi hôm nay' : 'Điểm danh buổi gần nhất'}
         variant={attendedToday ? 'secondary' : 'primary'}
         onPress={() => navTo('Attendance')}
         icon={attendedToday ? undefined : <IconCheck size={22} color="#fff" />}
@@ -190,8 +200,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
         <Text style={styles.sectionTitle}>Học sinh ({classStudents.length})</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity style={styles.bulkPill} onPress={goBulk} activeOpacity={0.85}>
-            <IconFlash size={14} color="#fff" />
-            <Text style={styles.bulkPillText}>Nhập nhanh</Text>
+            <Text style={styles.bulkPillText}>⚡ Nhập nhanh</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowAdd(true)}>
             <Text style={styles.addLink}>+ Thêm</Text>
@@ -204,10 +213,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
             <Text style={styles.emptyTitle}>Lớp của {tchTitle} chưa có học sinh</Text>
             <Text style={styles.emptySub}>Thêm cả lớp trong 10 giây</Text>
             <TouchableOpacity style={styles.emptyPrimary} onPress={goBulk} activeOpacity={0.85}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                <IconFlash size={18} color="#fff" />
-                <Text style={styles.emptyPrimaryText}>Nhập nhanh cả lớp</Text>
-              </View>
+              <Text style={styles.emptyPrimaryText}>⚡  Nhập nhanh cả lớp</Text>
               <Text style={styles.emptyPrimarySub}>Chụp ảnh · chọn file Excel / Word / PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAdd(true)} style={{ marginTop: 12 }}>
@@ -300,7 +306,7 @@ const styles = StyleSheet.create({
   sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionTitle: { ...typography.h3 },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
-  bulkPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  bulkPill: { backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
   bulkPillText: { color: 'white', fontSize: 13, fontWeight: '700' },
   emptyBox: { paddingVertical: 20, paddingHorizontal: 16, alignItems: 'center' },
   emptyTitle: { fontSize: 15.5, fontWeight: '700', color: colors.textPrimary },

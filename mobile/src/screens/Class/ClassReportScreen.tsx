@@ -14,6 +14,7 @@ import { generateReport } from '../../api/reports';
 import { listSessions } from '../../api/attendance';
 import { getTuition } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import { localMonth } from '../../utils/date';
 
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -125,7 +126,7 @@ export function ClassReportScreen({ route }: any) {
     if (isDemo) return;
     let alive = true;
     setLoading(true);
-    const month = new Date().toISOString().slice(0, 7);
+    const month = localMonth();
     Promise.all([
       Promise.resolve(fetchStudents(classId)),
       listSessions(classId).then((r: any) => { if (alive) setSessions(r || []); }).catch(() => {}),
@@ -134,12 +135,18 @@ export function ClassReportScreen({ route }: any) {
     return () => { alive = false; };
   }, [classId, isDemo]);
 
-  const reportMessage = `Báo cáo tuần ${weekLabel()} của [Tên con]:\n• Đi học: 1/1 buổi\n• Bài tập: làm đầy đủ\n• Học phí: đã thu T${new Date().getMonth() + 1}\n\nMọi thắc mắc anh/chị nhắn lại cho ${pronoun} nhé 🌿`;
+  // Tin NHÓM trung thực — chỉ dùng số liệu THẬT đã tính (buổi dạy, chuyên cần TB).
+  // Chi tiết từng bé (tên + số liệu riêng) đi qua "Gửi thiệp báo cáo" trong hồ sơ HS.
+  const reportMessage = isDemo
+    ? `Kính gửi quý phụ huynh ${className},\n\nBáo cáo tuần ${weekLabel()}: lớp học 1 buổi, các con đi học đầy đủ. Phụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${pronoun} nhé. Cảm ơn quý phụ huynh! 🌿`
+    : `Kính gửi quý phụ huynh ${className},\n\nBáo cáo tuần ${weekLabel()}:` +
+      (sessionCount > 0 ? `\n• Lớp học ${sessionCount} buổi, chuyên cần ${avgAttendPct}%` : '') +
+      (collected > 0 ? `\n• Học phí tháng này: ${pronoun} đã cập nhật, phụ huynh nào chưa nộp ${pronoun} sẽ nhắn riêng` : '') +
+      `\n\nPhụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${pronoun} nhé. Cảm ơn quý phụ huynh! 🌿`;
 
   const handleSend = async () => {
     setShowZalo(false);
     setSending(true);
-    await new Promise(r => setTimeout(r, Math.min(totalCount * 80, 1200)));
     if (isDemo) {
       setSending(false);
       setDone(true);
@@ -158,8 +165,8 @@ export function ClassReportScreen({ route }: any) {
   if (done) {
     return (
       <SuccessScreen
-        title={`Đã gửi ${totalCount} báo cáo`}
-        sub={`Phụ huynh lớp ${className} sẽ nhận qua Zalo.`}
+        title="Đã gửi báo cáo tuần"
+        sub={`Bạn đã gửi tin cho nhóm ${className} qua Zalo. Muốn gửi riêng từng bé (kèm tên & số liệu), mở học sinh rồi chọn "Gửi thiệp báo cáo".`}
       />
     );
   }
@@ -285,20 +292,16 @@ export function ClassReportScreen({ route }: any) {
           </View>
 
           {/* Tin gửi phụ huynh — preview */}
-          <Text style={s.sectionLabel}>TIN GỬI PHỤ HUYNH</Text>
+          <Text style={s.sectionLabel}>TIN GỬI NHÓM PHỤ HUYNH</Text>
           <View style={s.previewBox}>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={s.zaloBubble}>
-                <Text style={{ fontSize: 13, lineHeight: 20, color: 'white' }}>
-                  Báo cáo tuần {weekLabel()} của <Text style={{ fontWeight: '700' }}>[Tên con]</Text>:{'\n'}
-                  • Đi học: 1/1 buổi{'\n'}
-                  • Bài tập: làm đầy đủ{'\n'}
-                  • Học phí: đã thu{'\n'}
-                  <Text style={{ opacity: 0.85 }}>Mọi thắc mắc anh/chị nhắn lại cho {pronoun} nhé 🌿</Text>
-                </Text>
+                <Text style={{ fontSize: 13, lineHeight: 20, color: 'white' }}>{reportMessage}</Text>
               </View>
             </View>
-            <Text style={s.previewNote}>Tên con + số liệu điền tự động cho từng phụ huynh</Text>
+            <Text style={s.previewNote}>
+              Tin nhóm dùng số liệu thật của lớp. Muốn gửi riêng từng bé (tên + số liệu của con) — mở hồ sơ học sinh, chọn "Gửi thiệp báo cáo".
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -306,16 +309,16 @@ export function ClassReportScreen({ route }: any) {
       {/* Bottom send button */}
       {!sending && (
         <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32), backgroundImage: 'linear-gradient(to top, #faf8f2 60%, transparent)' } as any]}>
-          <Button label={`Gửi báo cáo cho ${totalCount} phụ huynh`} onPress={() => setShowZalo(true)} icon={<IconZalo size={16} color="#fff" />} />
+          <Button label="Soạn báo cáo tuần · gửi nhóm lớp" onPress={() => setShowZalo(true)} icon={<IconZalo size={16} color="#fff" />} />
         </View>
       )}
 
       {showZalo && (
         <ZaloCopySheet
           title={`Báo cáo tuần · ${className}`}
-          recipient={`${totalCount} phụ huynh · ${className}`}
+          recipient={`Nhóm Zalo ${className}`}
           message={reportMessage}
-          hint="từng phụ huynh trong lớp"
+          hint="nhóm lớp"
           onConfirm={handleSend}
           onClose={() => setShowZalo(false)}
         />
@@ -349,7 +352,7 @@ const s = StyleSheet.create({
   highlightRow: { flexDirection: 'row', gap: 10 },
   highlightCard: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 14 },
   highlightIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  highlightKicker: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4, marginBottom: 4 },
+  highlightKicker: { fontSize: 11, fontWeight: '700', letterSpacing: 0.4, marginBottom: 4 },
   highlightName: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   highlightSub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
 
@@ -362,11 +365,11 @@ const s = StyleSheet.create({
   stuName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   stuSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontWeight: '600' },
 
   previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14 },
   zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '90%' as any },
-  previewNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
+  previewNote: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
 
   bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.bg },
 });

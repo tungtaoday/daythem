@@ -66,8 +66,9 @@ export async function exportStudentsExcel(students: StudentExportRow[], classNam
     'STT': i + 1,
     'Họ và tên': s.name,
     'SĐT phụ huynh': s.parent_phone ?? '',
+    // Không có dữ liệu thật → để TRỐNG, tuyệt đối không ghi 0% / 0đ giả vào file.
     'Chuyên cần (%)': s.attend != null ? s.attend : '',
-    'Còn nợ (đ)': s.debt ?? 0,
+    'Còn nợ (đ)': s.debt != null ? s.debt : '',
   }));
   const wb = buildWorkbook(data, 'Học sinh', [
     { wch: 5 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 14 },

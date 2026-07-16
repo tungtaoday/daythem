@@ -11,6 +11,7 @@ import { useClassesStore } from '../../store/classes';
 import { getTuition, recordPayment } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { DemoBanner } from '../../components/ui/DemoBanner';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -28,6 +29,7 @@ const buildZaloTemplates = (gw: string) => {
 type Item = {
   student_id: string; student_name: string;
   amount: number; paid: boolean; classId: string; className: string;
+  parent_phone?: string | null;
 };
 
 const DEMO_TUITION: Item[] = [
@@ -170,8 +172,12 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const [demoData, setDemoData] = useState<Item[]>(DEMO_TUITION);
   const [loading, setLoading] = useState(!isDemo);
   const [showZaloModal, setShowZaloModal] = useState(false);
+  const [zaloItem, setZaloItem] = useState<Item | null>(null); // nhắc riêng 1 phụ huynh
   const [sent, setSent] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
+  // Lớp tải lỗi (KHÔNG nuốt im lặng — sót người chưa nộp là tối kỵ của wedge "thu không sót ai")
+  const [failedClasses, setFailedClasses] = useState<string[]>([]);
+  const [retryKey, setRetryKey] = useState(0);
 
   // Current month bound from LOCAL date (không dùng toISOString — lệch múi giờ)
   const now = new Date();
@@ -199,14 +205,18 @@ export function TuitionTabScreen({ navigation, route }: any) {
     Promise.all(
       classes.map(cls =>
         getTuition(cls.id, selectedMonth)
-          .then((rows: any[]) => rows.map(r => ({ ...r, classId: cls.id, className: cls.name })))
-          .catch(() => [] as Item[])
+          .then((rows: any[]) => ({ ok: true as const, rows: rows.map(r => ({ ...r, classId: cls.id, className: cls.name })) }))
+          .catch(() => ({ ok: false as const, name: cls.name }))
       )
     )
-      .then(res => { if (alive) setAllData(res.flat()); })
+      .then(res => {
+        if (!alive) return;
+        setAllData(res.filter((r): r is { ok: true; rows: Item[] } => r.ok).flatMap(r => r.rows));
+        setFailedClasses(res.filter((r): r is { ok: false; name: string } => !r.ok).map(r => r.name));
+      })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [classes, isDemo, selectedMonth]);
+  }, [classes, isDemo, selectedMonth, retryKey]);
 
   const rawData = isDemo ? demoData : allData;
   const allClassIds = [...new Set(rawData.map(d => d.classId))];
@@ -252,6 +262,39 @@ export function TuitionTabScreen({ navigation, route }: any) {
     });
   };
 
+  // Bỏ tick khi chạm nhầm — tiền phải sửa được, không "sai vĩnh viễn".
+  const unmarkPaid = (item: Item) => {
+    Alert.alert('Bỏ đánh dấu đã thu?', `${item.student_name} · ${VND_FULL(item.amount)}`, [
+      { text: 'Không', style: 'cancel' },
+      {
+        text: 'Bỏ tick', style: 'destructive',
+        onPress: () => {
+          if (isDemo) {
+            setDemoData(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: false } : x));
+            return;
+          }
+          setAllData(d => d.map(x => x.student_id === item.student_id && x.classId === item.classId ? { ...x, paid: false } : x));
+          recordPayment(item.classId, { student_id: item.student_id, paid: false, amount: item.amount, month }).catch(() => {
+            setAllData(d => d.map(x => x.student_id === item.student_id && x.classId === item.classId ? { ...x, paid: true } : x));
+            Alert.alert('Chưa lưu được', 'Không bỏ tick được. Kiểm tra mạng và thử lại.');
+          });
+        },
+      },
+    ]);
+  };
+
+  // Mẫu tin nhắc RIÊNG 1 phụ huynh — có tên con + số tiền cụ thể.
+  const personalTemplates = (item: Item) => {
+    const Gw = pronoun.charAt(0).toUpperCase() + pronoun.slice(1);
+    const ten = item.student_name.split(' ').slice(-1)[0];
+    const tien = VND_FULL(item.amount);
+    return [
+      { tone: 'Nhẹ nhàng', body: `Chào anh/chị! ${Gw} nhắc nhẹ học phí ${monthLabel.toLowerCase()} của bé ${ten} là ${tien}, anh/chị tiện thì gửi ${pronoun} trong tuần này nhé 🌿` },
+      { tone: 'Trực tiếp', body: `Anh/chị ơi, học phí ${monthLabel.toLowerCase()} của bé ${ten} là ${tien}, anh/chị nhớ gửi cho ${pronoun} nhé. Cảm ơn anh/chị.` },
+      { tone: 'Có chuyển khoản', body: `Chào anh/chị, học phí ${monthLabel.toLowerCase()} của bé ${ten} là ${tien}. Anh/chị chuyển khoản giúp ${pronoun} theo số tài khoản ${pronoun} đã gửi nhé. Cảm ơn anh/chị! 🌿` },
+    ];
+  };
+
   if (loading) {
     return (
       <View style={[s.container, s.center]}>
@@ -291,6 +334,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
 
   return (
     <View style={s.container}>
+      <DemoBanner />
       {/* Header */}
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
@@ -326,6 +370,18 @@ export function TuitionTabScreen({ navigation, route }: any) {
       </ScrollView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* ── Cảnh báo lớp tải lỗi — tổng bên dưới ĐANG THIẾU các lớp này ── */}
+        {failedClasses.length > 0 && (
+          <View style={s.failStrip}>
+            <Text style={s.failStripText}>
+              ⚠️ Không tải được: {failedClasses.join(', ')} — số bên dưới đang THIẾU các lớp này.
+            </Text>
+            <TouchableOpacity style={s.failRetryBtn} onPress={() => setRetryKey(k => k + 1)}>
+              <Text style={s.failRetryText}>Thử lại</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ── Revenue summary hero ── */}
         <View style={s.heroCard}>
           <View style={s.heroTopRow}>
@@ -416,10 +472,20 @@ export function TuitionTabScreen({ navigation, route }: any) {
         <Text style={s.sectionLabel}>GIAO DỊCH GẦN ĐÂY</Text>
         <View style={s.card}>
           {(() => {
-            const txs = isDemo ? DEMO_TRANSACTIONS : paidList.slice(0, 5).map(d => ({
-              name: d.student_name, cls: d.className, when: 'Gần đây', amt: d.amount, note: undefined,
-            }));
-            if (txs.length === 0) {
+            if (isDemo) {
+              return DEMO_TRANSACTIONS.map((tx, i) => (
+                <View key={i} style={[s.txRow, i > 0 && s.txDivider]}>
+                  <Avatar name={tx.name} size={38} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={s.txName}>{tx.name}</Text>
+                    <Text style={s.txSub}>{tx.cls} · {tx.when}</Text>
+                  </View>
+                  {tx.note ? <Text style={s.txNote}>{tx.note}</Text> : <Text style={s.txAmt}>+{VND_FULL(tx.amt)}</Text>}
+                </View>
+              ));
+            }
+            const recent = paidList.slice(0, 5);
+            if (recent.length === 0) {
               return (
                 <View style={s.txEmpty}>
                   <View style={s.txEmptyIcon}>
@@ -432,18 +498,20 @@ export function TuitionTabScreen({ navigation, route }: any) {
                 </View>
               );
             }
-            return txs.map((tx, i) => (
-              <View key={i} style={[s.txRow, i > 0 && s.txDivider]}>
-                <Avatar name={tx.name} size={38} />
+            return recent.map((d, i) => (
+              <View key={d.student_id + d.classId} style={[s.txRow, i > 0 && s.txDivider]}>
+                <Avatar name={d.student_name} size={38} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={s.txName}>{tx.name}</Text>
-                  <Text style={s.txSub}>{tx.cls} · {tx.when}</Text>
+                  <Text style={s.txName}>{d.student_name}</Text>
+                  <Text style={s.txSub}>{d.className} · {monthLabel}</Text>
                 </View>
-                {tx.note ? (
-                  <Text style={s.txNote}>{tx.note}</Text>
-                ) : (
-                  <Text style={s.txAmt}>+{VND_FULL(tx.amt)}</Text>
-                )}
+                <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                  <Text style={s.txAmt}>+{VND_FULL(d.amount)}</Text>
+                  {/* Tick nhầm sửa được ngay tại chỗ */}
+                  <TouchableOpacity onPress={() => unmarkPaid(d)} hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}>
+                    <Text style={s.untickText}>Bỏ tick</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ));
           })()}
@@ -461,7 +529,15 @@ export function TuitionTabScreen({ navigation, route }: any) {
                     <Text style={s.txName}>{d.student_name}</Text>
                     <Text style={s.txSub}>{d.className} · {VND_FULL(d.amount)}</Text>
                   </View>
-                  <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
+                  {/* Nhắc RIÊNG phụ huynh này — tin có tên + số tiền (không phải nhắc gộp) */}
+                  <TouchableOpacity
+                    style={s.zaloRowBtn}
+                    onPress={() => setZaloItem(d)}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  >
+                    <IconZalo size={17} color={colors.zalo} />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
                     <Text style={s.tickBtnText}>Tick đã thu</Text>
                   </TouchableOpacity>
                 </View>
@@ -470,6 +546,20 @@ export function TuitionTabScreen({ navigation, route }: any) {
           </>
         )}
       </ScrollView>
+
+      {/* Zalo copy sheet — nhắc riêng 1 phụ huynh (tin có tên + số tiền, mở đúng chat) */}
+      {zaloItem && (
+        <ZaloCopySheet
+          title={`Nhắc học phí · ${zaloItem.student_name.split(' ').slice(-1)[0]}`}
+          recipient={`Phụ huynh của ${zaloItem.student_name} · ${VND_FULL(zaloItem.amount)}`}
+          phone={zaloItem.parent_phone || undefined}
+          message={personalTemplates(zaloItem)[0].body}
+          templates={personalTemplates(zaloItem)}
+          hint={`phụ huynh của ${zaloItem.student_name}`}
+          onConfirm={() => setZaloItem(null)}
+          onClose={() => setZaloItem(null)}
+        />
+      )}
 
       {/* Zalo copy sheet */}
       {showZaloModal && (
@@ -539,7 +629,7 @@ const s = StyleSheet.create({
   zaloPromptIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.green50, alignItems: 'center', justifyContent: 'center' },
   zaloPromptTitle: { fontSize: 14, fontWeight: '700', color: colors.textPrimary },
   zaloPromptSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
-  zaloPromptBtn: { backgroundColor: colors.green500, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  zaloPromptBtn: { backgroundColor: colors.zalo, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
   zaloPromptBtnText: { fontSize: 13, fontWeight: '700', color: 'white' },
 
   txRow: { flexDirection: 'row', alignItems: 'center', padding: 12, paddingHorizontal: 16 },
@@ -548,8 +638,19 @@ const s = StyleSheet.create({
   txSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
   txAmt: { fontSize: 15, fontWeight: '700', color: colors.green700 },
   txNote: { fontSize: 12, color: colors.textSecondary, fontStyle: 'italic' },
-  tickBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: 'white' },
-  tickBtnText: { fontSize: 12, fontWeight: '600', color: colors.green700 },
+  tickBtn: { paddingHorizontal: 12, minHeight: 40, justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: 'white', marginLeft: 8 },
+  tickBtnText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
+  zaloRowBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
+  untickText: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textDecorationLine: 'underline' },
+
+  failStrip: {
+    marginHorizontal: 16, marginBottom: 8, padding: 12, borderRadius: 14,
+    backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  failStripText: { flex: 1, fontSize: 13, color: colors.coral700, lineHeight: 18, fontWeight: '600' },
+  failRetryBtn: { backgroundColor: colors.coral500, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  failRetryText: { fontSize: 13, fontWeight: '700', color: 'white' },
 
   breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
   breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },

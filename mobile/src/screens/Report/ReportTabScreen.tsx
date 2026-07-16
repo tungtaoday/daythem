@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
@@ -14,6 +14,7 @@ import { getTuition } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Button } from '../../components/ui/Button';
+import { SuccessScreen } from '../../components/ui/SuccessScreen';
 
 const VND = (n: number) => (n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : n.toLocaleString('vi-VN') + 'đ');
 
@@ -108,7 +109,7 @@ const ch = StyleSheet.create({
   col: { flex: 1, alignItems: 'center' },
   barWrap: { flex: 1, justifyContent: 'flex-end', width: '100%' },
   bar: { borderRadius: 4, width: '100%' },
-  pctLabel: { fontSize: 10, fontWeight: '700', color: colors.green700, marginTop: 3 },
+  pctLabel: { fontSize: 11, fontWeight: '700', color: colors.green700, marginTop: 3 },
 });
 
 // ── Stat chip ─────────────────────────────────────────────────
@@ -123,7 +124,7 @@ function StatChip({ label, value, sub, bg, color }: any) {
 }
 const sc = StyleSheet.create({
   box: { flex: 1, borderRadius: 16, padding: 12, minWidth: 0 },
-  label: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3, marginBottom: 3 },
+  label: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3, marginBottom: 3 },
   value: { fontSize: 20, fontWeight: '700', letterSpacing: -0.4 },
   sub: { fontSize: 11, fontWeight: '500', marginTop: 2 },
 });
@@ -365,7 +366,7 @@ function RealStats({ stats }: any) {
         <StatChip label="CHUYÊN CẦN" value={stats.attendPct !== null ? `${stats.attendPct}%` : '–'} sub={`${stats.present}/${total} có mặt${deltaTxt}`} bg="#f0faf4" color={colors.green700} />
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-        <StatChip label="ĐÃ THU THÁNG NÀY" value={VND(stats.collected)} sub={`${stats.paidCount} lượt nộp`} bg={colors.honey100} color="#8a6d30" />
+        <StatChip label="ĐÃ THU THÁNG NÀY" value={VND(stats.collected)} sub={`${stats.paidCount} lượt nộp`} bg={colors.honey100} color={colors.honey700} />
         <StatChip label="VẮNG" value={String(stats.absent)} sub={`lượt vắng ${rangeSub}`} bg={colors.coral100} color={colors.coral700} />
       </View>
 
@@ -392,7 +393,6 @@ export function ReportTabScreen({ navigation, route }: any) {
   const isDemo = isDemoToken(useAuthStore(st => st.token));
   const gw = useAuthStore(st => st.teacher?.gender) === 'thay' ? 'thầy' : 'cô';
   const [sending, setSending] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
@@ -477,36 +477,41 @@ export function ReportTabScreen({ navigation, route }: any) {
 
   useFocusEffect(useCallback(() => { loadSignals(); }, [loadSignals]));
 
+  // GV đã tự dán & gửi tin qua Zalo (trong ZaloCopySheet). Ở đây app chỉ GHI NHẬN
+  // báo cáo tuần vào hồ sơ từng lớp — KHÔNG có chuyện app tự gửi cho phụ huynh.
   const handleConfirmSend = async () => {
     setShowZalo(false);
+    if (isDemo) { setDone(true); return; }
     setSending(true);
-    setProgress(0);
-    let p = 0;
-    const interval = setInterval(() => {
-      p += 1;
-      setProgress(p);
-      if (p >= totalStudents) { clearInterval(interval); setTimeout(() => setDone(true), 200); }
-    }, 80);
-    if (isDemo) return;
     try {
       await Promise.all(displayClasses.map((cls: any) => generateReport(cls.id, getMondayOfWeek())));
     } catch {
-      Alert.alert('Chưa gửi được', 'Không tạo được báo cáo. Kiểm tra mạng và thử lại.');
+      // Không chặn luồng nếu ghi nhận lỗi — báo cáo có thể tạo lại sau.
     }
+    setSending(false);
+    setDone(true);
   };
+
+  // Dẫn GV tới luồng "thiệp báo cáo riêng từng bé" (vũ khí wedge: đẹp + có tên thật).
+  // 1 lớp → vào thẳng; nhiều lớp → hỏi chọn lớp ngay tại chỗ (không quăng ra tab Lớp).
+  const goThiep = () => {
+    if (displayClasses.length === 1) {
+      const cls = displayClasses[0];
+      navigation.navigate('ClassStudents', { classId: cls.id, className: cls.name });
+      return;
+    }
+    setShowThiepPicker(true);
+  };
+  const [showThiepPicker, setShowThiepPicker] = useState(false);
 
   if (done) {
     return (
-      <View style={[s.container, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
-        <View style={s.successCircle}>
-          <Text style={{ fontSize: 48, color: colors.green600 }}>✓</Text>
-        </View>
-        <Text style={s.successTitle}>Đã gửi {totalStudents} báo cáo</Text>
-        <Text style={s.successSub}>Phụ huynh sẽ nhận báo cáo tuần qua Zalo trong vài phút.</Text>
-        <TouchableOpacity style={s.ghostBtn} onPress={() => { setDone(false); navigation.navigate('MainTabs', { screen: 'Home' }); }}>
-          <Text style={s.ghostBtnText}>Về trang chính</Text>
-        </TouchableOpacity>
-      </View>
+      <SuccessScreen
+        title="Đã gửi báo cáo tuần"
+        sub="Bạn đã gửi tin cho phụ huynh qua Zalo. Muốn gửi riêng từng bé (kèm tên & số liệu thật), mở học sinh rồi chọn “Gửi thiệp báo cáo”."
+        secondaryLabel="Về trang chính"
+        onSecondary={() => { setDone(false); navigation.navigate('MainTabs', { screen: 'Home' }); }}
+      />
     );
   }
 
@@ -575,6 +580,18 @@ export function ReportTabScreen({ navigation, route }: any) {
         contentContainerStyle={{ padding: 16, paddingBottom: (sending ? 24 : 110) + insets.bottom }}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Thiệp riêng từng bé — vũ khí chính, đặt NGAY ĐẦU trang (không chôn cuối scroll) ── */}
+        {!isDemo && totalStudents > 0 && (
+          <TouchableOpacity style={[s.thiepNudge, { marginTop: 0, marginBottom: 14 }]} onPress={goThiep} activeOpacity={0.85}>
+            <View style={s.thiepNudgeIcon}><IconStar size={18} color={colors.honey700} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.thiepNudgeTitle}>Gửi báo cáo riêng từng bé</Text>
+              <Text style={s.thiepNudgeSub}>Thiệp đẹp có tên &amp; số liệu của con — gửi riêng cho phụ huynh, tế nhị hơn tin nhóm.</Text>
+            </View>
+            <Text style={s.thiepNudgeArrow}>›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* ── Stats + trend (demo only — số liệu thật chưa đủ để tổng hợp) ── */}
         {isDemo ? (
           <>
@@ -600,7 +617,7 @@ export function ReportTabScreen({ navigation, route }: any) {
                 value="5,4tr"
                 sub="↑ 1,2tr"
                 bg={colors.honey100}
-                color="#8a6d30"
+                color={colors.honey700}
               />
               <StatChip
                 label="VẮNG"
@@ -662,7 +679,7 @@ export function ReportTabScreen({ navigation, route }: any) {
             <Text style={s.sectionLabel}>NỔI BẬT</Text>
             <View style={s.card}>
               <HighlightRow
-                iconBg={colors.honey100} iconColor="#8a6d30" Icon={IconStar}
+                iconBg={colors.honey100} iconColor={colors.honey700} Icon={IconStar}
                 title="HỌC SINH TIẾN BỘ NHẤT"
                 name="Mai Khánh Linh"
                 detail={`${displayClasses[1]?.name || 'Lớp 10'} · chuyên cần 100% 4 tuần liền`}
@@ -707,12 +724,35 @@ export function ReportTabScreen({ navigation, route }: any) {
         )}
       </ScrollView>
 
+      {/* Chọn lớp để gửi thiệp riêng từng bé */}
+      {showThiepPicker && (
+        <TouchableOpacity style={s.pickerOverlay} activeOpacity={1} onPress={() => setShowThiepPicker(false)}>
+          <TouchableOpacity style={s.pickerSheet} activeOpacity={1} onPress={() => {}}>
+            <View style={s.pickerHandle} />
+            <Text style={s.pickerTitle}>Gửi thiệp cho lớp nào?</Text>
+            {displayClasses.map((cls: any) => (
+              <TouchableOpacity
+                key={cls.id}
+                style={s.pickerRow}
+                onPress={() => {
+                  setShowThiepPicker(false);
+                  navigation.navigate('ClassStudents', { classId: cls.id, className: cls.name });
+                }}
+              >
+                <Text style={s.pickerRowText}>{cls.name}</Text>
+                <Text style={s.pickerRowSub}>{cls.student_count || 0} học sinh</Text>
+              </TouchableOpacity>
+            ))}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
       {/* Bottom bar */}
       {!sending ? (
         <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom + 12, 32), backgroundImage: 'linear-gradient(to top, #f7f5f0 60%, transparent)' } as any]}>
           {totalStudents > 0 ? (
             <Button
-              label={`Soạn báo cáo Zalo · ${totalStudents} phụ huynh`}
+              label={`Soạn báo cáo tuần · gửi nhóm lớp`}
               onPress={() => setShowZalo(true)}
               icon={<IconZalo size={20} color="white" />}
               style={{ height: 56 }}
@@ -727,21 +767,18 @@ export function ReportTabScreen({ navigation, route }: any) {
         <View style={[s.sendingBar, { paddingBottom: Math.max(insets.bottom + 16, 36) }]}>
           <View style={s.sendingIcon}><IconSend size={18} color={colors.green600} /></View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Đang gửi Zalo...</Text>
-            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>{progress}/{totalStudents} phụ huynh</Text>
-            <View style={s.progressTrack}>
-              <View style={[s.progressFill, { width: `${progress / totalStudents * 100}%` as any }]} />
-            </View>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: colors.textPrimary }}>Đang lưu báo cáo tuần...</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>Ghi vào hồ sơ từng lớp</Text>
           </View>
         </View>
       )}
 
       {showZalo && (
         <ZaloCopySheet
-          title={`Báo cáo tuần · ${totalStudents} phụ huynh`}
-          recipient={`${totalStudents} phụ huynh · ${displayClasses.length} lớp`}
-          message={`Báo cáo tuần ${weekLabel()} của [Tên con]:\n• Đi học: 1/1 buổi\n• Bài tập: làm đầy đủ\n• Học phí: đã thu T${new Date().getMonth() + 1}\n\nMọi thắc mắc anh/chị nhắn lại cho ${gw} nhé. Cảm ơn! 🌿`}
-          hint="nhóm lớp hoặc từng phụ huynh"
+          title={`Báo cáo tuần ${weekLabel()}`}
+          recipient={`Gửi vào nhóm lớp Zalo · ${displayClasses.length} lớp`}
+          message={`Kính gửi quý phụ huynh,\n\n${gw} xin gửi báo cáo tuần ${weekLabel()}. Tuần này ${gw} đã cập nhật chuyên cần và bài tập của các con trên lớp.\n\nPhụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${gw} nhé. Cảm ơn quý phụ huynh! 🌿`}
+          hint="nhóm lớp"
           onConfirm={handleConfirmSend}
           onClose={() => setShowZalo(false)}
         />
@@ -764,19 +801,24 @@ const s = StyleSheet.create({
   cardSub: { fontSize: 12, color: colors.textSecondary },
   previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14, marginBottom: 16 },
   zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '90%' as any },
-  previewNote: { fontSize: 11, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
-  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16 },
+  previewNote: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
+  thiepNudge: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.honey100, borderRadius: 16, padding: 14, marginTop: 16, borderWidth: 1, borderColor: '#efe4c8' },
+  thiepNudgeIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  thiepNudgeTitle: { fontSize: 14.5, fontWeight: '700', color: colors.textPrimary },
+  thiepNudgeSub: { fontSize: 12.5, color: colors.textSecondary, marginTop: 2, lineHeight: 17 },
+  thiepNudgeArrow: { fontSize: 22, color: colors.honey700, fontWeight: '700' },
+  pickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.45)', justifyContent: 'flex-end' } as any,
+  pickerSheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 },
+  pickerHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 14 },
+  pickerTitle: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 10 },
+  pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 15, borderTopWidth: 1, borderTopColor: colors.border },
+  pickerRowText: { fontSize: 15.5, fontWeight: '600', color: colors.textPrimary },
+  pickerRowSub: { fontSize: 13, color: colors.textSecondary },
+  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, backgroundColor: colors.bg },
   sendingBar: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 20, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   sendingIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: colors.green50, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  progressTrack: { height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden', marginTop: 8 },
-  progressFill: { height: 6, borderRadius: 3, backgroundColor: colors.green500 },
   hintBar: { height: 56, borderRadius: 16, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   hintText: { color: colors.textSecondary, fontSize: 14, fontWeight: '600' },
-  successCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.green100, alignItems: 'center', justifyContent: 'center', marginBottom: 22 },
-  successTitle: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3, color: colors.textPrimary, marginBottom: 6 },
-  successSub: { fontSize: 14, color: colors.textSecondary, maxWidth: 280, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  ghostBtn: { padding: 12 },
-  ghostBtnText: { fontSize: 15, color: colors.textSecondary, fontWeight: '500' },
   breadcrumb: { paddingHorizontal: 16, paddingVertical: 9, backgroundColor: colors.green50, borderBottomWidth: 1, borderBottomColor: colors.green100 },
   breadcrumbText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
   clsChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white', alignSelf: 'center' },

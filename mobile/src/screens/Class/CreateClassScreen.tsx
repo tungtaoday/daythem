@@ -14,6 +14,8 @@ const DAYS = [
   { label: 'CN', value: 7 },
 ];
 const TIME_PRESETS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
+const FEE_PRESETS = [300000, 400000, 500000, 600000, 800000, 1000000];
+const feeLabel = (n: number) => (n >= 1000000 ? `${n / 1000000}tr` : `${n / 1000}k`);
 const DURATIONS = [{ l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }, { l: '2h30', v: 150 }];
 const PLACES = ['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'];
 
@@ -89,6 +91,7 @@ export function CreateClassScreen({ navigation }: any) {
       <TextInput style={styles.input} placeholder={autoName} placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} />
 
       <Text style={styles.label}>Học phí mặc định (đ/tháng)</Text>
+      <View style={styles.chips}>{FEE_PRESETS.map(p => chip(feeLabel(p), fee === String(p), () => setFee(String(p))))}</View>
       <TextInput style={styles.input} placeholder="800000" placeholderTextColor={colors.textMuted} keyboardType="number-pad" value={fee} onChangeText={setFee} />
 
       <Text style={styles.label}>Ngày học trong tuần (chọn nhiều được)</Text>

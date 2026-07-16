@@ -5,6 +5,7 @@ import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme';
 import { IconZalo } from '../icons';
+import { trackEvent } from '../../api/events';
 
 // ── Mầm cây (logo) ──
 function Sprout({ size = 30, color = '#fff' }: { size?: number; color?: string }) {
@@ -34,6 +35,7 @@ export function ThiepShareSheet({ children, onClose }: { children: React.ReactNo
       if (!uri) throw new Error('no uri');
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Gửi qua Zalo' });
+        trackEvent('thiep_shared');
       } else {
         Alert.alert('Đã tạo ảnh', 'Thiết bị chưa hỗ trợ chia sẻ trực tiếp.');
       }
@@ -98,7 +100,7 @@ export function ReportThiep({ name, meta, attendancePct, present, absent, paid, 
                 ? 'Con đi học đều và chăm chỉ tuần này. Cảm ơn anh/chị đã đồng hành cùng con 🌿'
                 : 'Cảm ơn anh/chị đã đồng hành. Mong con cố gắng đều hơn ở tuần tới nhé 🌿')}
         </Text>
-        <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿</Text>
+        <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿 · gieochu.vn</Text>
       </View>
     </View>
   );
@@ -124,7 +126,7 @@ export function WrapThiep({ monthLabel, collected, sessions, attendancePct, stud
           <Stat big={`${students}`} label="Học sinh" />
         </View>
         <Text style={t.note}>Một tháng chăm chỉ! Cảm ơn thầy cô đã gieo chữ mỗi ngày 🌿</Text>
-        <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿</Text>
+        <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿 · gieochu.vn</Text>
       </View>
     </View>
   );
@@ -164,5 +166,6 @@ const t = StyleSheet.create({
   feePill: { borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, marginBottom: 14, alignItems: 'center' },
   feeText: { fontSize: 13, fontWeight: '700' },
   note: { fontSize: 14, lineHeight: 21, color: colors.textPrimary, marginBottom: 16 },
-  foot: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textAlign: 'center' },
+  // 13px + đậm hơn: phụ huynh (khách hàng tương lai) phải đọc được nơi tải app.
+  foot: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { colors } from '../../theme';
 import { getNotifConfig, putNotifPrefs, NotifConfig, NotifRule } from '../../api/notify';
 import { syncNotifications } from '../../notifications/engine';
@@ -9,8 +9,7 @@ import { useAuthStore } from '../../store/auth';
 const TIMES = ['06:00', '06:30', '07:00', '07:30', '08:00'];
 const REPORT_TIMES = ['18:00', '19:00', '20:00', '21:00'];
 const LEADS = [15, 30, 60];
-const DOMS = [25, 28, 30, 1];
-const WEEKDAYS = [{ l: 'T6', v: 6 }, { l: 'T7', v: 7 }, { l: 'CN', v: 7 }];
+const DOMS = [25, 28, 1]; // ngày nhắc thu phí (bỏ 30 — tháng 2 không có ngày 30)
 const DND_STARTS = ['21:00', '22:00', '23:00'];
 const DND_ENDS = ['06:00', '07:00', '08:00'];
 
@@ -42,16 +41,21 @@ export function NotificationSettings() {
   }, []);
 
   const rule = (k: string): NotifRule => cfg?.rules?.[k] || {};
-  const save = (patch: Parameters<typeof putNotifPrefs>[0]) => {
+  const save = (patch: Parameters<typeof putNotifPrefs>[0], revert?: () => void) => {
     putNotifPrefs(patch).then(c => {
       setCfg(c);
       // Áp dụng ngay: đặt lại lịch thông báo theo cài đặt mới.
       syncNotifications(classes as any, gw).catch(() => {});
-    }).catch(() => {});
+    }).catch(() => {
+      // KHÔNG nuốt lỗi: revert UI + báo — kẻo cô tưởng đã lưu mà server chưa nhận.
+      revert?.();
+      Alert.alert('Chưa lưu được', 'Kiểm tra mạng rồi chỉnh lại nhé.');
+    });
   };
   const setRule = (k: string, v: NotifRule) => {
+    const before = cfg;
     setCfg(c => c ? { ...c, rules: { ...c.rules, [k]: { ...c.rules[k], ...v } } } : c); // optimistic
-    save({ rules: { [k]: v } });
+    save({ rules: { [k]: v } }, () => setCfg(before));
   };
 
   if (loading) {
@@ -68,7 +72,7 @@ export function NotificationSettings() {
       <Text style={s.section}>NHẮC VIỆC (bạn tự chỉnh)</Text>
 
       <View style={s.card}>
-        <RuleRow label="⏰ Trước buổi học" sub="Nhắc trước khi tới giờ dạy"
+        <RuleRow label="Trước buổi học" sub="Nhắc trước khi tới giờ dạy"
           on={rule('class_reminder').enabled !== false}
           onToggle={v => setRule('class_reminder', { enabled: v })} />
         {rule('class_reminder').enabled !== false && (
@@ -78,7 +82,7 @@ export function NotificationSettings() {
       </View>
 
       <View style={s.card}>
-        <RuleRow label="🌅 Tóm tắt sáng" sub="Việc cần làm trong ngày"
+        <RuleRow label="Tóm tắt sáng" sub="Việc cần làm trong ngày"
           on={rule('morning_summary').enabled !== false}
           onToggle={v => setRule('morning_summary', { enabled: v })} />
         {rule('morning_summary').enabled !== false && (
@@ -88,7 +92,7 @@ export function NotificationSettings() {
       </View>
 
       <View style={s.card}>
-        <RuleRow label="💰 Nhắc thu học phí" sub="Cuối tháng nhắc kiểm tra"
+        <RuleRow label="Nhắc thu học phí" sub="Cuối tháng nhắc kiểm tra"
           on={rule('tuition_reminder').enabled !== false}
           onToggle={v => setRule('tuition_reminder', { enabled: v })} />
         {rule('tuition_reminder').enabled !== false && (
@@ -98,7 +102,7 @@ export function NotificationSettings() {
       </View>
 
       <View style={s.card}>
-        <RuleRow label="📊 Nhắc gửi báo cáo" sub="Tổng kết tuần cho phụ huynh"
+        <RuleRow label="Nhắc gửi báo cáo" sub="Tổng kết tuần cho phụ huynh"
           on={rule('report_reminder').enabled !== false}
           onToggle={v => setRule('report_reminder', { enabled: v })} />
         {rule('report_reminder').enabled !== false && (
@@ -118,7 +122,7 @@ export function NotificationSettings() {
 
       <Text style={s.section}>TỪ GIEOCHỮ</Text>
       <View style={s.card}>
-        <RuleRow label="📣 Tin & ưu đãi từ GieoChữ" sub="Mẹo dạy học, ưu đãi, cập nhật"
+        <RuleRow label="Tin & ưu đãi từ GieoChữ" sub="Mẹo dạy học, ưu đãi, cập nhật"
           on={cfg.marketing_opt_in}
           onToggle={v => { setCfg(c => c ? { ...c, marketing_opt_in: v } : c); save({ marketing_opt_in: v }); }} />
       </View>

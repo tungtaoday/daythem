@@ -12,6 +12,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 
 import { useClassesStore } from '../../store/classes';
 import { IconPlus, IconChevron } from '../../components/icons';
+import { DemoBanner } from '../../components/ui/DemoBanner';
 import { getTuition } from '../../api/tuition';
 import { nextOccurrence, hasClassOnDayN, todayDayN, sessionTimeStr, DAY_FULL, daysLabel } from '../../utils/schedule';
 
@@ -337,6 +338,7 @@ export function ClassesScreen({ navigation }: any) {
 
   return (
     <View style={s.container}>
+      <DemoBanner />
       {/* ── Header ── */}
       <View style={[s.header, { paddingTop: insets.top + 12 }]}>
         <View style={{ flex: 1 }}>
@@ -368,14 +370,14 @@ export function ClassesScreen({ navigation }: any) {
           <View style={s.statStrip}>
             <View style={[s.statPill, { backgroundColor: colors.green50 }]}>
               <Text style={[s.statPillLabel, { color: colors.green600 }]}>HÔM NAY</Text>
-              <Text style={[s.statPillVal, { color: '#1a3d2a' }]}>{todayCount} buổi</Text>
+              <Text style={[s.statPillVal, { color: colors.green900 }]}>{todayCount} buổi</Text>
             </View>
-            <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
+            <View style={[s.statPill, { backgroundColor: colors.coral50 }]}>
               <Text style={[s.statPillLabel, { color: colors.coral700 }]}>CHƯA NỘP</Text>
               <Text style={[s.statPillVal, { color: colors.coral700 }]}>{unpaidCount} học sinh</Text>
             </View>
             {isDemo && (
-              <View style={[s.statPill, { backgroundColor: '#fff4f0' }]}>
+              <View style={[s.statPill, { backgroundColor: colors.coral50 }]}>
                 <Text style={[s.statPillLabel, { color: colors.coral700 }]}>NGHỈ NHIỀU</Text>
                 <Text style={[s.statPillVal, { color: colors.coral700 }]}>3 học sinh</Text>
               </View>
@@ -417,7 +419,7 @@ export function ClassesScreen({ navigation }: any) {
           activeOpacity={0.8}
         >
           <IconPlus size={18} color={colors.textSecondary} />
-          <Text style={s.addBtnText}>Thêm lớp mới</Text>
+          <Text style={s.addBtnText}>{classes.length === 0 ? 'Tạo lớp đầu tiên' : 'Thêm lớp mới'}</Text>
         </TouchableOpacity>
 
         {/* ── Recent activity (demo only — chưa có nguồn hoạt động thật) ── */}
@@ -426,8 +428,8 @@ export function ClassesScreen({ navigation }: any) {
             <Text style={s.sectionTitle}>Hoạt động gần đây</Text>
             <View style={s.activityCard}>
               <ActivityRow Icon={IconChevron} iconBg={colors.green100} iconColor={colors.green500} title="Hoàng Tuấn Kiệt đã nộp tiền" time="2 giờ trước" />
-              <ActivityRow Icon={IconChevron} iconBg="#fef5e1" iconColor={colors.honey700} title="Gửi Zalo nhắc 3 phụ huynh" time="Hôm qua, 21:14" />
-              <ActivityRow Icon={IconChevron} iconBg="#fff4f0" iconColor={colors.coral700} title="Bùi Nam Sơn vắng buổi 18/05" time="2 ngày trước" last />
+              <ActivityRow Icon={IconChevron} iconBg={colors.honey100} iconColor={colors.honey700} title="Gửi Zalo nhắc 3 phụ huynh" time="Hôm qua, 21:14" />
+              <ActivityRow Icon={IconChevron} iconBg={colors.coral50} iconColor={colors.coral700} title="Bùi Nam Sơn vắng buổi 18/05" time="2 ngày trước" last />
             </View>
           </>
         )}

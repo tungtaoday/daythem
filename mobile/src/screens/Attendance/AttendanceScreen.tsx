@@ -104,7 +104,7 @@ export function AttendanceScreen({ route, navigation }: any) {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [showZalo, setShowZalo] = useState(false);
+  const [showZalo, setShowZalo] = useState<string | null>(null); // id học sinh vắng đang nhắn hỏi thăm
 
   // ── Chọn buổi (cho điểm danh buổi quá khứ) ──
   const todayYmd = ymd(new Date());
@@ -133,9 +133,14 @@ export function AttendanceScreen({ route, navigation }: any) {
       .catch(() => {});
   }, [classId, isDemo]);
 
+  // Chống race: khi cô ĐÃ chạm đánh vắng mà listSessions về muộn, effect nạp lại
+  // sẽ reset thao tác về "tất cả có mặt". dirty = cô đã chạm → không auto-nạp đè nữa.
+  const [dirty, setDirty] = useState(false);
+
   // Khi đổi buổi (hoặc dữ liệu sẵn sàng): nạp trạng thái buổi đó (nếu đã điểm danh) hoặc mặc định có mặt.
   useEffect(() => {
     if (classStudents.length === 0) return;
+    if (dirty) return; // cô đang thao tác dở — không đè
     const existing = sessionsByDate[sessionDate];
     if (existing) {
       const m: Record<string, Mark> = {};
@@ -151,17 +156,23 @@ export function AttendanceScreen({ route, navigation }: any) {
       setMarks(Object.fromEntries(classStudents.map(s => [s.id, 'present' as Mark])));
       setNotes({});
     }
-  }, [classStudents, sessionDate, sessionsByDate]);
+  }, [classStudents, sessionDate, sessionsByDate, dirty]);
 
   const toggle = (id: string) => {
+    setDirty(true);
     setMarks(m => ({ ...m, [id]: m[id] === 'present' ? 'absent' : 'present' }));
   };
 
   const presentCount = Object.values(marks).filter(v => v === 'present').length;
   const absentCount = classStudents.length - presentCount;
-  const firstAbsent = classStudents.find(s => marks[s.id] === 'absent');
+  // Gợi ý hỏi thăm TẤT CẢ các em vắng (không chỉ em đầu tiên) — mỗi em 1 nút Zalo.
+  const absentStudents = classStudents.filter(s => marks[s.id] === 'absent');
 
   const handleSave = async () => {
+    if (classStudents.length === 0) {
+      Alert.alert('Lớp chưa có học sinh', 'Thêm học sinh vào lớp trước khi điểm danh nhé.');
+      return;
+    }
     const records = classStudents.map(s => ({
       student_id: s.id,
       present: marks[s.id] !== 'absent',
@@ -190,35 +201,49 @@ export function AttendanceScreen({ route, navigation }: any) {
         secondaryLabel="Về trang chính"
         onSecondary={() => navigation.goBack()}
       >
-        {absentCount > 0 && firstAbsent && (
+        {absentStudents.length > 0 && (
           <View style={s.nudgeCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <IconSparkle size={16} color={colors.green600} />
-              <Text style={{ fontSize: 14, fontWeight: '700' }}>Gợi ý</Text>
+              <Text style={{ fontSize: 14, fontWeight: '700' }}>
+                {absentStudents.length === 1 ? 'Gợi ý' : `${absentStudents.length} bạn vắng buổi này`}
+              </Text>
             </View>
-            <Text style={s.nudgeText}>
-              <Text style={{ fontWeight: '700' }}>{firstAbsent.name.split(' ').slice(-1)[0]}</Text>
-              {' '}vắng buổi này. Muốn nhắn Zalo hỏi thăm phụ huynh?
-            </Text>
-            <TouchableOpacity style={s.zaloPrimary} onPress={() => setShowZalo(true)}>
-              <IconZalo size={16} color="white" />
-              <Text style={s.zaloPrimaryText}>Nhắn Zalo hỏi thăm</Text>
-            </TouchableOpacity>
+            {absentStudents.map(stu => (
+              <View key={stu.id} style={s.absentRow}>
+                <Text style={[s.nudgeText, { flex: 1, marginBottom: 0 }]}>
+                  <Text style={{ fontWeight: '700' }}>{stu.name.split(' ').slice(-1)[0]}</Text>
+                  {notes[stu.id] ? ` · ${notes[stu.id]}` : ''}
+                </Text>
+                <TouchableOpacity
+                  style={s.zaloPrimary}
+                  onPress={() => setShowZalo(stu.id)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <IconZalo size={16} color="white" />
+                  <Text style={s.zaloPrimaryText}>Hỏi thăm</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
         )}
       </SuccessScreen>
 
-      {showZalo && firstAbsent && (
-        <ZaloCopySheet
-          title="Hỏi thăm học sinh vắng"
-          phone={firstAbsent.parent_phone || undefined}
-          recipient={`Phụ huynh của ${firstAbsent.name}`}
-          message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${firstAbsent.name.split(' ').slice(-1)[0]} buổi vừa rồi không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
-          hint={`phụ huynh của ${firstAbsent.name}`}
-          onConfirm={() => setShowZalo(false)}
-          onClose={() => setShowZalo(false)}
-        />
-      )}
+      {(() => {
+        const stu = absentStudents.find(x => x.id === showZalo);
+        if (!stu) return null;
+        return (
+          <ZaloCopySheet
+            title="Hỏi thăm học sinh vắng"
+            phone={stu.parent_phone || undefined}
+            recipient={`Phụ huynh của ${stu.name}`}
+            message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${stu.name.split(' ').slice(-1)[0]} buổi vừa rồi không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
+            hint={`phụ huynh của ${stu.name}`}
+            onConfirm={() => setShowZalo(null)}
+            onClose={() => setShowZalo(null)}
+          />
+        );
+      })()}
       </>
     );
   }
@@ -261,7 +286,7 @@ export function AttendanceScreen({ route, navigation }: any) {
               const active = d === sessionDate;
               const done = !!sessionsByDate[d];
               return (
-                <TouchableOpacity key={d} style={[s.dateChip, active && s.dateChipActive]} onPress={() => setSessionDate(d)} activeOpacity={0.8}>
+                <TouchableOpacity key={d} style={[s.dateChip, active && s.dateChipActive]} onPress={() => { setDirty(false); setSessionDate(d); }} activeOpacity={0.8}>
                   <Text style={[s.dateChipText, active && s.dateChipTextActive]}>
                     {d === todayYmd ? 'Hôm nay' : `${WD_SHORT[dt.getDay()]} ${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}`}
                   </Text>
@@ -297,6 +322,7 @@ export function AttendanceScreen({ route, navigation }: any) {
                   <TouchableOpacity
                     style={s.noteBtn}
                     onPress={() => setEditingNote(stu.id)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <IconNote size={18} color={colors.coral700} />
                   </TouchableOpacity>
@@ -323,7 +349,7 @@ export function AttendanceScreen({ route, navigation }: any) {
         <NoteModal
           name={classStudents.find(s => s.id === editingNote)?.name || ''}
           initial={notes[editingNote] || ''}
-          onSave={(v: string) => { setNotes(n => ({ ...n, [editingNote]: v })); setEditingNote(null); }}
+          onSave={(v: string) => { setDirty(true); setNotes(n => ({ ...n, [editingNote]: v })); setEditingNote(null); }}
           onClose={() => setEditingNote(null)}
         />
       )}
@@ -372,9 +398,10 @@ const s = StyleSheet.create({
     width: '100%', backgroundColor: 'white', borderRadius: 18,
     padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border,
   },
-  nudgeText: { fontSize: 13, color: colors.textPrimary, lineHeight: 20, marginBottom: 14 },
+  nudgeText: { fontSize: 13.5, color: colors.textPrimary, lineHeight: 20, marginBottom: 14 },
+  absentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   zaloPrimary: {
-    backgroundColor: colors.green500, height: 44, borderRadius: 12,
+    backgroundColor: colors.zalo, height: 44, borderRadius: 12, paddingHorizontal: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   zaloPrimaryText: { color: 'white', fontSize: 14, fontWeight: '600' },
@@ -427,7 +454,7 @@ const s = StyleSheet.create({
   },
   stuRowAbsent: { backgroundColor: colors.coral50 },
   stuName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary },
-  stuStatus: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  stuStatus: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   noteBtn: {
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',

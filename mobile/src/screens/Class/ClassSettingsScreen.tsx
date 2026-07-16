@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
-import { IconZalo, IconWallet, IconChevron } from '../../components/icons';
+import { IconZalo, IconWallet, IconChevron, IconCheck } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
@@ -51,11 +51,39 @@ function SectionHeader({ children }: { children: string }) {
   return <Text style={s.sectionHeader}>{children}</Text>;
 }
 
-function SoonBadge() {
+function ZaloLinkModal({ current, onSave, onClose }: any) {
+  const [val, setVal] = useState(current || '');
+  const link = val.trim();
   return (
-    <View style={s.soonBadge}>
-      <Text style={s.soonBadgeText}>Sắp có</Text>
-    </View>
+    <TouchableOpacity style={s.overlay} onPress={onClose} activeOpacity={1}>
+      <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
+        <View style={s.handle} />
+        <Text style={s.sheetTitle}>Nhóm Zalo của lớp</Text>
+        <Text style={s.sheetSub}>Dán link nhóm Zalo phụ huynh để mở nhanh khi gửi báo cáo / nhắc học phí. App không tự tạo nhóm hay tự gửi — bạn vẫn chủ động gửi trong Zalo.</Text>
+        <TextInput
+          style={[s.noteInput, { marginTop: 12 }]}
+          value={val}
+          onChangeText={setVal}
+          placeholder="https://zalo.me/g/..."
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
+        {!!link && (
+          <TouchableOpacity
+            style={[s.zaloRow, { paddingHorizontal: 0 }]}
+            onPress={() => Linking.openURL(link).catch(() => Alert.alert('Không mở được', 'Kiểm tra lại link nhóm Zalo.'))}
+          >
+            <View style={s.zaloIcon}><IconZalo size={18} color={colors.zalo} /></View>
+            <Text style={[s.zaloName, { flex: 1 }]}>Mở thử nhóm Zalo</Text>
+            <IconChevron size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity style={s.btnPrimary} onPress={() => onSave(link)}>
+          <Text style={s.btnPrimaryText}>{link ? 'Lưu link nhóm' : 'Xoá link'}</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 }
 
@@ -67,7 +95,7 @@ function FeeTag({ override, base, note }: { override: number | null; base: numbe
     return (
       <View style={{ alignItems: 'flex-end' }}>
         <View style={[s.feeBadge, { backgroundColor: colors.honey100 }]}>
-          <Text style={[s.feeBadgeText, { color: '#8a6d30' }]}>Miễn phí</Text>
+          <Text style={[s.feeBadgeText, { color: colors.honey700 }]}>Miễn phí</Text>
         </View>
         {note && <Text style={s.feeNote}>{note}</Text>}
       </View>
@@ -178,6 +206,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
     return s.length ? s : [{ day: 3, start_time: '18:30', duration: 90, location: 'Tại nhà' }];
   };
   const [showSched, setShowSched] = useState(false);
+  const [showZaloLink, setShowZaloLink] = useState(false);
   const [edSessions, setEdSessions] = useState<Session[]>(initSessions);
   const [savingSched, setSavingSched] = useState(false);
 
@@ -284,6 +313,15 @@ export function ClassSettingsScreen({ route, navigation }: any) {
     setEditingStu(null);
   };
 
+  const handleSaveZaloLink = async (link: string) => {
+    try {
+      await updateClass(classId, { zalo_group_id: link || null });
+    } catch {
+      Alert.alert('Chưa lưu được', 'Kiểm tra mạng và thử lại.');
+    }
+    setShowZaloLink(false);
+  };
+
   const handleSave = async () => {
     if (isDemo) return;
     try {
@@ -374,7 +412,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
                   style={[s.colorDot, { backgroundColor: CLASS_COLORS[k].dot, width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: color === k ? colors.textPrimary : 'transparent' }]}
                   activeOpacity={0.8}
                 >
-                  {color === k && <Text style={{ color: 'white', fontSize: 16, fontWeight: '800' }}>✓</Text>}
+                  {color === k && <IconCheck size={16} color="white" />}
                 </TouchableOpacity>
               ))}
             </View>
@@ -502,30 +540,24 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         <SectionHeader>NHÓM ZALO</SectionHeader>
         <View style={s.card}>
           {klass?.zalo_group_id ? (
-            <View style={s.zaloRow}>
+            <TouchableOpacity style={s.zaloRow} onPress={() => setShowZaloLink(true)}>
               <View style={s.zaloIcon}>
-                <IconZalo size={20} color="#3a7dd3" />
+                <IconZalo size={20} color={colors.zalo} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.zaloName}>Zalo {klass.name}</Text>
-                <Text style={s.zaloBadgeText}>Đã liên kết · Đang hoạt động</Text>
+                <Text style={s.zaloName}>Nhóm Zalo {klass.name}</Text>
+                <Text style={s.zaloBadgeText}>Đã lưu link · chạm để mở hoặc đổi</Text>
               </View>
               <IconChevron size={16} color={colors.textMuted} />
-            </View>
+            </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={s.zaloRow}
-              onPress={() => Alert.alert('Liên kết Zalo', 'Tính năng đang được hoàn thiện, sắp có nhé!')}
-            >
+            <TouchableOpacity style={s.zaloRow} onPress={() => setShowZaloLink(true)}>
               <View style={[s.zaloIcon, { backgroundColor: colors.surfaceAlt }]}>
                 <IconZalo size={20} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={s.zaloName}>Chưa liên kết nhóm Zalo</Text>
-                  <SoonBadge />
-                </View>
-                <Text style={s.zaloBadgeText}>Nhấn để kết nối nhóm phụ huynh</Text>
+                <Text style={s.zaloName}>Lưu link nhóm Zalo</Text>
+                <Text style={s.zaloBadgeText}>Dán link nhóm phụ huynh để mở nhanh</Text>
               </View>
               <IconChevron size={16} color={colors.textMuted} />
             </TouchableOpacity>
@@ -534,7 +566,8 @@ export function ClassSettingsScreen({ route, navigation }: any) {
 
         {/* ── LƯU THAY ĐỔI ── */}
         <Button
-          label={saved ? '✓ Đã lưu' : 'Lưu thay đổi'}
+          label={saved ? 'Đã lưu' : 'Lưu thay đổi'}
+          icon={saved ? <IconCheck size={18} color="white" /> : undefined}
           onPress={handleSave}
           disabled={isDemo}
           style={{ marginHorizontal: 16, marginTop: 20 }}
@@ -555,6 +588,15 @@ export function ClassSettingsScreen({ route, navigation }: any) {
           base={defaultFee}
           onSave={handleStuFee}
           onClose={() => setEditingStu(null)}
+        />
+      )}
+
+      {/* Zalo group link modal */}
+      {showZaloLink && (
+        <ZaloLinkModal
+          current={klass?.zalo_group_id || ''}
+          onSave={handleSaveZaloLink}
+          onClose={() => setShowZaloLink(false)}
         />
       )}
 
@@ -677,13 +719,13 @@ const s = StyleSheet.create({
   feeMeta: { fontSize: 12, color: colors.textSecondary, fontWeight: '500' },
   modeChip: { paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
   modeChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
-  modeChipText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
+  modeChipText: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   modeChipTextActive: { color: colors.green700 },
 
   customBadge: { backgroundColor: colors.coral100, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  customBadgeText: { fontSize: 11, fontWeight: '700', color: colors.coral700 },
+  customBadgeText: { fontSize: 12, fontWeight: '700', color: colors.coral700 },
   soonBadge: { backgroundColor: colors.honey100, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7 },
-  soonBadgeText: { fontSize: 10, fontWeight: '700', color: '#8a6d30' },
+  soonBadgeText: { fontSize: 12, fontWeight: '700', color: colors.honey700 },
   emptyTitle: { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 6 },
   emptySub: { fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
   stuFeeHint: { fontSize: 12, color: colors.textSecondary, marginHorizontal: 16, marginBottom: 8 },
@@ -691,8 +733,8 @@ const s = StyleSheet.create({
   stuName: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   feeTag: { fontSize: 14, fontWeight: '600' },
   feeBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, marginTop: 2 },
-  feeBadgeText: { fontSize: 10, fontWeight: '700' },
-  feeNote: { fontSize: 10, color: colors.textSecondary, marginTop: 1, maxWidth: 100 },
+  feeBadgeText: { fontSize: 12, fontWeight: '700' },
+  feeNote: { fontSize: 12, color: colors.textSecondary, marginTop: 1, maxWidth: 100 },
 
   zaloRow: { flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, gap: 12 },
   zaloIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },

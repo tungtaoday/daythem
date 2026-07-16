@@ -11,12 +11,92 @@ import { SuccessScreen } from '../../components/ui/SuccessScreen';
 import { Button } from '../../components/ui/Button';
 import { IconSend, IconSparkle, IconX, IconPlus } from '../../components/icons';
 import { useAuthStore, isDemoToken } from '../../store/auth';
-import { confirmMakeup, getMakeupPoll } from '../../api/announcements';
+import { confirmMakeup, getMakeupPoll, proposeMakeup } from '../../api/announcements';
 
 type Step = 'compose' | 'live' | 'confirmed';
 
-type Slot = { id: string; day: string; time: string };
+// date/start dùng để tạo poll trên server (đúng slot cô soạn — không bịa).
+type Slot = { id: string; day: string; time: string; date?: string; start?: string };
 type Voter = { id: string; name: string };
+
+const DAY_NAMES = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+const START_PRESETS = ['08:00', '09:00', '14:00', '17:00', '18:00', '18:30', '19:00', '19:30', '20:00'];
+const DUR_PRESETS = [{ l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }];
+
+// 7 ngày tới để cô chọn ngày học bù.
+function nextDays(n = 7) {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i + 1);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return { iso, label: `${DAY_NAMES[d.getDay()]} ${d.getDate()}/${d.getMonth() + 1}` };
+  });
+}
+
+function timeRange(start: string, durMin: number) {
+  const [h, m] = start.split(':').map(Number);
+  const end = new Date(2000, 0, 1, h, m + durMin);
+  return `${start} – ${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+}
+
+// Editor 1 khung giờ: chọn ngày (7 ngày tới) + giờ bắt đầu + thời lượng.
+function SlotEditor({ initial, onSave, onClose }: { initial?: Slot | null; onSave: (s: Omit<Slot, 'id'>) => void; onClose: () => void }) {
+  const days = nextDays();
+  const [date, setDate] = useState(initial?.date || days[0].iso);
+  const [start, setStart] = useState(initial?.start || '19:00');
+  const [dur, setDur] = useState(90);
+  const dayLabel = days.find(d => d.iso === date)?.label || days[0].label;
+  return (
+    <TouchableOpacity style={se.overlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity style={se.sheet} activeOpacity={1} onPress={() => {}}>
+        <View style={se.handle} />
+        <Text style={se.title}>{initial ? 'Sửa khung giờ' : 'Thêm khung giờ'}</Text>
+        <Text style={se.label}>NGÀY</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }} style={{ flexGrow: 0 }}>
+          {days.map(d => (
+            <TouchableOpacity key={d.iso} style={[se.chip, date === d.iso && se.chipActive]} onPress={() => setDate(d.iso)}>
+              <Text style={[se.chipText, date === d.iso && se.chipTextActive]}>{d.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <Text style={se.label}>GIỜ BẮT ĐẦU</Text>
+        <View style={se.wrapRow}>
+          {START_PRESETS.map(t => (
+            <TouchableOpacity key={t} style={[se.chip, start === t && se.chipActive]} onPress={() => setStart(t)}>
+              <Text style={[se.chipText, start === t && se.chipTextActive]}>{t}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={se.label}>THỜI LƯỢNG</Text>
+        <View style={se.wrapRow}>
+          {DUR_PRESETS.map(d => (
+            <TouchableOpacity key={d.v} style={[se.chip, dur === d.v && se.chipActive]} onPress={() => setDur(d.v)}>
+              <Text style={[se.chipText, dur === d.v && se.chipTextActive]}>{d.l}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Button
+          label="Lưu khung giờ"
+          onPress={() => onSave({ day: dayLabel, time: timeRange(start, dur), date, start })}
+          style={{ marginTop: 16 }}
+        />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+const se = StyleSheet.create({
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.45)', justifyContent: 'flex-end', zIndex: 50 } as any,
+  sheet: { backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 36 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 16 },
+  title: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 14 },
+  label: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginTop: 12, marginBottom: 8 },
+  wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: 'white' },
+  chipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  chipText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
+  chipTextActive: { color: colors.green700 },
+});
 
 const DEMO_VOTES: { sid: string; voter: Voter }[] = [
   { sid: 's2', voter: { id: 'v1', name: 'Minh Anh' } },
@@ -31,7 +111,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
   const insets = useSafeAreaInsets();
   const teacher = useAuthStore(st => st.teacher);
   const isDemo = isDemoToken(useAuthStore(st => st.token));
-  const makeupId: string | undefined = route?.params?.makeupId;
+  const announcementId: string | undefined = route?.params?.announcementId;
   const className: string = route?.params?.className || 'Lớp học';
   const rawSessionDate: string | undefined = route?.params?.sessionDate;
   const sessionLabel = rawSessionDate ? rawSessionDate.split('-').reverse().join('/') : 'đã nghỉ';
@@ -55,7 +135,11 @@ export function MakeupPollScreen({ route, navigation }: any) {
   const [picked, setPicked] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showZalo, setShowZalo] = useState(false);
-  const expected = 7;
+  const [editingSlot, setEditingSlot] = useState<Slot | null | 'new'>(null);
+  // Poll trên server: nhận từ params (nếu đã tạo) hoặc tạo khi cô gửi tin với slot thật.
+  const [makeupId, setMakeupId] = useState<string | undefined>(route?.params?.makeupId || undefined);
+  // Mẫu số THẬT = sĩ số lớp (nếu biết). Demo dùng 7 như dữ liệu mẫu. Không biết → ẩn "/N".
+  const expected: number | null = isDemo ? 7 : (route?.params?.studentCount || null);
 
   // Honest "copy + Mở Zalo" message — the teacher pastes this into the group;
   // the app never auto-sends to Zalo.
@@ -152,7 +236,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
               <Avatar name={senderName} size={26} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
                 <View style={s.groupBubble}>
                   <Text style={{ fontSize: 13, lineHeight: 20, color: colors.textPrimary }}>
                     {titlePrefix} chốt lịch: buổi học bù sẽ là{' '}
@@ -188,7 +272,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
           </View>
           <Text style={s.heroTitle}>Poll học bù · {className}</Text>
           <Text style={s.heroLine}>
-            {total} phụ huynh đã trả lời / {expected} · bù cho buổi {sessionLabel}
+            {total} phụ huynh đã trả lời{expected ? ` / ${expected}` : ''} · bù cho buổi {sessionLabel}
           </Text>
         </View>
 
@@ -206,7 +290,7 @@ export function MakeupPollScreen({ route, navigation }: any) {
           {slots.map((slot, slotIndex) => {
             const list = votes[slot.id] || [];
             const isBest = bestSlot?.id === slot.id && list.length > 0;
-            const pct = expected > 0 ? list.length / expected : 0;
+            const pct = expected ? list.length / expected : (total > 0 ? list.length / total : 0);
             return (
               <View key={slot.id} style={[s.slotCard, isBest && s.slotCardBest]}>
                 {isBest && (
@@ -219,11 +303,13 @@ export function MakeupPollScreen({ route, navigation }: any) {
                     <Text style={{ fontSize: 15, fontWeight: '700', color: colors.textPrimary }}>{slot.day}</Text>
                     <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{slot.time}</Text>
                   </View>
-                  <Text style={[s.voteCount, isBest && { color: '#8a6d30' }]}>
+                  <Text style={[s.voteCount, isBest && { color: colors.honey700 }]}>
                     {list.length}
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '500' }}>
-                      /{expected}
-                    </Text>
+                    {expected ? (
+                      <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '500' }}>
+                        /{expected}
+                      </Text>
+                    ) : null}
                   </Text>
                 </View>
 
@@ -291,37 +377,27 @@ export function MakeupPollScreen({ route, navigation }: any) {
         )}
 
         {slots.map((slot, i) => (
-          <View key={slot.id} style={s.slotRow}>
+          // Chạm để SỬA ngày/giờ (không còn slot cứng 19:00 không sửa được)
+          <TouchableOpacity key={slot.id} style={s.slotRow} onPress={() => setEditingSlot(slot)} activeOpacity={0.8}>
             <View style={s.slotNum}>
               <Text style={{ fontSize: 14, fontWeight: '700', color: colors.green700 }}>{i + 1}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>{slot.day}</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary }}>{slot.time}</Text>
+              <Text style={{ fontSize: 12.5, color: colors.textSecondary }}>{slot.time} · chạm để sửa</Text>
             </View>
             <TouchableOpacity
               onPress={() => setSlots(slots.filter(x => x.id !== slot.id))}
-              disabled={slots.length <= 2}
-              style={{ padding: 6, opacity: slots.length <= 2 ? 0.3 : 1 }}
+              style={{ padding: 8 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <IconX size={18} color={colors.textSecondary} />
             </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {slots.length < 4 && (
-          <TouchableOpacity
-            style={s.addSlotBtn}
-            onPress={() => {
-              const next = new Date();
-              next.setDate(next.getDate() + slots.length + 1);
-              const dayNames = ['CN', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-              const dayLabel = `${dayNames[next.getDay()]} · ${next.getDate()}/${next.getMonth() + 1}`;
-              const newId = `slot-${Date.now()}`;
-              setSlots(prev => [...prev, { id: newId, day: dayLabel, time: '19:00 – 20:30' }]);
-              setVotes(v => ({ ...v, [newId]: [] }));
-            }}
-          >
+          <TouchableOpacity style={s.addSlotBtn} onPress={() => setEditingSlot('new')}>
             <IconPlus size={16} color={colors.textSecondary} />
             <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary }}>Thêm khung giờ</Text>
           </TouchableOpacity>
@@ -337,15 +413,17 @@ export function MakeupPollScreen({ route, navigation }: any) {
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
                 <Avatar name={senderName} size={28} />
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 3 }}>{senderName}</Text>
                   <View style={s.groupBubble}>
+                    {/* Preview = ĐÚNG tin sẽ gửi (text nhờ PH nhắn lại — không vẽ checkbox
+                        vì tin Zalo thường không có nút vote) */}
                     <Text style={{ fontSize: 13, lineHeight: 20, color: colors.textPrimary, marginBottom: 10 }}>
-                      Anh/chị ơi, {titlePrefix.toLowerCase()} đề xuất {slots.length} khung giờ học bù. Anh/chị tick slot con đi được nhé 🌿
+                      Anh/chị ơi, {titlePrefix.toLowerCase()} đề xuất {slots.length} khung giờ học bù bên dưới. Anh/chị nhắn giúp {titlePrefix.toLowerCase()} khung nào con đi được nhé 🌿
                     </Text>
                     {slots.map((slot, i) => (
                       <View key={slot.id} style={s.pollOption}>
-                        <View style={s.pollCheckbox} />
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textPrimary }}>
+                        <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.green700 }}>{i + 1}.</Text>
+                        <Text style={{ fontSize: 12.5, fontWeight: '600', color: colors.textPrimary }}>
                           {slot.day} · {slot.time}
                         </Text>
                       </View>
@@ -367,16 +445,45 @@ export function MakeupPollScreen({ route, navigation }: any) {
         />
       </View>
 
-      {/* Real accounts: honest copy + Mở Zalo. After the teacher confirms she
-          sent it, move to the live/waiting step to pick & chốt the slot. */}
+      {/* Real accounts: honest copy + Mở Zalo. Sau khi cô xác nhận đã gửi:
+          tạo poll trên server với ĐÚNG các slot cô soạn (index chốt khớp server). */}
       {showZalo && (
         <ZaloCopySheet
           title="Đề xuất lịch học bù"
-          recipient="Nhóm Zalo · lớp học"
+          recipient={`Nhóm Zalo · ${className}`}
           message={pollMessage}
           hint="nhóm lớp"
-          onConfirm={() => { setShowZalo(false); setStep('live'); }}
+          onConfirm={async () => {
+            setShowZalo(false);
+            if (!isDemo && announcementId && !makeupId && slots.length > 0) {
+              try {
+                const r = await proposeMakeup(announcementId, slots.map(sl => ({
+                  date: sl.date || '', time: sl.start || '', label: `${sl.day} · ${sl.time}`,
+                })));
+                if (r?.id) setMakeupId(r.id);
+              } catch { /* sang live vẫn được; khi chốt sẽ báo nếu thiếu */ }
+            }
+            setStep('live');
+          }}
           onClose={() => setShowZalo(false)}
+        />
+      )}
+
+      {/* Slot editor */}
+      {editingSlot && (
+        <SlotEditor
+          initial={editingSlot === 'new' ? null : editingSlot}
+          onClose={() => setEditingSlot(null)}
+          onSave={data => {
+            if (editingSlot !== 'new') {
+              setSlots(prev => prev.map(x => x.id === editingSlot.id ? { ...x, ...data } : x));
+            } else {
+              const id = `slot-${Date.now()}`;
+              setSlots(prev => [...prev, { id, ...data }]);
+              setVotes(v => ({ ...v, [id]: [] }));
+            }
+            setEditingSlot(null);
+          }}
         />
       )}
     </View>
@@ -412,7 +519,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.honey100, borderRadius: 14,
     padding: 14, marginBottom: 8,
   },
-  emptyHintText: { fontSize: 13, color: '#8a6d30', lineHeight: 20 },
+  emptyHintText: { fontSize: 13, color: colors.honey700, lineHeight: 20 },
   zaloPreviewBox: { backgroundColor: '#f0f3f9', borderRadius: 18, padding: 14, marginBottom: 12 },
   groupBubble: {
     backgroundColor: 'white', borderRadius: 4, borderTopRightRadius: 16,
@@ -437,32 +544,32 @@ const s = StyleSheet.create({
   },
   heroBadgeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   heroEyebrow: {
-    fontSize: 12, fontWeight: '700', color: '#8a6d30', letterSpacing: 0.6,
+    fontSize: 12, fontWeight: '700', color: colors.honey700, letterSpacing: 0.6,
   },
   heroTitle: {
     fontSize: 20, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3, marginBottom: 4,
   },
-  heroLine: { fontSize: 13, color: '#8a6d30', fontWeight: '600', lineHeight: 19 },
+  heroLine: { fontSize: 13, color: colors.honey700, fontWeight: '600', lineHeight: 19 },
   liveDot: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: '#8a6d30', marginRight: 8,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: colors.honey700, marginRight: 8,
   },
   waitingNote: {
     backgroundColor: colors.honey100, borderRadius: 14,
     marginHorizontal: 16, marginBottom: 4, padding: 14,
   },
-  waitingNoteText: { fontSize: 13, color: '#8a6d30', lineHeight: 20 },
+  waitingNoteText: { fontSize: 13, color: colors.honey700, lineHeight: 20 },
   slotCard: {
     backgroundColor: 'white', borderRadius: 18, padding: 16, marginBottom: 10,
     borderWidth: 1, borderColor: colors.border,
     shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, shadowOffset: { width: 0, height: 2 },
     position: 'relative',
   },
-  slotCardBest: { borderColor: '#e6c878', backgroundColor: colors.honey100, shadowOpacity: 0.12, shadowColor: '#8a6d30' },
+  slotCardBest: { borderColor: '#e6c878', backgroundColor: colors.honey100, shadowOpacity: 0.12, shadowColor: colors.honey700 },
   bestBadge: {
     position: 'absolute', top: -10, right: 12,
-    backgroundColor: '#8a6d30', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: colors.honey700, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  bestBadgeText: { fontSize: 10, fontWeight: '700', color: 'white', letterSpacing: 0.3 },
+  bestBadgeText: { fontSize: 11, fontWeight: '700', color: 'white', letterSpacing: 0.3 },
   voteCount: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.3 },
   progressTrack: {
     height: 4, borderRadius: 2, backgroundColor: '#e8e4da', marginBottom: 12, overflow: 'hidden',
@@ -473,13 +580,13 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: colors.surfaceAlt, borderRadius: 999, padding: 3, paddingRight: 9,
   },
-  voterName: { fontSize: 11, fontWeight: '600', color: colors.textPrimary },
+  voterName: { fontSize: 12, fontWeight: '600', color: colors.textPrimary },
   chonBtn: {
     width: '100%', padding: 10, borderRadius: 12,
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
   },
-  chonBtnBest: { backgroundColor: '#8a6d30' },
+  chonBtnBest: { backgroundColor: colors.honey700 },
   chonBtnText: { fontSize: 13, fontWeight: '700', color: colors.textPrimary },
 
   // Confirmed

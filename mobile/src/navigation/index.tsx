@@ -53,7 +53,7 @@ function TabIcon({ label, Icon, focused }: TabIconProps) {
 
 const tb = StyleSheet.create({
   tab: { alignItems: 'center', gap: 2, paddingTop: 6 },
-  label: { fontSize: 11, fontWeight: '500', color: '#9e9e9e' },
+  label: { fontSize: 10, fontWeight: '500', color: '#9e9e9e' },
   labelActive: { color: '#3d8760', fontWeight: '700' },
 });
 
@@ -136,6 +136,12 @@ export function AppNavigator() {
             <Stack.Screen name="Welcome" component={WelcomeScreen} />
             <Stack.Screen name="Password" component={PasswordScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+            {/* Điều khoản/Bảo mật phải xem được TRƯỚC khi đăng nhập (link ở Welcome) */}
+            <Stack.Screen
+              name="Legal"
+              component={LegalScreen}
+              options={{ headerShown: true, title: 'Điều khoản & Bảo mật', headerStyle: { backgroundColor: '#ffffff' }, headerTintColor: '#3d8760', headerTitleStyle: { fontWeight: '700' } }}
+            />
           </>
         ) : needsSetup ? (
           <Stack.Screen name="Setup" component={SetupScreen} />

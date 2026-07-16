@@ -10,7 +10,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
+import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, daysLabel, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -121,7 +121,8 @@ export function CalendarScreen({ navigation }: any) {
         !best ||
         occ.delta < best.occ.delta ||
         (occ.delta === best.occ.delta &&
-          (c.schedule?.start_time || '99:99') < (best.cls.schedule?.start_time || '99:99'))
+          // Giờ của ĐÚNG buổi sắp tới (schema đa buổi) — không đọc schedule.start_time cũ.
+          (occ.session?.start_time || '99:99') < (best.occ.session?.start_time || '99:99'))
       ) {
         best = { cls: c, occ };
       }
@@ -378,8 +379,10 @@ export function CalendarScreen({ navigation }: any) {
             <Text style={s.sectionLabel}>CÁC LỚP ĐANG DẠY</Text>
             <View style={s.card}>
               {classes.map((cls: any, i: number) => {
-                const dow = cls.schedule?.day; // 1=Mon..7=Sun
-                const dayName = dow ? DAY_LABELS[dow - 1] : '–';
+                // Schema đa buổi: hiện đủ các thứ (vd "T3, T6") + giờ buổi sắp tới.
+                const days = daysLabel(cls.schedule) || '–';
+                const occ = nextOccurrence(cls.schedule);
+                const time = occ ? sessionTimeStr(occ.session) : '';
                 return (
                   <View key={cls.id} style={[s.classRow, i > 0 && s.divider]}>
                     <View style={s.classBar} />
@@ -389,7 +392,7 @@ export function CalendarScreen({ navigation }: any) {
                       <Text style={s.className}>{cls.name} · {cls.subject}</Text>
                     </View>
                       <Text style={s.classSub}>
-                        {dayName}{cls.schedule?.start_time ? ` · ${cls.schedule.start_time}` : ''} · {cls.student_count || 0} học sinh
+                        {days}{time ? ` · ${time}` : ''} · {cls.student_count || 0} học sinh
                       </Text>
                     </View>
                   </View>

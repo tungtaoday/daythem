@@ -10,6 +10,7 @@ import { IconZalo, IconCheck, IconDownload } from '../../components/icons';
 import { getTuition, recordPayment } from '../../api/tuition';
 import { exportTuitionExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import { localMonth } from '../../utils/date';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -47,8 +48,18 @@ export function ClassTuitionScreen({ route }: any) {
   const [showZalo, setShowZalo] = useState(false);
   const [reminder, setReminder] = useState<Item | null>(null);
   const [sent, setSent] = useState(false);
-  const month = new Date().toISOString().slice(0, 7);
-  const monthLabel = `Tháng ${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
+  // Tháng LOCAL (không dùng toISOString — sáng mùng 1 trước 7h bị lệch về tháng trước)
+  // + cho phép lùi tháng để thu nợ tháng trước ngay từ hub lớp.
+  const currentMonth = localMonth();
+  const [month, setMonth] = useState(currentMonth);
+  const [my, mm] = month.split('-');
+  const monthLabel = `Tháng ${Number(mm)}/${my}`;
+  const atCurrentMonth = month >= currentMonth;
+  const shiftMonth = (ym: string, delta: number) => {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + delta, 1);
+    return localMonth(d);
+  };
 
   useEffect(() => {
     if (isDemo) return;
@@ -69,7 +80,7 @@ export function ClassTuitionScreen({ route }: any) {
       .catch(() => { if (alive) setError(true); })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
-  }, [classId, isDemo]);
+  }, [classId, isDemo, month]);
 
   const paidList = items.filter(d => d.paid);
   const unpaidList = items.filter(d => !d.paid);
@@ -87,6 +98,24 @@ export function ClassTuitionScreen({ route }: any) {
       setItems(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: false } : x));
       Alert.alert('Chưa lưu được', 'Không ghi nhận được khoản thu. Kiểm tra mạng và thử lại.');
     });
+  };
+
+  // Chạm nhầm "Tick thu" → chạm badge "Đã nộp" để bỏ tick (tiền phải sửa được).
+  const unmarkPaid = (item: Item) => {
+    Alert.alert('Bỏ đánh dấu đã thu?', `${item.student_name} · ${VND_FULL(item.amount)}`, [
+      { text: 'Không', style: 'cancel' },
+      {
+        text: 'Bỏ tick', style: 'destructive',
+        onPress: () => {
+          setItems(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: false } : x));
+          if (isDemo) return;
+          recordPayment(classId, { student_id: item.student_id, paid: false, amount: item.amount, month }).catch(() => {
+            setItems(d => d.map(x => x.student_id === item.student_id ? { ...x, paid: true } : x));
+            Alert.alert('Chưa lưu được', 'Không bỏ tick được. Kiểm tra mạng và thử lại.');
+          });
+        },
+      },
+    ]);
   };
 
   if (loading) {
@@ -123,7 +152,20 @@ export function ClassTuitionScreen({ route }: any) {
         <View style={s.hero}>
           <LinearGradient colors={classColor(klass?.color).grad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
           <View style={s.heroTopRow}>
-            <Text style={s.heroLabel} numberOfLines={1}>THU HỌC PHÍ · {className} · {monthLabel}</Text>
+            {/* Chuyển tháng ngay tại hub lớp — thu nợ tháng trước không phải vòng sang tab Học phí */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+              <TouchableOpacity onPress={() => setMonth(m => shiftMonth(m, -1))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Text style={s.monthArrow}>‹</Text>
+              </TouchableOpacity>
+              <Text style={s.heroLabel} numberOfLines={1}>THU HỌC PHÍ · {monthLabel}</Text>
+              <TouchableOpacity
+                onPress={() => setMonth(m => (m >= currentMonth ? m : shiftMonth(m, 1)))}
+                disabled={atCurrentMonth}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={[s.monthArrow, atCurrentMonth && { opacity: 0.35 }]}>›</Text>
+              </TouchableOpacity>
+            </View>
             {items.length > 0 && (
               <TouchableOpacity
                 style={s.exportBtn}
@@ -155,8 +197,8 @@ export function ClassTuitionScreen({ route }: any) {
                     <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityLabel="Nhắc Zalo phụ huynh">
-                      <IconZalo size={16} color="#3a7dd3" />
+                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityLabel="Nhắc Zalo phụ huynh" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <IconZalo size={16} color={colors.zalo} />
                     </TouchableOpacity>
                     <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
                       <IconCheck size={13} color="white" />
@@ -201,10 +243,10 @@ export function ClassTuitionScreen({ route }: any) {
                     <Text style={s.stuName}>{d.student_name}</Text>
                     <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
                   </View>
-                  <View style={s.paidBadge}>
+                  <TouchableOpacity style={s.paidBadge} onPress={() => unmarkPaid(d)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <IconCheck size={13} color="white" />
                     <Text style={s.paidText}>Đã nộp</Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               ))}
             </View>
@@ -249,7 +291,8 @@ const s = StyleSheet.create({
     padding: 22, paddingTop: 18, overflow: 'hidden',
   },
   heroTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  heroLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.82)', letterSpacing: 0.5, flex: 1, marginRight: 8 },
+  heroLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.82)', letterSpacing: 0.5, flexShrink: 1, marginRight: 4 },
+  monthArrow: { fontSize: 20, fontWeight: '700', color: 'rgba(255,255,255,0.9)', lineHeight: 22, paddingHorizontal: 2 },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9, backgroundColor: 'white' },
   exportBtnText: { fontSize: 11, fontWeight: '700', color: colors.green500 },
   heroAmt: { fontSize: 44, fontWeight: '800', color: 'white', letterSpacing: -1.2, lineHeight: 50 },
@@ -263,8 +306,8 @@ const s = StyleSheet.create({
   divider: { borderTopWidth: 1, borderTopColor: colors.border },
   stuName: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   stuSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
-  zaloRowBtn: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
-  tickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 11, backgroundColor: colors.green500 },
+  zaloRowBtn: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
+  tickBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 13, minHeight: 42, borderRadius: 12, backgroundColor: colors.green500 },
   tickBtnText: { fontSize: 12, fontWeight: '700', color: 'white' },
   paidBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.green500, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 9 },
   paidText: { fontSize: 12, fontWeight: '700', color: 'white' },

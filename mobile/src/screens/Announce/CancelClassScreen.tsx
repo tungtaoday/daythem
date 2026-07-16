@@ -6,11 +6,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../theme';
 import { Avatar } from '../../components/ui/Avatar';
-import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend } from '../../components/icons';
+import { IconZalo, IconCheck, IconCalendar, IconBell, IconSend, IconSparkle } from '../../components/icons';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
 import { Button } from '../../components/ui/Button';
-import { cancelClass, proposeMakeup } from '../../api/announcements';
+import { cancelClass } from '../../api/announcements';
 import { useAuthStore } from '../../store/auth';
 import { useClassesStore } from '../../store/classes';
 import { openZalo } from '../../utils/zalo';
@@ -37,7 +37,7 @@ function ZaloGroupPreview({ groupName, reason, note, makeup, senderName, titlePr
   return (
     <View style={gp.box}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <IconZalo size={14} color="#3a7dd3" />
+        <IconZalo size={14} color={colors.zalo} />
         <Text style={gp.groupLabel}>NHÓM ZALO · {groupName.toUpperCase()}</Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
@@ -55,7 +55,7 @@ function ZaloGroupPreview({ groupName, reason, note, makeup, senderName, titlePr
 const gp = StyleSheet.create({
   box: { backgroundColor: '#f0f3f9', borderRadius: 18, padding: 14, marginBottom: 12 },
   groupLabel: { fontSize: 11, color: '#6b7d99', fontWeight: '600' },
-  senderName: { fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginBottom: 3 },
+  senderName: { fontSize: 12, color: colors.textSecondary, fontWeight: '600', marginBottom: 3 },
   bubble: { backgroundColor: 'white', borderRadius: 4, borderTopRightRadius: 16, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, padding: 10, paddingHorizontal: 14 },
 });
 
@@ -78,8 +78,6 @@ export function CancelClassScreen({ route, navigation }: any) {
   const [reason, setReason] = useState(`${titlePrefix} bận việc đột xuất`);
   const [note, setNote] = useState('');
   const [makeup, setMakeup] = useState(true);
-  const [toGroup, setToGroup] = useState(true);
-  const [toIndividual, setToIndividual] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [annId, setAnnId] = useState<string | null>(null);
@@ -118,34 +116,22 @@ export function CancelClassScreen({ route, navigation }: any) {
     }
   };
 
-  const handleMakeup = async () => {
-    if (!annId) { navigation.navigate('MakeupPoll', { announcementId: null, makeupId: null }); return; }
-    const d1 = new Date(); d1.setDate(d1.getDate() + 7);
-    const d2 = new Date(); d2.setDate(d2.getDate() + ((6 - d2.getDay() + 7) % 7) + 1);
-    try {
-      const r = await proposeMakeup(annId, [
-        { date: d1.toISOString().slice(0, 10), time: '19:00', label: `${d1.toLocaleDateString('vi-VN')} · 19:00` },
-        { date: d2.toISOString().slice(0, 10), time: '09:00', label: `${d2.toLocaleDateString('vi-VN')} · 09:00` },
-      ]);
-      navigation.navigate('MakeupPoll', { announcementId: annId, makeupId: r?.id });
-    } catch {
-      navigation.navigate('MakeupPoll', { announcementId: annId, makeupId: null });
-    }
+  // KHÔNG tự bịa slot ở đây — cô soạn khung giờ THẬT trong màn Poll,
+  // poll được tạo trên server với đúng các slot cô soạn (tránh lệch index khi chốt).
+  const handleMakeup = () => {
+    navigation.navigate('MakeupPoll', {
+      announcementId: annId,
+      makeupId: null,
+      className,
+      sessionDate: today,
+    });
   };
 
   if (sent) {
     return (
       <SuccessScreen
         title="Đã đánh dấu báo nghỉ"
-        sub={
-          toGroup && toIndividual
-            ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo và nhắn riêng từng phụ huynh nhé.'
-            : toGroup
-            ? 'Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo nhé.'
-            : toIndividual
-            ? 'Tin đã được copy. Nhớ dán & gửi riêng cho từng phụ huynh nhé.'
-            : 'Tin đã được copy. Nhớ dán & gửi trong Zalo nhé.'
-        }
+        sub="Tin đã được copy. Nhớ dán & gửi vào nhóm Zalo nhé."
         secondaryLabel="Về trang chính"
         onSecondary={() => navigation.goBack()}
       >
@@ -156,7 +142,8 @@ export function CancelClassScreen({ route, navigation }: any) {
         {makeup && (
           <View style={s.nextStep}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.green700 }}>✦ Bước tiếp theo</Text>
+              <IconSparkle size={16} color={colors.green700} />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.green700 }}>Bước tiếp theo</Text>
             </View>
             <Text style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 20, marginBottom: 14 }}>
               Đề xuất buổi học bù để phụ huynh chọn slot phù hợp.
@@ -229,40 +216,22 @@ export function CancelClassScreen({ route, navigation }: any) {
             <Toggle on={makeup} />
           </TouchableOpacity>
 
-          {/* Channel selector */}
+          {/* Kênh gửi: chỉ tin NHÓM (app soạn 1 tin). Toggle "nhắn riêng từng PH" cũ
+              không tạo tin riêng nào → gỡ để không hứa hão; muốn nhắn riêng ai thì
+              mở hồ sơ học sinh → Nhắn Zalo. */}
           <Text style={s.sectionLabel}>GỬI QUA</Text>
           <View style={s.channelCard}>
-            <TouchableOpacity
-              style={s.channelRow}
-              onPress={() => setToGroup(!toGroup)}
-              activeOpacity={0.8}
-            >
+            <View style={s.channelRow}>
               <View style={s.channelIconGreen}>
                 <IconZalo size={18} color={colors.green700} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhóm Zalo · {groupName}</Text>
-                <Text style={{ fontSize: 12, color: colors.textSecondary }}>{titlePrefix} + phụ huynh</Text>
+                <Text style={{ fontSize: 12.5, color: colors.textSecondary }}>
+                  Muốn báo riêng phụ huynh nào — mở hồ sơ học sinh → Nhắn Zalo
+                </Text>
               </View>
-              <Toggle on={toGroup} />
-            </TouchableOpacity>
-
-            <View style={s.divider} />
-
-            <TouchableOpacity
-              style={s.channelRow}
-              onPress={() => setToIndividual(!toIndividual)}
-              activeOpacity={0.8}
-            >
-              <View style={s.channelIconHoney}>
-                <IconBell size={18} color="#8a6d30" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Nhắn riêng từng phụ huynh</Text>
-                <Text style={{ fontSize: 12, color: colors.textSecondary }}>Phòng khi nhóm bị im tiếng</Text>
-              </View>
-              <Toggle on={toIndividual} />
-            </TouchableOpacity>
+            </View>
           </View>
 
           {/* Preview */}
@@ -388,7 +357,7 @@ const s = StyleSheet.create({
     borderRadius: 18, padding: 18, marginBottom: 14, width: '100%',
   },
   openZaloBtn: {
-    height: 50, borderRadius: 14, backgroundColor: '#3a7dd3',
+    height: 50, borderRadius: 14, backgroundColor: colors.zalo,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingHorizontal: 28, marginBottom: 16,
   },

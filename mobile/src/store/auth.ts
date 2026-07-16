@@ -50,10 +50,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Sai mật khẩu — finally sẽ reset isLoading, lỗi trả về PasswordScreen
         throw err;
       }
-      // Mất mạng / server down → demo mode (token chỉ trong memory, không lưu storage)
-      const mockToken = 'demo-' + Date.now();
-      const gender = (await storage.get('teacher_gender') as Gender | null) ?? 'co';
-      set({ token: mockToken, teacher: { id: 'demo', phone, name: null, avatar_url: null, gender } });
+      if (__DEV__) {
+        // DEV ONLY: mất mạng / server down → demo mode để dev không cần backend.
+        const mockToken = 'demo-' + Date.now();
+        const gender = (await storage.get('teacher_gender') as Gender | null) ?? 'co';
+        set({ token: mockToken, teacher: { id: 'demo', phone, name: null, avatar_url: null, gender } });
+        return;
+      }
+      // PROD: KHÔNG âm thầm rơi vào demo (GV thật sẽ thấy dữ liệu giả + mất tài khoản khi tắt app).
+      // Ném lỗi để PasswordScreen hiện "Không kết nối được — thử lại".
+      throw err;
     } finally {
       set({ isLoading: false });
     }
@@ -67,9 +73,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const teacher = await getMe();
       const gender = (await storage.get('teacher_gender') as Gender | null) ?? 'co';
       set({ token, teacher: { ...teacher, gender } });
-    } catch {
-      // Lỗi mạng thoáng qua → giữ token, không đăng xuất
-      // Token hết hạn (401) → response interceptor tự xử lý
+    } catch (err: any) {
+      // Token hết hạn (401) → response interceptor đã logout, KHÔNG giữ phiên.
+      // Lỗi mạng thoáng qua → GIỮ PHIÊN (set token để navigator không đá về Welcome);
+      // teacher tạm null, các màn tự fetch lại khi có mạng.
+      if (err?.response?.status !== 401) set({ token });
     }
   },
 

@@ -36,10 +36,6 @@ export const IconTrash       = ico('trash-outline');
 export const IconEdit        = ico('create-outline');
 export const IconShare       = ico('share-social-outline');
 export const IconDownload    = ico('download-outline');
-export const IconFlash       = ico('flash-outline');
-export const IconCamera      = ico('camera-outline');
-export const IconImage       = ico('image-outline');
-export const IconFile        = ico('document-outline');
 
 // Zalo — custom SVG via Text approximation (no official icon in Ionicons)
 export function IconZalo({ size = 22, color = '#0068FF' }: { size?: number; color?: string }) {

@@ -10,7 +10,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
 import { ZaloCopySheet } from '../../components/ui/ZaloCopySheet';
 import { ThiepShareSheet, ReportThiep } from '../../components/ui/ThiepShare';
-import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash, IconFlash, IconCamera, IconImage, IconFile } from '../../components/icons';
+import { IconWarn, IconZalo, IconPhone, IconCheck, IconX, IconWallet, IconChevron, IconDownload, IconEdit, IconTrash } from '../../components/icons';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
 import { bulkAddStudents, importStudentNames } from '../../api/students';
@@ -43,7 +43,7 @@ const DEMO_STUS: StuItem[] = [
 ];
 
 const STATUS_CFG = {
-  star: { label: 'Xuất sắc ★', bg: colors.honey100, color: '#8a6d30' },
+  star: { label: 'Xuất sắc ★', bg: colors.honey100, color: colors.honey700 },
   risk: { label: 'Vắng nhiều', bg: colors.coral100, color: colors.coral700 },
   ok:   { label: 'OK',          bg: colors.green100, color: colors.green700 },
 };
@@ -103,7 +103,7 @@ const sr = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   sub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, flexShrink: 0 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontWeight: '600' },
 });
 
 // ── Inline student profile ────────────────────────────────────
@@ -299,7 +299,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
             </View>
 
             <TouchableOpacity style={[pp.thiepBtn, { backgroundColor: hero.btnBg }]} onPress={() => setShowThiep(true)} activeOpacity={0.85}>
-              <Text style={[pp.thiepBtnText, { color: hero.fg }]}>🌿  Gửi thiệp báo cáo cho phụ huynh</Text>
+              <Text style={[pp.thiepBtnText, { color: hero.fg }]}>Gửi thiệp báo cáo cho phụ huynh</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -453,7 +453,8 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
                   />
 
                   <Button
-                    label={feeSaved ? '✓ Đã lưu học phí' : 'Lưu học phí riêng'}
+                    label={feeSaved ? 'Đã lưu học phí' : 'Lưu học phí riêng'}
+                    icon={feeSaved ? <IconCheck size={18} color="white" /> : undefined}
                     onPress={saveFee}
                     loading={savingFee}
                   />
@@ -564,7 +565,7 @@ function HeroStat({ label, value, fg, fgDim }: { label: string; value: string; f
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
       <Text style={{ fontSize: 16, fontWeight: '800', letterSpacing: -0.3, color: fg }} numberOfLines={1}>{value}</Text>
-      <Text style={{ fontSize: 10, fontWeight: '700', marginTop: 3, color: fgDim }} numberOfLines={1}>{label}</Text>
+      <Text style={{ fontSize: 11, fontWeight: '700', marginTop: 3, color: fgDim }} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -859,8 +860,10 @@ export function ClassStudentsScreen({ route, navigation }: any) {
                   displayStus.map(st => ({
                     name: st.name,
                     parent_phone: st.parent_phone,
-                    attend: st.attend,
-                    debt: st.debt,
+                    // Tài khoản thật: màn này không tính chuyên cần/nợ → KHÔNG ghi số bịa
+                    // (0% / 0đ) vào file. exportExcel bỏ trống cột khi undefined.
+                    attend: isDemo ? st.attend : undefined,
+                    debt: isDemo ? st.debt : undefined,
                   })),
                   className
                 )}
@@ -872,8 +875,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
             {!isDemo && (
               <>
                 <TouchableOpacity style={s.bulkPill} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
-                  <IconFlash size={14} color="#fff" />
-                  <Text style={s.bulkPillText}>Nhập nhanh</Text>
+                  <Text style={s.bulkPillText}>⚡ Nhập nhanh</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setShowAdd(true)}>
                   <Text style={s.addLink}>+ Thêm</Text>
@@ -901,10 +903,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
             <Text style={s.emptyTitle2}>Chưa có học sinh nào</Text>
             <Text style={s.emptySubline}>Thêm cả lớp trong 10 giây</Text>
             <TouchableOpacity style={s.emptyPrimary} onPress={() => setShowBulk(true)} activeOpacity={0.85}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                <IconFlash size={18} color="#fff" />
-                <Text style={s.emptyPrimaryText}>Nhập nhanh cả lớp</Text>
-              </View>
+              <Text style={s.emptyPrimaryText}>⚡  Nhập nhanh cả lớp</Text>
               <Text style={s.emptyPrimarySub}>Chụp ảnh · chọn file Excel / Word / PDF</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setShowAdd(true)} style={{ marginTop: 14 }}>
@@ -976,17 +975,14 @@ export function ClassStudentsScreen({ route, navigation }: any) {
           <Text style={s.bulkHint}>Dán danh sách tên (mỗi dòng 1 HS), hoặc để app tự nhận diện từ ảnh / file Word, Excel, PDF.</Text>
           <View style={s.ocrRow}>
             <TouchableOpacity style={s.ocrBtn} onPress={() => pickAndOcr(true)} disabled={ocrLoading} activeOpacity={0.85}>
-              <IconCamera size={17} color={colors.green700} />
-              <Text style={s.ocrBtnText}>Chụp danh sách</Text>
+              <Text style={s.ocrBtnText}>📷  Chụp danh sách</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.ocrBtn} onPress={() => pickAndOcr(false)} disabled={ocrLoading} activeOpacity={0.85}>
-              <IconImage size={17} color={colors.green700} />
-              <Text style={s.ocrBtnText}>Chọn ảnh</Text>
+              <Text style={s.ocrBtnText}>🖼  Chọn ảnh</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity style={s.fileBtn} onPress={pickDocument} disabled={ocrLoading} activeOpacity={0.85}>
-            <IconFile size={16} color={colors.textPrimary} />
-            <Text style={s.fileBtnText}>Chọn file (Word · Excel · PDF · CSV)</Text>
+            <Text style={s.fileBtnText}>📄  Chọn file (Word · Excel · PDF · CSV)</Text>
           </TouchableOpacity>
           {ocrLoading && (
             <View style={s.ocrLoading}>
@@ -1026,7 +1022,7 @@ const s = StyleSheet.create({
   summaryBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 },
   summaryText: { fontSize: 13, fontWeight: '600', color: colors.textSecondary },
   addLink: { fontSize: 14, fontWeight: '600', color: colors.green600 },
-  bulkPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
+  bulkPill: { backgroundColor: colors.green500, borderRadius: 999, paddingHorizontal: 13, paddingVertical: 7 },
   bulkPillText: { color: 'white', fontSize: 13, fontWeight: '700' },
   card: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   emptyCard: { backgroundColor: colors.green50, borderRadius: 18, borderWidth: 1, borderColor: colors.green200, paddingVertical: 28, paddingHorizontal: 20, alignItems: 'center' },
@@ -1051,9 +1047,9 @@ const s = StyleSheet.create({
   saveBtnText: { color: 'white', fontSize: 16, fontWeight: '600' },
   bulkHint: { fontSize: 13, color: colors.textSecondary, lineHeight: 19, marginBottom: 14 },
   ocrRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  ocrBtn: { flex: 1, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 14, paddingVertical: 14 },
+  ocrBtn: { flex: 1, backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green200, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
   ocrBtnText: { fontSize: 14, fontWeight: '700', color: colors.green700 },
-  fileBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 7, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 13, marginBottom: 12 },
+  fileBtn: { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: 14, paddingVertical: 13, alignItems: 'center', marginBottom: 12 },
   fileBtnText: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary },
   ocrLoading: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   ocrLoadingText: { fontSize: 13, color: colors.green700, fontWeight: '600' },

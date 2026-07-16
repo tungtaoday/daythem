@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius } from '../../theme';
@@ -53,16 +53,22 @@ export function SetupScreen() {
   };
 
   const handleEnter = async () => {
+    // AWAIT tạo lớp — không nuốt lỗi: màn Done vừa nói "Sẵn sàng rồi!" mà lớp
+    // không lưu được thì phải BÁO, đừng để cô vào app thấy "Chưa có lớp nào".
     if (className.trim()) {
-      createClass({
-        name: className.trim(),
-        subject: subjects[0] || 'Toán',
-        grade: String(grades[0] || 9),
-        default_fee: fee,
-        fee_type: 'month',
-        color: 'green',
-        schedule: { days, day: days[0], start_time: time, duration, location: place },
-      }).catch(() => {});
+      try {
+        await createClass({
+          name: className.trim(),
+          subject: subjects[0] || 'Toán',
+          grade: String(grades[0] || 9),
+          default_fee: fee,
+          fee_type: 'month',
+          color: 'green',
+          schedule: { days, day: days[0], start_time: time, duration, location: place },
+        });
+      } catch {
+        Alert.alert('Lớp chưa lưu được', `Mạng đang chập chờn nên lớp "${className.trim()}" chưa được lưu. Vào app rồi tạo lại trong tab Lớp học nhé.`);
+      }
     }
     await updateProfile(name.trim(), gender);
   };
@@ -95,6 +101,11 @@ export function SetupScreen() {
           place={place} setPlace={setPlace}
           onBack={() => setStep('profile')}
           onNext={() => setStep('done')}
+          onSkip={async () => {
+            // Bỏ qua tạo lớp: chỉ lưu hồ sơ rồi vào thẳng app (checklist Home sẽ dẫn tiếp).
+            setClassName('');
+            await updateProfile(name.trim(), gender);
+          }}
         />
       )}
       {step === 'done' && (
@@ -137,7 +148,11 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
       >
         <Text style={s.emoji}>👋</Text>
         <Text style={s.title}>Chào mừng đến GieoChữ!</Text>
-        <Text style={s.sub}>Cho chúng tôi biết thêm về bạn.</Text>
+        <Text style={s.sub}>
+          Cho chúng tôi biết thêm về bạn.{'  '}
+          {/* Đăng nhập nhầm số → có đường thoát, không kẹt trong Setup */}
+          <Text style={s.logoutLink} onPress={() => useAuthStore.getState().logout()}>Không phải bạn? Đăng xuất</Text>
+        </Text>
 
         <Text style={s.sectionLabel}>BẠN LÀ</Text>
         <View style={s.genderRow}>
@@ -206,7 +221,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
 }
 
 // ─── First Class Step ─────────────────────────────────────────────────────────
-function FirstClassStep({ gender, className, setClassName, fee, setFee, days, setDays, time, setTime, duration, setDuration, place, setPlace, onBack, onNext }: any) {
+function FirstClassStep({ gender, className, setClassName, fee, setFee, days, setDays, time, setTime, duration, setDuration, place, setPlace, onBack, onNext, onSkip }: any) {
   const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
 
@@ -330,6 +345,10 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
           onPress={onNext}
           disabled={!className.trim() || days.length === 0}
         />
+        {/* Không ép tạo lớp — vào app khám phá trước, tạo lớp sau ở tab Lớp học */}
+        <TouchableOpacity onPress={onSkip} style={s.skipBtn} hitSlop={{ top: 8, bottom: 8, left: 16, right: 16 }}>
+          <Text style={s.skipText}>Tạo lớp sau, vào app luôn →</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -390,6 +409,9 @@ const s = StyleSheet.create({
   emoji: { fontSize: 48, marginBottom: 14 },
   title: { fontSize: 24, fontWeight: '700', color: colors.textPrimary, letterSpacing: -0.4, lineHeight: 30, marginBottom: 8 },
   sub: { fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 20 },
+  logoutLink: { fontSize: 13, fontWeight: '700', color: colors.green700 },
+  skipBtn: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 12, marginTop: 6 },
+  skipText: { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.3, marginBottom: 10 },
   sectionHint: { fontSize: 12, color: colors.textMuted, marginBottom: 8 },
   perDayHint: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, marginTop: 10, backgroundColor: colors.green50, borderRadius: 10, padding: 10 },

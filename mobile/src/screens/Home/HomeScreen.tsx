@@ -1,8 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   RefreshControl, Animated, ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '../../components/ui/Avatar';
 import { Button } from '../../components/ui/Button';
@@ -20,6 +21,7 @@ import {
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 import { getHomeSummary, HomeSummary, getMonthlyWrap, MonthlyWrap } from '../../api/home';
 import { ThiepShareSheet, WrapThiep } from '../../components/ui/ThiepShare';
+import { DemoBanner } from '../../components/ui/DemoBanner';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -111,7 +113,7 @@ const TONES: Record<string, any> = {
   money: {
     label: 'HỌC PHÍ',
     grad: ['#e9b84d', '#c8902a'] as [string, string], heroBg: '#c8902a',
-    iconBg: '#fef5e1', iconColor: colors.honey700,
+    iconBg: colors.honey100, iconColor: colors.honey700,
     btnBg: '#c8902a', btnColor: 'white',
     Icon: IconWallet,
   },
@@ -210,7 +212,9 @@ function NudgeCard({ card, isPrimary, onDone, onLater }: any) {
         <View style={nc.btnRow}>
           <TouchableOpacity
             style={[nc.btnPrimary, { backgroundColor: isPrimary ? 'white' : tone.btnBg }]}
-            onPress={() => dismiss('right', onDone)}
+            // Thẻ việc (tiền/vắng/báo cáo): bấm = ĐI LÀM, thẻ ở lại tới khi việc thật sự xong
+            // (summary refetch khi quay lại Home sẽ tự gỡ). Chỉ thẻ buổi học trượt đi luôn.
+            onPress={() => (card.kind === 'class' ? dismiss('right', onDone) : onDone())}
             activeOpacity={0.85}
           >
             <PrimaryIcon size={15} color={isPrimary ? tone.heroBg : 'white'} />
@@ -410,7 +414,8 @@ export function HomeScreen({ navigation }: any) {
   }, [classes, isLoading, isDemo]);
 
   // Số liệu trợ lý (chưa nộp + vắng liên tiếp). Demo → dữ liệu mẫu; thật → gọi API.
-  useEffect(() => {
+  // Refetch mỗi lần quay lại Home (useFocusEffect) → thẻ việc phản ánh đúng việc VỪA làm xong.
+  useFocusEffect(useCallback(() => {
     if (isDemo) { setSummary(DEMO_SUMMARY); return; }
     if (isLoading) return;
     const hasStu = classes.reduce((t, c) => t + (c.student_count || 0), 0) > 0;
@@ -418,7 +423,7 @@ export function HomeScreen({ navigation }: any) {
     let alive = true;
     getHomeSummary().then(s => { if (alive) setSummary(s); }).catch(() => { if (alive) setSummary(null); });
     return () => { alive = false; };
-  }, [classes, isLoading, isDemo]);
+  }, [classes, isLoading, isDemo]));
 
   // Reschedule local notifications from server config whenever classes change (real accounts).
   useEffect(() => {
@@ -463,6 +468,7 @@ export function HomeScreen({ navigation }: any) {
           meta: isNow ? 'Đang học' : 'Sắp tới',
           classId: todayClass.id,
           className: todayClass.name,
+          isNow, // nút ghi "Điểm danh" thì phải MỞ điểm danh (không vòng qua ClassDetail)
         });
       }
     }
@@ -482,11 +488,12 @@ export function HomeScreen({ navigation }: any) {
         body: single
           ? `${first.name} (${first.class_name}) vắng ${first.absent_streak} buổi gần đây liên tiếp — nhắn Zalo hỏi thăm phụ huynh sớm kẻo bé bỏ học nhé.`
           : `${atRisk.slice(0, 3).map(a => lastName(a.name)).join(', ')}… đang vắng nhiều buổi liên tiếp, có nguy cơ bỏ học. Gọi hỏi thăm sớm nhé ${gw}.`,
-        meta: single ? `${first.absent_streak} buổi` : `${atRiskTotal} bạn`,
+        meta: `${first.absent_streak} buổi`,
         avatarNames: atRisk.slice(0, 4).map(a => a.name),
         classId: first.class_id,
         className: first.class_name,
-        primary: { label: 'Xem lớp', icon: 'check' },
+        openStudentId: first.student_id, // mở THẲNG hồ sơ em này (nút hứa "hỏi thăm" thì phải tới nơi hỏi thăm)
+        primary: { label: 'Nhắn hỏi thăm', icon: 'send' },
         secondary: { label: 'Để sau' },
       });
     }
@@ -534,12 +541,22 @@ export function HomeScreen({ navigation }: any) {
     setCards(prev => prev.filter(c => c.id !== id));
   };
 
+  // KHÔNG dismiss khi bấm nút chính — việc chưa xong mà thẻ biến mất là "đã xử lý" giả.
+  // Thẻ tự cập nhật khi quay lại Home (summary refetch on focus). "Để sau" mới là dismiss.
   const handlePrimary = (card: any) => {
-    dismiss(card.id);
     if (card.kind === 'class' && card.classId) {
-      navigation.navigate('ClassDetail', { classId: card.classId, className: card.className });
+      // Đang giờ học + nút ghi "Điểm danh" → mở THẲNG điểm danh (bớt 1 chạm mỗi ngày)
+      if (card.isNow) {
+        navigation.navigate('Attendance', { classId: card.classId, className: card.className });
+      } else {
+        navigation.navigate('ClassDetail', { classId: card.classId, className: card.className });
+      }
+      dismiss(card.id); // mở lớp rồi thì thẻ buổi học coi như đã xử lý
     } else if (card.kind === 'risk' && card.classId && card.classId !== 'demo') {
-      navigation.navigate('ClassStudents', { classId: card.classId, className: card.className });
+      navigation.navigate('ClassStudents', {
+        classId: card.classId, className: card.className,
+        openStudentId: card.openStudentId, // mở thẳng hồ sơ em vắng → nút "Nhắn Zalo" ngay đó
+      });
     } else if (card.kind === 'money') {
       navigation.navigate('Tuition');
     } else if (card.kind === 'report') {
@@ -561,6 +578,7 @@ export function HomeScreen({ navigation }: any) {
 
   return (
     <View style={s.container}>
+      <DemoBanner />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[s.scroll, { paddingTop: insets.top + 12 }]}
@@ -575,7 +593,7 @@ export function HomeScreen({ navigation }: any) {
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.greetDate}>{todayStr()} · {now.getHours()}:{String(now.getMinutes()).padStart(2, '0')}</Text>
           </View>
-          <TouchableOpacity style={s.calBtn} onPress={() => navigation.navigate('Calendar')}>
+          <TouchableOpacity style={s.calBtn} onPress={() => navigation.navigate('Calendar')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <IconCalendar size={18} color="#444" />
           </TouchableOpacity>
         </View>
@@ -676,9 +694,9 @@ const s = StyleSheet.create({
 
   // Chốt sổ tháng
   wrapCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.honey100, borderRadius: 18, padding: 16, marginBottom: 4, borderWidth: 1, borderColor: '#f0d99a' },
-  wrapEyebrow: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6, color: '#a9791f' },
+  wrapEyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: '#a9791f' },
   wrapAmount: { fontSize: 24, fontWeight: '800', letterSpacing: -0.6, color: '#5e4715', marginTop: 3 },
-  wrapSub: { fontSize: 12.5, fontWeight: '600', color: '#8a6d30', marginTop: 2 },
+  wrapSub: { fontSize: 12.5, fontWeight: '600', color: colors.honey700, marginTop: 2 },
   wrapShare: { fontSize: 13, fontWeight: '700', color: '#a9791f' },
 
   // Feed

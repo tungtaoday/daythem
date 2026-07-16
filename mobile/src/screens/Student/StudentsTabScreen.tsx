@@ -13,6 +13,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
 import { getTuition } from '../../api/tuition';
+import { localMonth } from '../../utils/date';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Demo data ─────────────────────────────────────────────────
@@ -56,7 +57,7 @@ const DEMO_GROUPS: DemoClsGroup[] = [
 
 const ALL_DEMO_STUS = DEMO_GROUPS.flatMap(g => g.students);
 const STATUS_CFG = {
-  star: { label: 'Xuất sắc ★', bg: colors.honey100, color: '#8a6d30' },
+  star: { label: 'Xuất sắc ★', bg: colors.honey100, color: colors.honey700 },
   risk: { label: 'Vắng nhiều', bg: colors.coral100, color: colors.coral700 },
   ok: { label: 'OK', bg: colors.green100, color: colors.green700 },
 };
@@ -106,7 +107,7 @@ const sr = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   sub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, flexShrink: 0 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
+  badgeText: { fontSize: 12, fontWeight: '600' },
 });
 
 // ── Profile tabs (DEMO_ATTEND / DEMO_MONEY) ───────────────────
@@ -124,7 +125,7 @@ const DEMO_MONEY = [
 ];
 const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
-function StudentProfile({ student, clsName, isDemo, onClose, sessions }: any) {
+function StudentProfile({ student, clsName, isDemo, onClose, sessions, tuition }: any) {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
@@ -174,7 +175,12 @@ function StudentProfile({ student, clsName, isDemo, onClose, sessions }: any) {
             <View style={pp.statsRow}>
               <MiniStat label="Đã học" value={hasReal ? String(rPresent) : '–'} sub="buổi" />
               <MiniStat label="Vắng" value={hasReal ? String(rAbsent) : '–'} sub="buổi" warn={rAbsent > 0} />
-              <MiniStat label="Còn nợ" value="–" />
+              {/* Nợ THẬT tháng này (đã có từ danh sách — không hiện "–" nữa) */}
+              <MiniStat
+                label="Còn nợ"
+                value={student.debt > 0 ? VND(student.debt) : (tuition && tuition.length ? '0đ' : '–')}
+                warn={student.debt > 0}
+              />
             </View>
           )}
 
@@ -300,10 +306,28 @@ function StudentProfile({ student, clsName, isDemo, onClose, sessions }: any) {
         {tab === 'money' && (
           <View style={pp.content}>
             {!isDemo ? (
-              <View style={pp.emptyTab}>
-                <Text style={pp.emptyTabTitle}>Chưa có dữ liệu học phí</Text>
-                <Text style={pp.emptyTabSub}>Ghi nhận học phí để xem lịch sử ở đây.</Text>
-              </View>
+              // Học phí THẬT tháng này (dữ liệu đã có sẵn từ tab Học sinh).
+              (tuition && tuition.length > 0) ? tuition.map((r: any, i: number) => (
+                <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                  <View style={[pp.histIcon, r.paid ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
+                    <IconWallet size={16} color={r.paid ? colors.green700 : colors.coral700} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary }}>Tháng này</Text>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>{VND(r.amount || 0)}{r.paid_date ? ' · nộp ' + r.paid_date.split('-').reverse().slice(0, 2).join('/') : ''}</Text>
+                  </View>
+                  <View style={[pp.chip, r.paid ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: r.paid ? colors.green700 : colors.coral700 }}>
+                      {r.paid ? 'Đã nộp' : 'Còn thiếu'}
+                    </Text>
+                  </View>
+                </View>
+              )) : (
+                <View style={pp.emptyTab}>
+                  <Text style={pp.emptyTabTitle}>Chưa có dữ liệu học phí</Text>
+                  <Text style={pp.emptyTabSub}>Ghi nhận học phí để xem lịch sử ở đây.</Text>
+                </View>
+              )
             ) : DEMO_MONEY.map((r, i) => (
               <View key={i} style={[pp.histRow, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={[pp.histIcon, r.paid ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
@@ -314,7 +338,7 @@ function StudentProfile({ student, clsName, isDemo, onClose, sessions }: any) {
                   <Text style={{ fontSize: 12, color: colors.textSecondary }}>{VND(r.amt)}{r.date ? ' · nộp ' + r.date : ''}</Text>
                 </View>
                 <View style={[pp.chip, r.paid ? { backgroundColor: colors.green100 } : { backgroundColor: colors.coral100 }]}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: r.paid ? colors.green700 : colors.coral700 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: r.paid ? colors.green700 : colors.coral700 }}>
                     {r.paid ? 'Đã nộp' : 'Còn thiếu'}
                   </Text>
                 </View>
@@ -343,7 +367,7 @@ function MiniStat({ label, value, sub, warn }: any) {
   return (
     <View style={{ alignItems: 'center' }}>
       <Text style={{ fontSize: 20, fontWeight: '700', letterSpacing: -0.3, color: warn ? colors.coral700 : colors.textPrimary }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600', marginTop: 2 }}>{label}{sub ? ' · ' + sub : ''}</Text>
+      <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '600', marginTop: 2 }}>{label}{sub ? ' · ' + sub : ''}</Text>
     </View>
   );
 }
@@ -422,7 +446,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
   useEffect(() => {
     if (isDemo) return;
     let alive = true;
-    const month = new Date().toISOString().slice(0, 7);
+    const month = localMonth();
     classes.forEach(c => {
       listSessions(c.id)
         .then((arr: any[]) => { if (alive) setSessionsByClass(prev => ({ ...prev, [c.id]: Array.isArray(arr) ? arr : [] })); })
@@ -514,6 +538,7 @@ export function StudentsTabScreen({ navigation, route }: any) {
         clsName={profileCls}
         isDemo={isDemo}
         sessions={profileSessions}
+        tuition={(tuitionByClass[profileClsId] || []).filter((t: any) => t.student_id === profileStu.id)}
         onClose={() => setProfileStu(null)}
       />
     );
@@ -566,10 +591,10 @@ export function StudentsTabScreen({ navigation, route }: any) {
           <Text style={[s.statLabel, { color: colors.coral700 }]}>Cần quan tâm</Text>
         </View>
         <View style={[s.statPill, { backgroundColor: colors.honey100 }]}>
-          <Text style={[s.statValue, { color: '#8a6d30' }]}>
+          <Text style={[s.statValue, { color: colors.honey700 }]}>
             {avgAttend !== null ? `${avgAttend}%` : '–'}
           </Text>
-          <Text style={[s.statLabel, { color: '#8a6d30' }]}>Chuyên cần</Text>
+          <Text style={[s.statLabel, { color: colors.honey700 }]}>Chuyên cần</Text>
         </View>
       </View>
 
@@ -695,7 +720,7 @@ const s = StyleSheet.create({
   statBand: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 2 },
   statPill: { flex: 1, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
   statValue: { fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  statLabel: { fontSize: 11, fontWeight: '700', marginTop: 2, textAlign: 'center' },
+  statLabel: { fontSize: 12, fontWeight: '700', marginTop: 2, textAlign: 'center' },
   filterScroll: { flexGrow: 0, flexShrink: 0 },
   filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8, alignItems: 'center' },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999, backgroundColor: colors.surfaceAlt, alignSelf: 'center' },

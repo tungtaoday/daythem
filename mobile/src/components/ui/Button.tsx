@@ -1,5 +1,5 @@
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, View } from 'react-native';
+import React, { useRef } from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, View, Animated } from 'react-native';
 import { colors, radius, typography, layout } from '../../theme';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger' | 'onHero';
@@ -27,28 +27,36 @@ const VARIANTS: Record<Variant, { bg: string; fg: string; border?: string }> = {
 
 export function Button({ label, onPress, variant = 'primary', loading, disabled, icon, style, testID }: Props) {
   const v = VARIANTS[variant];
+  // Phản hồi chạm: nút lún nhẹ (scale 0.97) khi giữ — người dùng "cảm" được cú bấm.
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressIn = () => Animated.spring(scale, { toValue: 0.97, friction: 6, tension: 300, useNativeDriver: true }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1, friction: 5, tension: 300, useNativeDriver: true }).start();
   return (
-    <TouchableOpacity
-      testID={testID}
-      onPress={onPress}
-      disabled={disabled || loading}
-      style={[
-        styles.btn,
-        { backgroundColor: v.bg, opacity: disabled ? 0.5 : 1 },
-        v.border ? { borderWidth: 1.5, borderColor: v.border } : null,
-        style,
-      ]}
-      activeOpacity={0.85}
-    >
-      {loading ? (
-        <ActivityIndicator color={v.fg} size="small" />
-      ) : (
-        <View style={styles.inner}>
-          {icon}
-          <Text style={[styles.label, { color: v.fg }]}>{label}</Text>
-        </View>
-      )}
-    </TouchableOpacity>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        testID={testID}
+        onPress={onPress}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        disabled={disabled || loading}
+        style={[
+          styles.btn,
+          { backgroundColor: v.bg, opacity: disabled ? 0.5 : 1 },
+          v.border ? { borderWidth: 1.5, borderColor: v.border } : null,
+          style,
+        ]}
+        activeOpacity={0.85}
+      >
+        {loading ? (
+          <ActivityIndicator color={v.fg} size="small" />
+        ) : (
+          <View style={styles.inner}>
+            {icon}
+            <Text style={[styles.label, { color: v.fg }]}>{label}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
