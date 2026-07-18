@@ -5,6 +5,8 @@
 # Screenshots / temp files
 *.png
 *.jpg
+# Landing screenshots (ảnh thật của app) — phải được track
+!backend/src/daythem/web/assets/**
 *.jpeg
 
 # ...but the mobile app icon/splash assets MUST be included (EAS build needs them)

@@ -1,8 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from daythem.adapters.database import create_tables
 from daythem.config import settings
 from daythem.entrypoints.routers import auth, classes, students, attendance, tuition, announcements, reports, tax, promo, notify, legal, landing, home, admin, events
@@ -65,6 +68,10 @@ app.include_router(promo.router, prefix="/api/v1")
 app.include_router(notify.router, prefix="/api/v1")
 app.include_router(legal.router)  # /legal, /privacy, /terms — trang công khai
 app.include_router(landing.router)  # / và /landing — trang giới thiệu
+
+# Ảnh tĩnh cho landing (screenshot thật của app). check_dir=False: dir có thể chưa tồn tại ở dev.
+_ASSETS_DIR = Path(__file__).resolve().parent.parent / "web" / "assets"
+app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR), check_dir=False), name="assets")
 
 
 @app.get("/health")
