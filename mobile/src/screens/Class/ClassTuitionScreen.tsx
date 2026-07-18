@@ -154,7 +154,12 @@ export function ClassTuitionScreen({ route }: any) {
           <View style={s.heroTopRow}>
             {/* Chuyển tháng ngay tại hub lớp — thu nợ tháng trước không phải vòng sang tab Học phí */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-              <TouchableOpacity onPress={() => setMonth(m => shiftMonth(m, -1))} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => setMonth(m => shiftMonth(m, -1))}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Xem tháng trước"
+              >
                 <Text style={s.monthArrow}>‹</Text>
               </TouchableOpacity>
               <Text style={s.heroLabel} numberOfLines={1}>THU HỌC PHÍ · {monthLabel}</Text>
@@ -162,6 +167,9 @@ export function ClassTuitionScreen({ route }: any) {
                 onPress={() => setMonth(m => (m >= currentMonth ? m : shiftMonth(m, 1)))}
                 disabled={atCurrentMonth}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel="Xem tháng sau"
+                accessibilityState={{ disabled: atCurrentMonth }}
               >
                 <Text style={[s.monthArrow, atCurrentMonth && { opacity: 0.35 }]}>›</Text>
               </TouchableOpacity>
@@ -197,7 +205,7 @@ export function ClassTuitionScreen({ route }: any) {
                     <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityLabel="Nhắc Zalo phụ huynh" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityRole="button" accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <IconZalo size={16} color={colors.zalo} />
                     </TouchableOpacity>
                     <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>

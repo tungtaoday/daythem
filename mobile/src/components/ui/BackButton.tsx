@@ -18,6 +18,7 @@ export function BackButton({ onPress, variant = 'boxed', color, style }: Props) 
     <TouchableOpacity
       onPress={onPress}
       style={[styles.hit, variant === 'boxed' ? styles.boxed : styles.chip, style]}
+      accessibilityRole="button"
       accessibilityLabel="Quay lại"
       hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
     >

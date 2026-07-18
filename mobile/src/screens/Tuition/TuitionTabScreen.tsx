@@ -133,7 +133,13 @@ function MonthSwitcher({ label, atCurrent, onPrev, onNext }: {
 }) {
   return (
     <View style={ms.wrap}>
-      <TouchableOpacity style={ms.arrow} onPress={onPrev} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <TouchableOpacity
+        style={ms.arrow}
+        onPress={onPrev}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Xem tháng trước"
+      >
         <Text style={ms.arrowText}>‹</Text>
       </TouchableOpacity>
       <Text style={ms.label}>{label}</Text>
@@ -142,6 +148,9 @@ function MonthSwitcher({ label, atCurrent, onPrev, onNext }: {
         onPress={onNext}
         disabled={atCurrent}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityRole="button"
+        accessibilityLabel="Xem tháng sau"
+        accessibilityState={{ disabled: atCurrent }}
       >
         <Text style={[ms.arrowText, atCurrent && ms.arrowTextDisabled]}>›</Text>
       </TouchableOpacity>
@@ -534,6 +543,8 @@ export function TuitionTabScreen({ navigation, route }: any) {
                     style={s.zaloRowBtn}
                     onPress={() => setZaloItem(d)}
                     hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`}
                   >
                     <IconZalo size={17} color={colors.zalo} />
                   </TouchableOpacity>

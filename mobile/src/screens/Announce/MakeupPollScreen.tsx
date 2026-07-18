@@ -390,6 +390,8 @@ export function MakeupPollScreen({ route, navigation }: any) {
               onPress={() => setSlots(slots.filter(x => x.id !== slot.id))}
               style={{ padding: 8 }}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Xoá khung giờ ${slot.day} ${slot.time}`}
             >
               <IconX size={18} color={colors.textSecondary} />
             </TouchableOpacity>

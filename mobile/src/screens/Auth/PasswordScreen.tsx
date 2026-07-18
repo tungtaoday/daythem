@@ -93,7 +93,12 @@ export function PasswordScreen({ route, navigation }: any) {
             returnKeyType={isCreate ? 'next' : 'done'}
             onSubmitEditing={!isCreate && valid ? handleLogin : undefined}
           />
-          <TouchableOpacity onPress={() => setShowPw(p => !p)} style={s.eyeBtn}>
+          <TouchableOpacity
+            onPress={() => setShowPw(p => !p)}
+            style={s.eyeBtn}
+            accessibilityRole="button"
+            accessibilityLabel={showPw ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          >
             <Ionicons
               name={showPw ? 'eye-off-outline' : 'eye-outline'}
               size={20}

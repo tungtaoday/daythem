@@ -593,7 +593,13 @@ export function HomeScreen({ navigation }: any) {
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={s.greetDate}>{todayStr()} · {now.getHours()}:{String(now.getMinutes()).padStart(2, '0')}</Text>
           </View>
-          <TouchableOpacity style={s.calBtn} onPress={() => navigation.navigate('Calendar')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            style={s.calBtn}
+            onPress={() => navigation.navigate('Calendar')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Mở lịch dạy"
+          >
             <IconCalendar size={18} color="#444" />
           </TouchableOpacity>
         </View>

@@ -150,7 +150,12 @@ function StudentProfile({ student, clsName, isDemo, onClose, sessions, tuition }
     <View style={pp.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[pp.backRow, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={pp.backBtn} onPress={onClose}>
+          <TouchableOpacity
+            style={pp.backBtn}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel="Đóng hồ sơ học sinh"
+          >
             <View style={{ transform: [{ rotate: '180deg' }] }}><IconChevron size={18} color={colors.textPrimary} /></View>
           </TouchableOpacity>
         </View>
