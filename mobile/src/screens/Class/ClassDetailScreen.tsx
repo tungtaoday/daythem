@@ -11,6 +11,7 @@ import { classColor } from '../../theme/classColors';
 import { useClassesStore } from '../../store/classes';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
+import { getCancelledDates } from '../../api/announcements';
 import { listSessions } from '../../api/attendance';
 import {
   IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
@@ -48,6 +49,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
   const [tuition, setTuition] = useState<{ paid: number; total: number } | null>(null);
   const [attendedToday, setAttendedToday] = useState(false);
   const [attendPct, setAttendPct] = useState<number | null>(null);
+  const [cancelledToday, setCancelledToday] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
   const [addParentName, setAddParentName] = useState('');
@@ -68,6 +70,8 @@ export function ClassDetailScreen({ route, navigation }: any) {
       .then((data: any[]) => { if (Array.isArray(data)) setTuition({ paid: data.filter(d => d.paid).length, total: data.length }); })
       .catch(() => {});
     const todayYmd = localDate();
+    // Trạng thái báo nghỉ hôm nay — để lớp không rủ điểm danh buổi đã nghỉ.
+    getCancelledDates(classId).then(set => setCancelledToday(set.has(todayYmd))).catch(() => {});
     listSessions(classId)
       .then((arr: any[]) => {
         if (!Array.isArray(arr)) return;
@@ -169,6 +173,14 @@ export function ClassDetailScreen({ route, navigation }: any) {
           { value: tuition ? `${tuition.paid}/${tuition.total}` : 'Chưa có', label: 'Đã nộp' },
         ]}
       />
+
+      {/* ── Trạng thái báo nghỉ hôm nay ── */}
+      {cancelledToday && (
+        <View style={{ backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 14.5, fontWeight: '700', color: colors.coral700, flex: 1 }}>Hôm nay lớp ĐÃ BÁO NGHỈ</Text>
+          <Text style={{ fontSize: 12.5, color: colors.coral700 }}>Cần học bù? → Học bù</Text>
+        </View>
+      )}
 
       {/* ── PRIMARY action ── */}
       <Button

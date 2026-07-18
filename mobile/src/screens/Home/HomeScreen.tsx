@@ -20,6 +20,7 @@ import {
 } from '../../components/icons';
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 import { getHomeSummary, HomeSummary, getMonthlyWrap, MonthlyWrap } from '../../api/home';
+import { getCancelledDates } from '../../api/announcements';
 import { DemoBanner } from '../../components/ui/DemoBanner';
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -396,6 +397,7 @@ export function HomeScreen({ navigation }: any) {
   const [cards, setCards] = useState<any[]>([]);
   const [totalCards, setTotalCards] = useState(0);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
+  const [cancelledTodayIds, setCancelledTodayIds] = useState<Set<string>>(new Set());
   const [wrap, setWrap] = useState<MonthlyWrap | null>(null);
 
   useEffect(() => { fetchClasses(); }, []);
@@ -420,6 +422,14 @@ export function HomeScreen({ navigation }: any) {
     if (!hasStu) { setSummary(null); return; }
     let alive = true;
     getHomeSummary().then(s => { if (alive) setSummary(s); }).catch(() => { if (alive) setSummary(null); });
+    // Lớp nào ĐÃ BÁO NGHỈ hôm nay → thẻ buổi học đổi trạng thái, không rủ điểm danh nữa.
+    (async () => {
+      const today = new Date();
+      const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const ids = new Set<string>();
+      await Promise.all(classes.map(c => getCancelledDates(c.id).then(set => { if (set.has(ymd)) ids.add(c.id); })));
+      if (alive) setCancelledTodayIds(ids);
+    })();
     return () => { alive = false; };
   }, [classes, isLoading, isDemo]));
 
@@ -451,6 +461,19 @@ export function HomeScreen({ navigation }: any) {
       const st = todaySession?.start_time || '';
       const loc = todaySession?.location || 'tại nhà';
       const cnt = todayClass.student_count || 0;
+      if (cancelledTodayIds.has(todayClass.id)) {
+        generated.push({
+          id: 'class-cancelled',
+          kind: 'class',
+          title: `Hôm nay ${todayClass.name} nghỉ học`,
+          body: `${gw.charAt(0).toUpperCase() + gw.slice(1)} đã báo nghỉ buổi hôm nay. Cần xếp lịch học bù thì mở lớp nhé.`,
+          meta: 'Đã báo nghỉ',
+          primary: { label: 'Mở lớp', icon: 'open' },
+          secondary: { label: 'Ẩn' },
+          classId: todayClass.id,
+          className: todayClass.name,
+        });
+      } else
       // Buổi đã qua → KHÔNG hiện "sắp tới" nữa.
       if (timing && timing !== 'finished') {
         const isNow = timing === 'ongoing';
@@ -533,7 +556,7 @@ export function HomeScreen({ navigation }: any) {
 
     setCards(generated);
     setTotalCards(generated.length);
-  }, [classes, isLoading, teacher, isDemo, summary]);
+  }, [classes, isLoading, teacher, isDemo, summary, cancelledTodayIds]);
 
   const dismiss = (id: string) => {
     setCards(prev => prev.filter(c => c.id !== id));

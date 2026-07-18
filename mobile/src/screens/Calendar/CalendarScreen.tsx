@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -12,6 +12,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Mascot } from '../../components/ui/mascot';
 import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, daysLabel, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
+import { getCancelledDates } from '../../api/announcements';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -43,6 +44,15 @@ export function CalendarScreen({ navigation }: any) {
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
   const [mode, setMode] = useState<'week' | 'month'>('week');
+  // Ngày đã báo nghỉ của từng lớp → hiện trạng thái trên lịch.
+  const [cancelMap, setCancelMap] = useState<Record<string, Set<string>>>({});
+  useEffect(() => {
+    let alive = true;
+    classes.forEach((c: any) => {
+      getCancelledDates(c.id).then(set => { if (alive) setCancelMap(prev => ({ ...prev, [c.id]: set })); });
+    });
+    return () => { alive = false; };
+  }, [classes.length]);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -167,7 +177,11 @@ export function CalendarScreen({ navigation }: any) {
                   {sess?.location ? ` · ${sess.location}` : ''}
                 </Text>
               </View>
-              {isPastOrToday ? (
+              {cancelMap[cls.id]?.has(selYmd) ? (
+                <View style={{ backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.coral700 }}>Đã báo nghỉ</Text>
+                </View>
+              ) : isPastOrToday ? (
                 <TouchableOpacity
                   style={s.attendBtn}
                   onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}

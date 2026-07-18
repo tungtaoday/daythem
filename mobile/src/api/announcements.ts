@@ -17,3 +17,9 @@ export const voteMakeup = (makeupId: string, option_index: number, voter_name: s
 
 export const confirmMakeup = (makeupId: string, option_index: number) =>
   api.post(`/makeups/${makeupId}/confirm`, { option_index }).then(r => r.data);
+
+// Các ngày lớp ĐÃ BÁO NGHỈ (đọc lại từ thông báo type=cancel) → hiện trạng thái lớp.
+export const getCancelledDates = (classId: string): Promise<Set<string>> =>
+  listAnnouncements(classId)
+    .then((list: any[]) => new Set<string>((list || []).filter(a => a.type === 'cancel' && a.session_date).map(a => a.session_date)))
+    .catch(() => new Set<string>());
