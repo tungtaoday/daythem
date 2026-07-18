@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { Button } from '../../components/ui/Button';
 import { useAuthStore } from '../../store/auth';
+import { Mascot } from '../../components/ui/mascot';
 
 type Phase = 'welcome' | 'phone';
 
@@ -171,52 +172,18 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
+// Mascot "Mầm Chữ" chào người dùng — thay minh hoạ điện thoại vẽ tay cũ.
 function HeroArt() {
   return (
     <View style={h.wrap}>
-      <View style={h.blob} />
-      <View style={h.phone}>
-        <View style={h.notch} />
-        <View style={[h.card, { backgroundColor: colors.green500 }]}>
-          <View style={[h.line, { width: 40, opacity: 0.6 }]} />
-          <View style={[h.line, { width: 60, marginTop: 6 }]} />
-          <View style={[h.line, { width: 30, marginTop: 6, opacity: 0.6 }]} />
-        </View>
-        <View style={[h.card, { backgroundColor: colors.honey100, borderWidth: 1, borderColor: '#f0d99a', marginTop: 8 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[h.dot, { backgroundColor: '#d9a23b' }]} />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <View style={[h.line, { width: '80%' as any, backgroundColor: '#5a4a2a' }]} />
-              <View style={[h.line, { width: '55%' as any, backgroundColor: '#a08e6c', marginTop: 5 }]} />
-            </View>
-          </View>
-        </View>
-        <View style={[h.card, { backgroundColor: '#fbeeea', borderWidth: 1, borderColor: '#e9c4ba', marginTop: 8 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[h.dot, { backgroundColor: colors.coral500 }]} />
-            <View style={{ flex: 1, marginLeft: 8 }}>
-              <View style={[h.line, { width: '70%' as any, backgroundColor: '#a85e5e' }]} />
-              <View style={[h.line, { width: '50%' as any, backgroundColor: '#c98e8e', marginTop: 5 }]} />
-            </View>
-          </View>
-        </View>
-      </View>
-      <View style={h.leafLeft} />
-      <View style={h.leafRight} />
+      <Image source={Mascot.chao} style={h.mascot} resizeMode="contain" accessible={false} />
     </View>
   );
 }
 
 const h = StyleSheet.create({
-  wrap: { width: 200, height: 210, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  blob: { position: 'absolute', right: 8, top: 0, width: 110, height: 170, borderRadius: 60, backgroundColor: colors.green500, opacity: 0.1 },
-  phone: { width: 130, backgroundColor: 'white', borderRadius: 22, borderWidth: 1.5, borderColor: colors.border, padding: 10, shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  notch: { width: 40, height: 5, backgroundColor: colors.border, borderRadius: 3, alignSelf: 'center', marginBottom: 10 },
-  card: { borderRadius: 10, padding: 10 },
-  line: { height: 5, backgroundColor: 'white', borderRadius: 3 },
-  dot: { width: 13, height: 13, borderRadius: 7 },
-  leafLeft: { position: 'absolute', left: 2, top: 55, width: 26, height: 38, borderRadius: 18, backgroundColor: colors.green200, opacity: 0.7, transform: [{ rotate: '-30deg' }] },
-  leafRight: { position: 'absolute', right: 2, bottom: 28, width: 20, height: 30, borderRadius: 14, backgroundColor: colors.green200, opacity: 0.7, transform: [{ rotate: '20deg' }] },
+  wrap: { alignItems: 'center', justifyContent: 'center' },
+  mascot: { width: 190, height: 190, borderRadius: 36 },
 });
 
 const s = StyleSheet.create({

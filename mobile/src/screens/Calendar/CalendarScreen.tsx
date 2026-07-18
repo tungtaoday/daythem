@@ -10,6 +10,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { IconChevron } from '../../components/icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Mascot } from '../../components/ui/mascot';
 import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, daysLabel, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -404,7 +405,7 @@ export function CalendarScreen({ navigation }: any) {
 
         {classes.length === 0 && (
           <EmptyState
-            icon="📅"
+            image={Mascot.emptyLop}
             title="Chưa có lịch học nào"
             subtitle="Tạo lớp và đặt lịch học để xem trên lịch tuần/tháng."
             ctaLabel="+ Tạo lớp học"

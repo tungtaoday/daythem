@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
 import { colors } from '../../theme';
 
 type Props = {
-  icon?: string;            // emoji
+  icon?: string;            // emoji (fallback khi chưa có mascot)
+  /** Mascot "Mầm Chữ" — ưu tiên hơn icon khi được truyền. */
+  image?: ImageSourcePropType;
   title: string;
   subtitle?: string;
   ctaLabel?: string;
@@ -13,10 +15,14 @@ type Props = {
 };
 
 /** Friendly, consistent empty state with an optional call-to-action. */
-export function EmptyState({ icon = '🌱', title, subtitle, ctaLabel, onCta, compact }: Props) {
+export function EmptyState({ icon = '🌱', image, title, subtitle, ctaLabel, onCta, compact }: Props) {
   return (
     <View style={[s.wrap, compact && s.wrapCompact]}>
-      <Text style={[s.icon, compact && { fontSize: 36 }]}>{icon}</Text>
+      {image ? (
+        <Image source={image} style={[s.mascot, compact && s.mascotCompact]} resizeMode="contain" accessible={false} />
+      ) : (
+        <Text style={[s.icon, compact && { fontSize: 36 }]}>{icon}</Text>
+      )}
       <Text style={s.title}>{title}</Text>
       {subtitle ? <Text style={s.sub}>{subtitle}</Text> : null}
       {ctaLabel && onCta ? (
@@ -32,6 +38,9 @@ const s = StyleSheet.create({
   wrap: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 28 },
   wrapCompact: { paddingVertical: 28 },
   icon: { fontSize: 48, marginBottom: 14 },
+  // Ảnh mascot nền kem — bo tròn để hoà vào nền app.
+  mascot: { width: 140, height: 140, borderRadius: 28, marginBottom: 14 },
+  mascotCompact: { width: 96, height: 96, borderRadius: 20 },
   title: { fontSize: 17, fontWeight: '700', color: colors.textPrimary, textAlign: 'center', marginBottom: 6 },
   sub: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 18 },
   cta: { backgroundColor: colors.green500, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 24, alignItems: 'center' },

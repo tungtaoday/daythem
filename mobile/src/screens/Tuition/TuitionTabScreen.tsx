@@ -12,6 +12,7 @@ import { getTuition, recordPayment } from '../../api/tuition';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { DemoBanner } from '../../components/ui/DemoBanner';
+import { Mascot } from '../../components/ui/mascot';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -327,7 +328,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
           </TouchableOpacity>
         </View>
         <EmptyState
-          icon="💰"
+          image={Mascot.emptyGieo}
           title={hasClass ? 'Chưa có học sinh để thu học phí' : 'Chưa có lớp nào'}
           subtitle={hasClass
             ? 'Thêm học sinh vào lớp, rồi tick "đã thu" mỗi khi phụ huynh nộp — app tự tổng hợp & nhắc giúp.'

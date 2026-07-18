@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import { colors } from '../../theme';
 import { IconZalo } from '../icons';
 import { trackEvent } from '../../api/events';
+import { Mascot } from './mascot';
 
 // ── Mầm cây (logo) ──
 // FIX CRASH: bản cũ render thẻ 'svg' kiểu WEB ('svg' as any) — component đó không
@@ -109,13 +110,22 @@ export function ReportThiep({ name, meta, attendancePct, present, absent, paid, 
             </Text>
           </View>
         )}
-        <Text style={t.note}>
-          {note?.trim()
-            ? note.trim()
-            : (attendancePct != null && attendancePct >= 90
-                ? 'Con đi học đều và chăm chỉ tuần này. Cảm ơn anh/chị đã đồng hành cùng con 🌿'
-                : 'Cảm ơn anh/chị đã đồng hành. Mong con cố gắng đều hơn ở tuần tới nhé 🌿')}
-        </Text>
+        <View style={t.noteRow}>
+          {/* Mascot Mầm Chữ — chuyên cần cao thì ăn mừng, còn lại cúi chào cảm ơn */}
+          <Image
+            source={attendancePct != null && attendancePct >= 90 ? Mascot.hoanThanh : Mascot.camOn}
+            style={t.mascot}
+            resizeMode="contain"
+            accessible={false}
+          />
+          <Text style={[t.note, { flex: 1, textAlign: 'left' }]}>
+            {note?.trim()
+              ? note.trim()
+              : (attendancePct != null && attendancePct >= 90
+                  ? 'Con đi học đều và chăm chỉ tuần này. Cảm ơn anh/chị đã đồng hành cùng con 🌿'
+                  : 'Cảm ơn anh/chị đã đồng hành. Mong con cố gắng đều hơn ở tuần tới nhé 🌿')}
+          </Text>
+        </View>
         <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿 · gieochu.vn</Text>
       </View>
     </View>
@@ -141,7 +151,10 @@ export function WrapThiep({ monthLabel, collected, sessions, attendancePct, stud
           <Stat big={attendancePct != null ? `${attendancePct}%` : '–'} label="Chuyên cần" tone="green" />
           <Stat big={`${students}`} label="Học sinh" />
         </View>
-        <Text style={t.note}>Một tháng chăm chỉ! Cảm ơn thầy cô đã gieo chữ mỗi ngày 🌿</Text>
+        <View style={t.noteRow}>
+          <Image source={Mascot.hoanThanh} style={t.mascot} resizeMode="contain" accessible={false} />
+          <Text style={[t.note, { flex: 1, textAlign: 'left' }]}>Một tháng chăm chỉ! Cảm ơn thầy cô đã gieo chữ mỗi ngày 🌿</Text>
+        </View>
         <Text style={t.foot}>{teacher ? `${teacher} · ` : ''}Tạo bằng GieoChữ 🌿 · gieochu.vn</Text>
       </View>
     </View>
@@ -184,4 +197,6 @@ const t = StyleSheet.create({
   note: { fontSize: 14, lineHeight: 21, color: colors.textPrimary, marginBottom: 16 },
   // 13px + đậm hơn: phụ huynh (khách hàng tương lai) phải đọc được nơi tải app.
   foot: { fontSize: 13, fontWeight: '700', color: colors.textSecondary, textAlign: 'center' },
+  noteRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  mascot: { width: 64, height: 64, borderRadius: 16 },
 });

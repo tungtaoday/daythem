@@ -15,6 +15,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Button } from '../../components/ui/Button';
 import { SuccessScreen } from '../../components/ui/SuccessScreen';
+import { Mascot } from '../../components/ui/mascot';
 
 const VND = (n: number) => (n >= 1000000 ? (n / 1000000).toFixed(1) + 'tr' : n.toLocaleString('vi-VN') + 'đ');
 
@@ -533,7 +534,7 @@ export function ReportTabScreen({ navigation, route }: any) {
           </View>
         </View>
         <EmptyState
-          icon="📊"
+          image={Mascot.ghiChep}
           title="Chưa có lớp để làm báo cáo"
           subtitle="Tạo lớp và thêm học sinh, rồi mỗi tuần app sẽ tổng kết đi học & học phí để bạn gửi phụ huynh qua Zalo."
           ctaLabel="+ Tạo lớp học"

@@ -14,6 +14,7 @@ import { useClassesStore } from '../../store/classes';
 import { listSessions } from '../../api/attendance';
 import { getTuition } from '../../api/tuition';
 import { localMonth } from '../../utils/date';
+import { Mascot } from '../../components/ui/mascot';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 
 // ── Demo data ─────────────────────────────────────────────────
@@ -674,13 +675,13 @@ export function StudentsTabScreen({ navigation, route }: any) {
         {filteredGroups.length === 0 && (
           effectiveFilter === 'all'
             ? <EmptyState
-                icon="👥"
+                image={Mascot.emptyLop}
                 title="Chưa có lớp để thêm học sinh"
                 subtitle="Tạo lớp học đầu tiên, rồi thêm học sinh và phụ huynh vào lớp."
                 ctaLabel="+ Tạo lớp học"
                 onCta={() => navigation.navigate('CreateClass')}
               />
-            : <EmptyState icon="🔍" title="Không có kết quả" subtitle="Thử chọn bộ lọc khác nhé." compact />
+            : <EmptyState image={Mascot.emptyTim} title="Không có kết quả" subtitle="Thử chọn bộ lọc khác nhé." compact />
         )}
 
         <View style={{ height: 40 }} />
