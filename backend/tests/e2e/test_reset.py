@@ -55,6 +55,24 @@ def test_admin_reset_short_password_422(password_auth_client, monkeypatch):
     assert r.status_code == 422
 
 
+def test_delete_account_page_public(client):
+    r = client.get("/delete-account")
+    assert r.status_code == 200 and "Xoá tài khoản GieoChữ" in r.text
+
+
+def test_delete_request_queued_with_marker(client, monkeypatch):
+    r = client.post("/api/v1/auth/delete-request", json={"phone": "0903334445", "note": "mất máy"})
+    assert r.status_code == 200 and r.json() == {"ok": True}
+    h = _admin_h(client, monkeypatch)
+    lst = client.get("/admin/reset-requests", headers=h).json()
+    row = next(x for x in lst["items"] if x["phone"] == "0903334445")
+    assert "[XOÁ TÀI KHOẢN]" in (row["note"] or "")
+
+
+def test_delete_request_empty_phone_422(client):
+    assert client.post("/api/v1/auth/delete-request", json={"phone": "  "}).status_code == 422
+
+
 def test_check_phone_new_vs_existing(password_auth_client):
     client, _ = password_auth_client  # đã tạo GV 0912345678 có mật khẩu
     assert client.post("/api/v1/auth/check-phone", json={"phone": "0912345678"}).json() == {"exists": True}

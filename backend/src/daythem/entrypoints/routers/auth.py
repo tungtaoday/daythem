@@ -182,6 +182,23 @@ def reset_request(body: ResetRequestBody, request: Request, uow: SqlAlchemyUnitO
     return {"ok": True}
 
 
+@router.post("/delete-request")
+def delete_request(body: ResetRequestBody, request: Request, uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Yêu cầu xoá tài khoản gửi từ trang web /delete-account (Google Play bắt buộc
+    có đường xoá NGOÀI app). Vào chung hàng chờ với reset — note đánh dấu
+    [XOÁ TÀI KHOẢN] để owner phân biệt trên dashboard và xử lý thủ công."""
+    rate_limit("delete_req_ip", _client_ip(request), limit=5, window_seconds=3600)
+    phone = (body.phone or "").strip()
+    if not phone:
+        raise HTTPException(status_code=422, detail="Vui lòng nhập số điện thoại đăng ký")
+    note = "[XOÁ TÀI KHOẢN] " + ((body.note or "").strip() or "yêu cầu từ web")
+    with uow:
+        uow._session.add(PasswordResetRequestORM(id=str(uuid.uuid4()), phone=phone, note=note))
+        uow.commit()
+    notify("🗑 <b>Yêu cầu XOÁ TÀI KHOẢN</b>\nSĐT: " + phone)
+    return {"ok": True}
+
+
 @router.put("/password")
 def change_password(
     body: ChangePasswordBody,
