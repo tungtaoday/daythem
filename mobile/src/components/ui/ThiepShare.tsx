@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -29,7 +29,17 @@ function Sprout({ size = 30, color = '#fff' }: { size?: number; color?: string }
 }
 
 // ── Sheet: hiển thị 1 tấm thiệp + nút chia sẻ (chụp View thành PNG) ──
-export function ThiepShareSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+export function ThiepShareSheet({ children, onClose, sub, noteValue, onNoteChange, onSaveNote, noteSaved }: {
+  children: React.ReactNode;
+  onClose: () => void;
+  /** 1 câu giải thích thiệp là gì / gửi lúc nào (GV góp ý "không rõ ý nghĩa"). */
+  sub?: string;
+  /** Lời nhắn trên thiệp — GV sửa được, xem trước ngay trên thiệp. */
+  noteValue?: string;
+  onNoteChange?: (v: string) => void;
+  onSaveNote?: () => void;
+  noteSaved?: boolean;
+}) {
   const shotRef = useRef<ViewShot>(null);
   const [busy, setBusy] = useState(false);
 
@@ -66,9 +76,33 @@ export function ThiepShareSheet({ children, onClose }: { children: React.ReactNo
   return (
     <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
       <TouchableOpacity style={s.wrap} activeOpacity={1} onPress={() => {}}>
+        {sub ? <Text style={s.subText}>{sub}</Text> : null}
         <ViewShot ref={shotRef} options={{ format: 'png', quality: 1 }}>
           {children}
         </ViewShot>
+
+        {/* Sửa lời nhắn — xem trước ngay trên thiệp (GV toàn quyền nội dung) */}
+        {onNoteChange && (
+          <View style={s.noteEdit}>
+            <View style={s.noteEditHead}>
+              <Text style={s.noteEditLabel}>LỜI NHẮN TRÊN THIỆP · sửa tuỳ ý</Text>
+              {onSaveNote && (
+                <TouchableOpacity onPress={onSaveNote} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={s.noteSaveLink}>{noteSaved ? '✓ Đã lưu mẫu' : 'Lưu làm mẫu'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <TextInput
+              style={s.noteInput}
+              value={noteValue}
+              onChangeText={onNoteChange}
+              multiline
+              placeholder="Lời nhắn của cô gửi phụ huynh..."
+              placeholderTextColor={colors.textMuted}
+            />
+          </View>
+        )}
+
         <TouchableOpacity style={s.shareBtn} onPress={share} disabled={busy} activeOpacity={0.85}>
           {busy ? <ActivityIndicator color="#fff" /> : (
             <><IconZalo size={18} color="#fff" /><Text style={s.shareText}>Chia sẻ cho phụ huynh</Text></>
@@ -174,6 +208,12 @@ function Stat({ big, label, tone }: { big: string; label: string; tone?: 'green'
 const s = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 } as any,
   wrap: { alignItems: 'center' },
+  subText: { color: 'rgba(255,255,255,0.92)', fontSize: 13.5, lineHeight: 19, textAlign: 'center', marginBottom: 12, maxWidth: 320 },
+  noteEdit: { width: 320, maxWidth: '100%' as any, marginTop: 12 },
+  noteEditHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  noteEditLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  noteSaveLink: { color: '#a5e8c3', fontSize: 13, fontWeight: '700' },
+  noteInput: { backgroundColor: 'white', borderRadius: 12, padding: 12, fontSize: 14, color: colors.textPrimary, minHeight: 64, textAlignVertical: 'top' },
   shareBtn: { marginTop: 18, height: 52, borderRadius: 14, backgroundColor: '#3a7dd3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 28 },
   shareText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   hint: { color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 10, textAlign: 'center' },

@@ -16,6 +16,7 @@ import { listSessions } from '../../api/attendance';
 import { bulkAddStudents, importStudentNames } from '../../api/students';
 import { exportStudentsExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
+import { storage } from '../../store/storage';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 // SDK 54: PHẢI dùng 'expo-file-system/legacy' — readAsStringAsync ở bản thường ném lỗi runtime.
@@ -135,6 +136,23 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
   const [tab, setTab] = useState<'overview' | 'attend' | 'money'>('overview');
   const [showZalo, setShowZalo] = useState(false);
   const [showThiep, setShowThiep] = useState(false);
+  // Lời nhắn trên thiệp — GV sửa được + lưu làm mẫu ({ten} tự thay bằng tên bé).
+  const [thiepNote, setThiepNote] = useState('');
+  const [thiepNoteSaved, setThiepNoteSaved] = useState(false);
+  const openThiep = async () => {
+    try {
+      const saved = await storage.get('tpl_thiep-note');
+      if (saved) setThiepNote(saved.split('{ten}').join(firstName));
+    } catch {}
+    setShowThiep(true);
+  };
+  const saveThiepNote = async () => {
+    try {
+      await storage.set('tpl_thiep-note', thiepNote.split(firstName).join('{ten}'));
+      setThiepNoteSaved(true);
+      setTimeout(() => setThiepNoteSaved(false), 2000);
+    } catch {}
+  };
   const teacher = useAuthStore(s => s.teacher);
   const gw = teacher?.gender === 'thay' ? 'thầy' : 'cô';
 
@@ -299,7 +317,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={[pp.thiepBtn, { backgroundColor: hero.btnBg }]} onPress={() => setShowThiep(true)} activeOpacity={0.85}>
+            <TouchableOpacity style={[pp.thiepBtn, { backgroundColor: hero.btnBg }]} onPress={openThiep} activeOpacity={0.85}>
               <Text style={[pp.thiepBtnText, { color: hero.fg }]}>Gửi thiệp báo cáo cho phụ huynh</Text>
             </TouchableOpacity>
           </View>
@@ -539,13 +557,22 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
           recipient={`Phụ huynh của ${firstName}`}
           message={`Chào anh/chị, ${gw} muốn hỏi thăm bé ${firstName} ạ. Tuần này bé học như thế nào rồi? Anh/chị có điều gì muốn trao đổi thêm với ${gw} không ạ? 🌿`}
           hint={`phụ huynh của ${student.name}`}
+          templateKey="hoi-tham"
+          vars={{ ten: firstName }}
           onConfirm={() => setShowZalo(false)}
           onClose={() => setShowZalo(false)}
         />
       )}
 
       {showThiep && (
-        <ThiepShareSheet onClose={() => setShowThiep(false)}>
+        <ThiepShareSheet
+          onClose={() => setShowThiep(false)}
+          sub="Thiệp ảnh có tên & số liệu thật của bé. Gửi Zalo riêng cho phụ huynh sau buổi học hoặc cuối tuần."
+          noteValue={thiepNote}
+          onNoteChange={setThiepNote}
+          onSaveNote={saveThiepNote}
+          noteSaved={thiepNoteSaved}
+        >
           <ReportThiep
             name={student.name}
             meta={metaLine}
@@ -553,7 +580,7 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
             present={isDemo ? 6 : rPresent}
             absent={isDemo ? 2 : rAbsent}
             paid={isDemo ? student.debt === 0 : undefined}
-            note={note}
+            note={thiepNote.trim() || note}
             teacher={teacher?.name ? `${gw === 'thầy' ? 'Thầy' : 'Cô'} ${teacher.name.split(' ').pop()}` : undefined}
           />
         </ThiepShareSheet>

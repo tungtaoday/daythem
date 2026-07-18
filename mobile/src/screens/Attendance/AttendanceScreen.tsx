@@ -273,6 +273,8 @@ export function AttendanceScreen({ route, navigation }: any) {
           recipient={`Nhóm Zalo ${className}`}
           message={dailyReportMsg}
           hint="nhóm lớp"
+          templateKey="bao-cao-buoi"
+          vars={{ lop: className, ngay: dateLine, si_so: `${presentCount}/${classStudents.length}`, bai_hoc: lessonNote.trim(), dan_do: homeworkNote.trim() }}
           onConfirm={() => setShowDailyReport(false)}
           onClose={() => setShowDailyReport(false)}
         />
@@ -288,6 +290,8 @@ export function AttendanceScreen({ route, navigation }: any) {
             recipient={`Phụ huynh của ${stu.name}`}
             message={`Chào anh/chị, ${gw} xin hỏi thăm bé ${stu.name.split(' ').slice(-1)[0]} buổi vừa rồi không thấy đến lớp ạ. Bé có khoẻ không ạ? Nếu bé bị ốm thì anh/chị nhớ cho bé nghỉ ngơi đầy đủ nhé. ${gw.charAt(0).toUpperCase() + gw.slice(1)} mong bé sớm khoẻ và gặp lại ở buổi sau 🌿`}
             hint={`phụ huynh của ${stu.name}`}
+            templateKey="hoi-tham"
+            vars={{ ten: stu.name.split(' ').slice(-1)[0] }}
             onConfirm={() => setShowZalo(null)}
             onClose={() => setShowZalo(null)}
           />

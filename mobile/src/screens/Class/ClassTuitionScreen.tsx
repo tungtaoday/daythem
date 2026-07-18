@@ -269,6 +269,7 @@ export function ClassTuitionScreen({ route }: any) {
           message={zaloTemplates[0].body}
           hint="nhóm lớp hoặc nhắn riêng từng phụ huynh"
           templates={zaloTemplates}
+          templateKey="nhac-phi-nhom" 
           onConfirm={() => { setSent(true); setShowZalo(false); }}
           onClose={() => setShowZalo(false)}
         />
@@ -280,6 +281,8 @@ export function ClassTuitionScreen({ route }: any) {
           phone={reminder.parent_phone || undefined}
           recipient={`Phụ huynh ${reminder.student_name}`}
           message={`Chào anh/chị, ${gw} nhắc học phí tháng này của ${reminder.student_name} là ${VND_FULL(reminder.amount)}. Anh/chị gửi ${gw} khi tiện nhé, cảm ơn anh/chị 🌿`}
+          templateKey="nhac-phi-rieng"
+          vars={{ ten: reminder.student_name, tien: VND_FULL(reminder.amount) }}
           hint={`phụ huynh ${reminder.student_name}`}
           onConfirm={() => setReminder(null)}
           onClose={() => setReminder(null)}

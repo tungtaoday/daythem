@@ -567,6 +567,8 @@ export function TuitionTabScreen({ navigation, route }: any) {
           phone={zaloItem.parent_phone || undefined}
           message={personalTemplates(zaloItem)[0].body}
           templates={personalTemplates(zaloItem)}
+          templateKey="nhac-phi-rieng"
+          vars={{ ten: zaloItem.student_name.split(' ').slice(-1)[0], tien: VND_FULL(zaloItem.amount), thang: monthLabel.toLowerCase() }}
           hint={`phụ huynh của ${zaloItem.student_name}`}
           onConfirm={() => setZaloItem(null)}
           onClose={() => setZaloItem(null)}
@@ -581,6 +583,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
           message={zaloTemplates[0].body}
           hint="nhóm lớp hoặc nhắn riêng từng phụ huynh"
           templates={zaloTemplates}
+          templateKey="nhac-phi-nhom" 
           onConfirm={() => { setSent(true); setShowZaloModal(false); }}
           onClose={() => setShowZaloModal(false)}
         />

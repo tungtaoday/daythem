@@ -20,7 +20,6 @@ import {
 } from '../../components/icons';
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 import { getHomeSummary, HomeSummary, getMonthlyWrap, MonthlyWrap } from '../../api/home';
-import { ThiepShareSheet, WrapThiep } from '../../components/ui/ThiepShare';
 import { DemoBanner } from '../../components/ui/DemoBanner';
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -398,7 +397,6 @@ export function HomeScreen({ navigation }: any) {
   const [totalCards, setTotalCards] = useState(0);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
   const [wrap, setWrap] = useState<MonthlyWrap | null>(null);
-  const [showWrapShare, setShowWrapShare] = useState(false);
 
   useEffect(() => { fetchClasses(); }, []);
 
@@ -615,9 +613,9 @@ export function HomeScreen({ navigation }: any) {
                 : 'Cùng xử lý gọn vài việc hôm nay nhé 🌿'}
         </Text>
 
-        {/* ── Chốt sổ tháng (bấm để chia sẻ thiệp) ── */}
+        {/* ── Chốt sổ tháng — chỉ hiển thị số liệu (bỏ nút chia sẻ theo góp ý GV) ── */}
         {wrap && (wrap.collected > 0 || wrap.sessions > 0) && (
-          <TouchableOpacity style={s.wrapCard} activeOpacity={0.9} onPress={() => setShowWrapShare(true)}>
+          <View style={s.wrapCard}>
             <View style={{ flex: 1 }}>
               <Text style={s.wrapEyebrow}>CHỐT SỔ THÁNG {wrap.month.split('-')[1].replace(/^0/, '')}</Text>
               <Text style={s.wrapAmount}>{wrap.collected.toLocaleString('vi-VN')}đ</Text>
@@ -625,8 +623,7 @@ export function HomeScreen({ navigation }: any) {
                 {wrap.sessions} buổi{wrap.attendance_pct != null ? ` · ${wrap.attendance_pct}% chuyên cần` : ''}
               </Text>
             </View>
-            <Text style={s.wrapShare}>Chia sẻ ›</Text>
-          </TouchableOpacity>
+          </View>
         )}
 
         {/* ── Owner promo banner (server-driven, dismissible) ── */}
@@ -670,18 +667,6 @@ export function HomeScreen({ navigation }: any) {
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      {showWrapShare && wrap && (
-        <ThiepShareSheet onClose={() => setShowWrapShare(false)}>
-          <WrapThiep
-            monthLabel={`Tháng ${wrap.month.split('-')[1].replace(/^0/, '')}`}
-            collected={wrap.collected}
-            sessions={wrap.sessions}
-            attendancePct={wrap.attendance_pct}
-            students={wrap.students}
-            teacher={teacher?.name ? `${genderStr === 'thầy' ? 'Thầy' : 'Cô'} ${teacher.name.split(/\s+/).pop()}` : undefined}
-          />
-        </ThiepShareSheet>
-      )}
     </View>
   );
 }
@@ -703,7 +688,6 @@ const s = StyleSheet.create({
   wrapEyebrow: { fontSize: 11, fontWeight: '800', letterSpacing: 0.6, color: '#a9791f' },
   wrapAmount: { fontSize: 24, fontWeight: '800', letterSpacing: -0.6, color: '#5e4715', marginTop: 3 },
   wrapSub: { fontSize: 12.5, fontWeight: '600', color: colors.honey700, marginTop: 2 },
-  wrapShare: { fontSize: 13, fontWeight: '700', color: '#a9791f' },
 
   // Feed
   feed: { gap: 12 },

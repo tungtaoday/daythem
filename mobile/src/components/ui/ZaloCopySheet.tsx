@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
 } from 'react-native';
@@ -6,6 +6,7 @@ import { colors } from '../../theme';
 import { IconZalo, IconCheck } from '../icons';
 import { copyToClipboard } from '../../utils/clipboard';
 import { openZalo } from '../../utils/zalo';
+import { storage } from '../../store/storage';
 
 // ── Types ─────────────────────────────────────────────────────
 export type ZaloTemplate = { tone: string; body: string };
@@ -17,17 +18,59 @@ type Props = {
   hint?: string;              // shown in the "Mở Zalo → dán vào…" instruction
   phone?: string;             // SĐT phụ huynh → mở đúng chat (1 chạm); rỗng → share/copy
   templates?: ZaloTemplate[]; // optional tone selector
+  /** Bật "mẫu của tôi": GV sửa tin rồi Lưu làm mẫu — lần sau tự dùng mẫu đó.
+   *  Tên/số tiền... được thay bằng chỗ trống {ten}{tien}... nên mẫu dùng lại được cho mọi người. */
+  templateKey?: string;
+  /** Giá trị thay vào chỗ trống của mẫu, vd { ten: 'Bình', tien: '500.000đ', thang: '7' } */
+  vars?: Record<string, string>;
   onConfirm: () => void;
   onClose: () => void;
 };
 
-export function ZaloCopySheet({ title, recipient, message, hint, phone, templates, onConfirm, onClose }: Props) {
+// Điền giá trị vào mẫu: "{ten} ơi" + {ten:'Bình'} → "Bình ơi"
+const applyVars = (tpl: string, vars?: Record<string, string>) =>
+  Object.entries(vars || {}).reduce((acc, [k, v]) => acc.split(`{${k}}`).join(v), tpl);
+
+// Ngược lại khi LƯU mẫu: đổi giá trị cụ thể về chỗ trống (thay chuỗi dài trước để tránh cắt nhầm).
+const extractVars = (text: string, vars?: Record<string, string>) =>
+  Object.entries(vars || {})
+    .filter(([, v]) => v && v.length > 1)
+    .sort((a, b) => b[1].length - a[1].length)
+    .reduce((acc, [k, v]) => acc.split(v).join(`{${k}}`), text);
+
+export function ZaloCopySheet({ title, recipient, message, hint, phone, templates, templateKey, vars, onConfirm, onClose }: Props) {
   const [tpl, setTpl] = useState(0);
   const [text, setText] = useState(
     templates ? templates[0].body : message
   );
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [tplSaved, setTplSaved] = useState(false);
+
+  // Có mẫu GV đã lưu → dùng mẫu đó thay tin mặc định.
+  useEffect(() => {
+    if (!templateKey) return;
+    let alive = true;
+    storage.get('tpl_' + templateKey)
+      .then(saved => { if (alive && saved) setText(applyVars(saved, vars)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [templateKey]);
+
+  const saveTpl = async () => {
+    if (!templateKey) return;
+    try {
+      await storage.set('tpl_' + templateKey, extractVars(text, vars));
+      setTplSaved(true);
+      setTimeout(() => setTplSaved(false), 2000);
+    } catch {}
+  };
+
+  const resetTpl = async () => {
+    if (templateKey) { try { await storage.delete('tpl_' + templateKey); } catch {} }
+    setText(templates ? templates[tpl].body : message);
+    setCopied(false);
+  };
 
   const handleTpl = (i: number) => {
     setTpl(i);
@@ -108,6 +151,18 @@ export function ZaloCopySheet({ title, recipient, message, hint, phone, template
           scrollEnabled={false}
         />
 
+        {/* Mẫu của tôi — GV sửa theo giọng mình rồi lưu, lần sau tự dùng */}
+        {templateKey && (
+          <View style={s.tplRow}>
+            <TouchableOpacity onPress={saveTpl} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={s.tplLink}>{tplSaved ? '✓ Đã lưu mẫu của bạn' : 'Lưu làm mẫu của tôi'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={resetTpl} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={s.tplLinkMuted}>Dùng mẫu gốc</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Copy button */}
         {!copied ? (
           <TouchableOpacity style={s.copyBtn} onPress={handleCopy}>
@@ -184,6 +239,9 @@ const s = StyleSheet.create({
   toneChipTextActive: { color: colors.green700 },
 
   editLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.3, marginBottom: 6 },
+  tplRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: -6, marginBottom: 12, paddingHorizontal: 2 },
+  tplLink: { fontSize: 13.5, fontWeight: '700', color: colors.green700 },
+  tplLinkMuted: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
   messageInput: {
     borderWidth: 1.5, borderColor: colors.border, borderRadius: 16,
     padding: 14, fontSize: 14, lineHeight: 22, color: colors.textPrimary,
