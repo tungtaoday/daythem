@@ -28,10 +28,12 @@ function webDownload(wb: XLSX.WorkBook, filename: string) {
 
 async function nativeShare(wb: XLSX.WorkBook, filename: string) {
   try {
-    // Dynamic import to avoid web bundling issues — `as any` is intentional here
+    // Dynamic import to avoid web bundling issues — `as any` is intentional here.
+    // SDK 54: PHẢI dùng 'expo-file-system/legacy' — writeAsStringAsync ở bản thường
+    // đã bị deprecated và NÉM LỖI runtime (xuất file sẽ hỏng im lặng).
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [FS, Sharing] = await Promise.all([
-      import('expo-file-system') as Promise<any>,
+      import('expo-file-system/legacy') as Promise<any>,
       import('expo-sharing') as Promise<any>,
     ]);
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'base64' }) as string;

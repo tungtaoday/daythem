@@ -21,9 +21,10 @@ export async function exportDocxBase64(base64: string, filename: string) {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     } else {
+      // SDK 54: PHẢI dùng 'expo-file-system/legacy' — bản thường ném lỗi runtime.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const [FS, Sharing] = await Promise.all([
-        import('expo-file-system') as Promise<any>,
+        import('expo-file-system/legacy') as Promise<any>,
         import('expo-sharing') as Promise<any>,
       ]);
       const uri = FS.cacheDirectory + filename;

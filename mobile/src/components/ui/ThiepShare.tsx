@@ -8,16 +8,21 @@ import { IconZalo } from '../icons';
 import { trackEvent } from '../../api/events';
 
 // ── Mầm cây (logo) ──
+// FIX CRASH: bản cũ render thẻ 'svg' kiểu WEB ('svg' as any) — component đó không
+// tồn tại trên Android native → app văng NGAY khi mở thiệp. Dùng react-native-svg
+// (chạy cả native lẫn web) để giữ đúng brand mark.
+import Svg, { Circle, Path } from 'react-native-svg';
+
 function Sprout({ size = 30, color = '#fff' }: { size?: number; color?: string }) {
-  const Svg = 'svg' as any, C = 'circle' as any, P = 'path' as any;
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      <C cx="22" cy="20" r="2.4" fill={color} /><C cx="34" cy="14" r="2.4" fill={color} opacity="0.85" />
-      <C cx="44" cy="22" r="2.4" fill={color} opacity="0.7" />
-      <P d="M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z" fill={color} opacity="0.3" />
-      <P d="M32 52 L32 34" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-      <P d="M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z" fill={color} />
-      <P d="M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z" fill={color} opacity="0.85" />
+      <Circle cx={22} cy={20} r={2.4} fill={color} />
+      <Circle cx={34} cy={14} r={2.4} fill={color} opacity={0.85} />
+      <Circle cx={44} cy={22} r={2.4} fill={color} opacity={0.7} />
+      <Path d="M8 50 Q32 40 56 50 L56 56 Q32 52 8 56 Z" fill={color} opacity={0.3} />
+      <Path d="M32 52 L32 34" stroke={color} strokeWidth={3.5} strokeLinecap="round" />
+      <Path d="M32 40 C26 40 21 36 21 29 C27 29 32 33 32 40 Z" fill={color} />
+      <Path d="M32 36 C38 36 43 31 43 25 C37 25 32 30 32 36 Z" fill={color} opacity={0.85} />
     </Svg>
   );
 }
@@ -33,8 +38,19 @@ export function ThiepShareSheet({ children, onClose }: { children: React.ReactNo
       // @ts-ignore capture tồn tại trên instance ViewShot
       const uri = await shotRef.current?.capture?.();
       if (!uri) throw new Error('no uri');
+      let shareUri = uri;
+      if (Platform.OS !== 'web') {
+        // FIX CRASH Android: view-shot lưu tmpfile vào EXTERNAL cache — FileProvider
+        // của expo-sharing không phủ đường dẫn đó → app văng khi mở share sheet.
+        // Copy ảnh vào internal cache (được FileProvider phủ) rồi mới chia sẻ.
+        // Lưu ý SDK 54: PHẢI import 'expo-file-system/legacy' (bản thường ném lỗi runtime).
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const FS = (await import('expo-file-system/legacy')) as any;
+        shareUri = FS.cacheDirectory + `gieochu-thiep-${Date.now()}.png`;
+        await FS.copyAsync({ from: uri, to: shareUri });
+      }
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Gửi qua Zalo' });
+        await Sharing.shareAsync(shareUri, { mimeType: 'image/png', dialogTitle: 'Gửi qua Zalo' });
         trackEvent('thiep_shared');
       } else {
         Alert.alert('Đã tạo ảnh', 'Thiết bị chưa hỗ trợ chia sẻ trực tiếp.');

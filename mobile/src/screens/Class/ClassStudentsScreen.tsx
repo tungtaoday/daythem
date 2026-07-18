@@ -18,7 +18,8 @@ import { exportStudentsExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+// SDK 54: PHẢI dùng 'expo-file-system/legacy' — readAsStringAsync ở bản thường ném lỗi runtime.
+import * as FileSystem from 'expo-file-system/legacy';
 
 const countNames = (t: string) => t.split('\n').map(n => n.trim()).filter(Boolean);
 
