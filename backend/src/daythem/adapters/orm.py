@@ -97,6 +97,9 @@ class AttendanceSessionORM(Base):
     class_id: Mapped[str] = mapped_column(String(36), ForeignKey("classes.id"), index=True)
     session_date: Mapped[str] = mapped_column(String(10))
     notes: Mapped[Optional[str]] = mapped_column(Text)
+    # Nội dung buổi học — GV ghi lúc điểm danh, dùng cho báo cáo gửi phụ huynh.
+    lesson_note: Mapped[Optional[str]] = mapped_column(Text)     # hôm nay học gì
+    homework_note: Mapped[Optional[str]] = mapped_column(Text)   # dặn dò về nhà
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
     class_: Mapped["ClassORM"] = relationship(back_populates="sessions")

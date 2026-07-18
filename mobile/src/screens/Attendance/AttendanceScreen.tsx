@@ -105,6 +105,10 @@ export function AttendanceScreen({ route, navigation }: any) {
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [showZalo, setShowZalo] = useState<string | null>(null); // id học sinh vắng đang nhắn hỏi thăm
+  // Báo cáo buổi học (tuỳ chọn): hôm nay học gì + dặn dò về nhà — gửi nhóm PH sau điểm danh.
+  const [lessonNote, setLessonNote] = useState('');
+  const [homeworkNote, setHomeworkNote] = useState('');
+  const [showDailyReport, setShowDailyReport] = useState(false);
 
   // ── Chọn buổi (cho điểm danh buổi quá khứ) ──
   const todayYmd = ymd(new Date());
@@ -152,9 +156,13 @@ export function AttendanceScreen({ route, navigation }: any) {
       });
       setMarks(m);
       setNotes(n);
+      setLessonNote(existing.lesson_note || '');
+      setHomeworkNote(existing.homework_note || '');
     } else {
       setMarks(Object.fromEntries(classStudents.map(s => [s.id, 'present' as Mark])));
       setNotes({});
+      setLessonNote('');
+      setHomeworkNote('');
     }
   }, [classStudents, sessionDate, sessionsByDate, dirty]);
 
@@ -184,13 +192,38 @@ export function AttendanceScreen({ route, navigation }: any) {
       return;
     }
     try {
-      const saved = await recordAttendance(classId, { session_date: sessionDate, records });
+      const saved = await recordAttendance(classId, {
+        session_date: sessionDate, records,
+        lesson_note: lessonNote.trim() || undefined,
+        homework_note: homeworkNote.trim() || undefined,
+      });
       setSessionsByDate(prev => ({ ...prev, [sessionDate]: saved }));
       setSubmitted(true);
     } catch {
       Alert.alert('Chưa lưu được', 'Không lưu được điểm danh. Kiểm tra mạng và thử lại.');
     }
   };
+
+  // Tin báo cáo buổi học gửi NHÓM phụ huynh: sĩ số + tên vắng (kèm lý do) +
+  // hôm nay học gì + dặn dò — đúng thứ phụ huynh muốn đọc sau mỗi buổi.
+  const dailyReportMsg = (() => {
+    const Gw = gw.charAt(0).toUpperCase() + gw.slice(1);
+    const lines = [
+      `📋 Báo cáo buổi học ${dateLine} · ${className}`,
+      `Sĩ số: ${presentCount}/${classStudents.length}`,
+    ];
+    if (absentStudents.length > 0) {
+      lines.push('Vắng: ' + absentStudents
+        .map(st => st.name.split(' ').slice(-1)[0] + (notes[st.id] ? ` (${notes[st.id]})` : ''))
+        .join(', '));
+    } else if (classStudents.length > 0) {
+      lines.push('Cả lớp có mặt đầy đủ 🎉');
+    }
+    if (lessonNote.trim()) lines.push(`📖 Hôm nay học: ${lessonNote.trim()}`);
+    if (homeworkNote.trim()) lines.push(`📝 Dặn dò các con: ${homeworkNote.trim()}`);
+    lines.push(`${Gw} cảm ơn quý phụ huynh! 🌿`);
+    return lines.join('\n');
+  })();
 
   if (submitted) {
     return (
@@ -201,6 +234,11 @@ export function AttendanceScreen({ route, navigation }: any) {
         secondaryLabel="Về trang chính"
         onSecondary={() => navigation.goBack()}
       >
+        {/* Gửi báo cáo buổi học — khoảnh khắc vàng: vừa dạy xong, mọi số liệu còn nóng */}
+        <TouchableOpacity style={s.dailyReportBtn} onPress={() => setShowDailyReport(true)} activeOpacity={0.85}>
+          <IconZalo size={18} color="white" />
+          <Text style={s.dailyReportBtnText}>Gửi báo cáo buổi học vào nhóm</Text>
+        </TouchableOpacity>
         {absentStudents.length > 0 && (
           <View style={s.nudgeCard}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -228,6 +266,17 @@ export function AttendanceScreen({ route, navigation }: any) {
           </View>
         )}
       </SuccessScreen>
+
+      {showDailyReport && (
+        <ZaloCopySheet
+          title={`Báo cáo buổi học · ${className}`}
+          recipient={`Nhóm Zalo ${className}`}
+          message={dailyReportMsg}
+          hint="nhóm lớp"
+          onConfirm={() => setShowDailyReport(false)}
+          onClose={() => setShowDailyReport(false)}
+        />
+      )}
 
       {(() => {
         const stu = absentStudents.find(x => x.id === showZalo);
@@ -323,6 +372,8 @@ export function AttendanceScreen({ route, navigation }: any) {
                     style={s.noteBtn}
                     onPress={() => setEditingNote(stu.id)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ghi lý do vắng cho ${stu.name}`}
                   >
                     <IconNote size={18} color={colors.coral700} />
                   </TouchableOpacity>
@@ -336,6 +387,32 @@ export function AttendanceScreen({ route, navigation }: any) {
             );
           })}
         </View>
+        </View>
+
+        {/* Báo cáo buổi học (tuỳ chọn) — ghi ngay lúc điểm danh, gửi nhóm PH sau khi lưu */}
+        <View style={{ paddingHorizontal: 16, marginTop: 18 }}>
+          <Text style={s.reportLabel}>BÁO CÁO BUỔI HỌC · gửi phụ huynh (không bắt buộc)</Text>
+          <View style={s.reportCard}>
+            <Text style={s.reportFieldLabel}>Hôm nay học gì?</Text>
+            <TextInput
+              style={s.reportInput}
+              value={lessonNote}
+              onChangeText={v => { setDirty(true); setLessonNote(v); }}
+              placeholder="VD: Phương trình bậc hai — chữa bài 5, 6"
+              placeholderTextColor={colors.textMuted}
+              multiline
+            />
+            <Text style={s.reportFieldLabel}>Dặn dò các con ở nhà</Text>
+            <TextInput
+              style={s.reportInput}
+              value={homeworkNote}
+              onChangeText={v => { setDirty(true); setHomeworkNote(v); }}
+              placeholder="VD: Làm bài 7, 8 trang 40 · học thuộc công thức nghiệm"
+              placeholderTextColor={colors.textMuted}
+              multiline
+            />
+            <Text style={s.reportHint}>Điểm danh xong sẽ có nút gửi báo cáo buổi học vào nhóm Zalo.</Text>
+          </View>
         </View>
       </ScrollView>
 
@@ -399,6 +476,19 @@ const s = StyleSheet.create({
     padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border,
   },
   nudgeText: { fontSize: 13.5, color: colors.textPrimary, lineHeight: 20, marginBottom: 14 },
+  dailyReportBtn: {
+    width: '100%', backgroundColor: '#3a7dd3', borderRadius: 14, minHeight: 50,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12,
+  },
+  dailyReportBtnText: { color: 'white', fontSize: 15, fontWeight: '700' },
+  reportLabel: { fontSize: 12, fontWeight: '700', color: colors.textSecondary, letterSpacing: 0.4, marginBottom: 8 },
+  reportCard: { backgroundColor: 'white', borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 14 },
+  reportFieldLabel: { fontSize: 13.5, fontWeight: '700', color: colors.textPrimary, marginBottom: 6, marginTop: 4 },
+  reportInput: {
+    borderWidth: 1.5, borderColor: colors.border, borderRadius: 12, backgroundColor: colors.bg,
+    padding: 12, fontSize: 14.5, color: colors.textPrimary, minHeight: 56, textAlignVertical: 'top', marginBottom: 10,
+  },
+  reportHint: { fontSize: 12.5, color: colors.textMuted, lineHeight: 17 },
   absentRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   zaloPrimary: {
     backgroundColor: colors.zalo, height: 44, borderRadius: 12, paddingHorizontal: 14,

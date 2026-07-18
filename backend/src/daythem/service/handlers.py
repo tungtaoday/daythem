@@ -123,6 +123,8 @@ class RecordAttendanceCommand(BaseModel):
     session_date: str
     records: list[dict]  # [{student_id, present, absence_reason?}]
     notes: Optional[str] = None
+    lesson_note: Optional[str] = None    # hôm nay học gì (cho báo cáo)
+    homework_note: Optional[str] = None  # dặn dò về nhà (cho báo cáo)
 
 class RecordPaymentCommand(BaseModel):
     class_id: str
@@ -462,12 +464,19 @@ def handle_record_attendance(cmd: RecordAttendanceCommand, uow: SqlAlchemyUnitOf
         if existing:
             existing.records.clear()
             session = existing
+            # Điểm danh lại buổi cũ: cập nhật nội dung buổi học nếu có gửi lên.
+            if cmd.lesson_note is not None:
+                session.lesson_note = cmd.lesson_note or None
+            if cmd.homework_note is not None:
+                session.homework_note = cmd.homework_note or None
         else:
             session = AttendanceSessionORM(
                 id=str(uuid.uuid4()),
                 class_id=cmd.class_id,
                 session_date=cmd.session_date,
                 notes=cmd.notes,
+                lesson_note=cmd.lesson_note or None,
+                homework_note=cmd.homework_note or None,
             )
             uow.attendance.add_session(session)
 

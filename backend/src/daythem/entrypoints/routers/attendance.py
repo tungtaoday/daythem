@@ -16,6 +16,8 @@ def session_out(s) -> dict:
         "class_id": s.class_id,
         "session_date": s.session_date,
         "notes": s.notes,
+        "lesson_note": s.lesson_note,
+        "homework_note": s.homework_note,
         "records": [
             {
                 "student_id": r.student_id,
@@ -40,6 +42,8 @@ class RecordAttendanceBody(BaseModel):
     session_date: str
     records: list[AttendanceRecordBody]
     notes: Optional[str] = None
+    lesson_note: Optional[str] = None
+    homework_note: Optional[str] = None
 
 
 @router.get("")
@@ -74,6 +78,8 @@ def record_attendance(
             session_date=body.session_date,
             records=[r.model_dump() for r in body.records],
             notes=body.notes,
+            lesson_note=body.lesson_note,
+            homework_note=body.homework_note,
         ),
         uow,
     )

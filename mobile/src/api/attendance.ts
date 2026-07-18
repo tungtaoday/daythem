@@ -7,6 +7,8 @@ export const recordAttendance = (classId: string, body: {
   session_date: string;
   records: { student_id: string; present: boolean; absence_reason?: string }[];
   notes?: string;
+  lesson_note?: string;    // hôm nay học gì (cho báo cáo buổi học)
+  homework_note?: string;  // dặn dò về nhà
 }) => api.post(`/classes/${classId}/attendance`, body).then(r => r.data);
 
 export const getSession = (classId: string, sessionId: string) =>

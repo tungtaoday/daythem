@@ -47,3 +47,32 @@ def test_overwrite_attendance(setup):
     })
     assert resp.status_code == 201
     assert resp.json()["absent_count"] == 0
+
+
+def test_attendance_with_lesson_and_homework(auth_client):
+    """Báo cáo buổi học: lưu 'hôm nay học gì' + 'dặn dò về nhà' cùng buổi điểm danh."""
+    client, _ = auth_client
+    klass = client.post("/api/v1/classes", json={"name": "L1", "subject": "Toán", "grade": "9"}).json()
+    stu = client.post(f"/api/v1/classes/{klass['id']}/students", json={"name": "An"}).json()
+
+    r = client.post(f"/api/v1/classes/{klass['id']}/attendance", json={
+        "session_date": "2026-07-18",
+        "records": [{"student_id": stu["id"], "present": True}],
+        "lesson_note": "Phương trình bậc hai",
+        "homework_note": "Làm bài 5, 6 trang 40",
+    })
+    assert r.status_code == 201
+    d = r.json()
+    assert d["lesson_note"] == "Phương trình bậc hai"
+    assert d["homework_note"] == "Làm bài 5, 6 trang 40"
+
+    # Điểm danh lại buổi đó có sửa nội dung → cập nhật
+    r2 = client.post(f"/api/v1/classes/{klass['id']}/attendance", json={
+        "session_date": "2026-07-18",
+        "records": [{"student_id": stu["id"], "present": False, "absence_reason": "Ốm"}],
+        "lesson_note": "Phương trình bậc hai (tiếp)",
+    })
+    assert r2.json()["lesson_note"] == "Phương trình bậc hai (tiếp)"
+    # list trả về đủ trường
+    lst = client.get(f"/api/v1/classes/{klass['id']}/attendance").json()
+    assert lst[0]["homework_note"] == "Làm bài 5, 6 trang 40"

@@ -135,14 +135,65 @@ export function ClassReportScreen({ route }: any) {
     return () => { alive = false; };
   }, [classId, isDemo]);
 
-  // Tin NHÓM trung thực — chỉ dùng số liệu THẬT đã tính (buổi dạy, chuyên cần TB).
-  // Chi tiết từng bé (tên + số liệu riêng) đi qua "Gửi thiệp báo cáo" trong hồ sơ HS.
+  // ── Tin nhóm theo KỲ: Ngày (buổi gần nhất) / Tuần / Tháng ──
+  // Ngày: sĩ số + tên vắng + hôm nay học gì + dặn dò (ghi lúc điểm danh).
+  // Tuần/Tháng: số buổi, chuyên cần, các bài đã học, học phí. Toàn bộ là số THẬT.
+  const [range, setRange] = useState<'day' | 'week' | 'month'>('day');
+  const fmtD = (ymd: string) => { const p = ymd.split('-'); return `${p[2]}/${Number(p[1])}`; };
+  const sortedSessions = [...sessions].sort((a: any, b: any) => (a.session_date < b.session_date ? 1 : -1));
+  const latest = sortedSessions[0];
+  const monthKey = localMonth();
+  const weekMon = (() => { const d = new Date(); const day = d.getDay(); d.setDate(d.getDate() - day + (day === 0 ? -6 : 1)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  const rangeSessions = range === 'day'
+    ? (latest ? [latest] : [])
+    : sortedSessions.filter((sx: any) => range === 'week' ? sx.session_date >= weekMon : sx.session_date.slice(0, 7) === monthKey);
+
+  const buildRangeMessage = (): string => {
+    const Gw = pronoun.charAt(0).toUpperCase() + pronoun.slice(1);
+    if (range === 'day') {
+      if (!latest) return `Kính gửi quý phụ huynh ${className}, lớp chưa có buổi học nào được điểm danh. ${Gw} sẽ gửi báo cáo sau buổi học đầu tiên nhé 🌿`;
+      const recs: any[] = latest.records || [];
+      const absent = recs.filter(r => !r.present);
+      const lines = [
+        `📋 Báo cáo buổi học ${fmtD(latest.session_date)} · ${className}`,
+        `Sĩ số: ${recs.length - absent.length}/${recs.length}`,
+        absent.length > 0
+          ? 'Vắng: ' + absent.map(r => (r.student_name || 'HS').split(' ').slice(-1)[0] + (r.absence_reason ? ` (${r.absence_reason})` : '')).join(', ')
+          : 'Cả lớp có mặt đầy đủ 🎉',
+      ];
+      if (latest.lesson_note) lines.push(`📖 Hôm nay học: ${latest.lesson_note}`);
+      if (latest.homework_note) lines.push(`📝 Dặn dò các con: ${latest.homework_note}`);
+      lines.push(`${Gw} cảm ơn quý phụ huynh! 🌿`);
+      return lines.join('\n');
+    }
+    // Tuần / Tháng
+    const label = range === 'week' ? `tuần ${weekLabel()}` : `tháng ${Number(monthKey.split('-')[1])}`;
+    let marks = 0, present = 0;
+    const absentNames = new Set<string>();
+    rangeSessions.forEach((sx: any) => sx.records?.forEach((r: any) => {
+      marks++; if (r.present) present++;
+      else if (r.student_name) absentNames.add(r.student_name.split(' ').slice(-1)[0]);
+    }));
+    const pct = marks ? Math.round(present / marks * 100) : 0;
+    const lessons = rangeSessions.map((sx: any) => sx.lesson_note).filter(Boolean);
+    const lines = [`📋 Báo cáo ${label} · ${className}`];
+    if (rangeSessions.length > 0) {
+      lines.push(`• ${rangeSessions.length} buổi học · chuyên cần ${pct}%`);
+      lines.push(absentNames.size > 0 ? `• Có vắng: ${[...absentNames].join(', ')}` : '• Không bạn nào vắng 🎉');
+      if (lessons.length > 0) lines.push(`📖 Đã học: ${lessons.join('; ')}`);
+      const hw = rangeSessions.find((sx: any) => sx.homework_note)?.homework_note;
+      if (hw) lines.push(`📝 Dặn dò mới nhất: ${hw}`);
+    } else {
+      lines.push(`• Chưa có buổi học nào trong ${label}`);
+    }
+    if (range === 'month' && collected > 0) lines.push(`• Học phí: ${pronoun} đã cập nhật, phụ huynh nào chưa nộp ${pronoun} sẽ nhắn riêng`);
+    lines.push(`Phụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${pronoun} nhé. Cảm ơn quý phụ huynh! 🌿`);
+    return lines.join('\n');
+  };
+
   const reportMessage = isDemo
     ? `Kính gửi quý phụ huynh ${className},\n\nBáo cáo tuần ${weekLabel()}: lớp học 1 buổi, các con đi học đầy đủ. Phụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${pronoun} nhé. Cảm ơn quý phụ huynh! 🌿`
-    : `Kính gửi quý phụ huynh ${className},\n\nBáo cáo tuần ${weekLabel()}:` +
-      (sessionCount > 0 ? `\n• Lớp học ${sessionCount} buổi, chuyên cần ${avgAttendPct}%` : '') +
-      (collected > 0 ? `\n• Học phí tháng này: ${pronoun} đã cập nhật, phụ huynh nào chưa nộp ${pronoun} sẽ nhắn riêng` : '') +
-      `\n\nPhụ huynh muốn biết chi tiết của bé nhà mình thì nhắn ${pronoun} nhé. Cảm ơn quý phụ huynh! 🌿`;
+    : buildRangeMessage();
 
   const handleSend = async () => {
     setShowZalo(false);
@@ -293,6 +344,20 @@ export function ClassReportScreen({ route }: any) {
 
           {/* Tin gửi phụ huynh — preview */}
           <Text style={s.sectionLabel}>TIN GỬI NHÓM PHỤ HUYNH</Text>
+          {/* Chọn kỳ báo cáo: buổi hôm nay / tuần / tháng */}
+          {!isDemo && (
+            <View style={s.rangeRow}>
+              {([['day', 'Buổi học'], ['week', 'Tuần'], ['month', 'Tháng']] as const).map(([k, lbl]) => (
+                <TouchableOpacity
+                  key={k}
+                  style={[s.rangeChip, range === k && s.rangeChipActive]}
+                  onPress={() => setRange(k)}
+                >
+                  <Text style={[s.rangeChipText, range === k && s.rangeChipTextActive]}>{lbl}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           <View style={s.previewBox}>
             <View style={{ alignItems: 'flex-end' }}>
               <View style={s.zaloBubble}>
@@ -300,7 +365,7 @@ export function ClassReportScreen({ route }: any) {
               </View>
             </View>
             <Text style={s.previewNote}>
-              Tin nhóm dùng số liệu thật của lớp. Muốn gửi riêng từng bé (tên + số liệu của con) — mở hồ sơ học sinh, chọn "Gửi thiệp báo cáo".
+              Tin dùng số liệu thật của lớp (điểm danh + "hôm nay học gì" ghi lúc điểm danh). Muốn gửi riêng từng bé — mở hồ sơ học sinh, chọn "Gửi thiệp báo cáo".
             </Text>
           </View>
         </View>
@@ -368,6 +433,11 @@ const s = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600' },
 
   previewBox: { backgroundColor: colors.surfaceAlt, borderRadius: 18, padding: 14 },
+  rangeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  rangeChip: { flex: 1, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, backgroundColor: 'white', alignItems: 'center' },
+  rangeChipActive: { borderColor: colors.green500, backgroundColor: colors.green50 },
+  rangeChipText: { fontSize: 13.5, fontWeight: '600', color: colors.textSecondary },
+  rangeChipTextActive: { color: colors.green700 },
   zaloBubble: { backgroundColor: '#5b9bd5', borderRadius: 18, borderBottomRightRadius: 4, padding: 10, paddingHorizontal: 14, maxWidth: '90%' as any },
   previewNote: { fontSize: 12, color: colors.textSecondary, textAlign: 'center', marginTop: 10 },
 
