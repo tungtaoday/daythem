@@ -23,9 +23,13 @@ export function PasswordScreen({ route, navigation }: any) {
 
   useEffect(() => {
     let alive = true;
-    checkPhone(phone)
-      .then(d => { if (alive) setExists(d.exists); })
-      .catch(() => {}); // không chặn luồng nếu check lỗi
+    // Thử lại 1 lần nếu mạng chậm — giữ được màn "tạo mật khẩu 2 ô" chống gõ nhầm.
+    const tryCheck = (attempt: number) => {
+      checkPhone(phone)
+        .then(d => { if (alive) setExists(d.exists); })
+        .catch(() => { if (alive && attempt < 1) setTimeout(() => tryCheck(attempt + 1), 1500); });
+    };
+    tryCheck(0);
     return () => { alive = false; };
   }, [phone]);
 

@@ -316,7 +316,7 @@ export function AttendanceScreen({ route, navigation }: any) {
             style={StyleSheet.absoluteFill}
           />
           <Text style={s.heroEyebrow}>
-            ĐIỂM DANH · {className.toUpperCase()}{subject ? ` · ${subject.toUpperCase()}` : ''}
+            ĐIỂM DANH · {className.toUpperCase()}{subject && !className.toLowerCase().includes(subject.toLowerCase()) ? ` · ${subject.toUpperCase()}` : ''}
           </Text>
           <Text style={s.heroDate}>{dateLine}</Text>
 
