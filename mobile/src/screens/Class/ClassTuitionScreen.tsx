@@ -10,7 +10,8 @@ import { IconZalo, IconCheck, IconDownload } from '../../components/icons';
 import { getTuition, recordPayment } from '../../api/tuition';
 import { exportTuitionExcel } from '../../utils/exportExcel';
 import { useAuthStore, isDemoToken } from '../../store/auth';
-import { localMonth } from '../../utils/date';
+import { localMonth, localDate } from '../../utils/date';
+import { storage } from '../../store/storage';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -55,6 +56,22 @@ export function ClassTuitionScreen({ route }: any) {
   const [my, mm] = month.split('-');
   const monthLabel = `Tháng ${Number(mm)}/${my}`;
   const atCurrentMonth = month >= currentMonth;
+  // "Đã nhắc" từng phụ huynh trong tháng (chung sổ với tab Học phí — key nhac_phi_<tháng>).
+  const [remindedMap, setRemindedMap] = useState<Record<string, string>>({});
+  useEffect(() => {
+    storage.get('nhac_phi_' + month)
+      .then(v => setRemindedMap(v ? JSON.parse(v) : {}))
+      .catch(() => setRemindedMap({}));
+  }, [month]);
+  const markReminded = (studentId: string) => {
+    const next = { ...remindedMap, [studentId]: localDate() };
+    setRemindedMap(next);
+    storage.set('nhac_phi_' + month, JSON.stringify(next)).catch(() => {});
+  };
+  const remindedLabel = (studentId: string) => {
+    const ymd = remindedMap[studentId];
+    return ymd ? `Đã nhắc ${Number(ymd.slice(8, 10))}/${Number(ymd.slice(5, 7))}` : null;
+  };
   const shiftMonth = (ym: string, delta: number) => {
     const [y, m] = ym.split('-').map(Number);
     const d = new Date(y, m - 1 + delta, 1);
@@ -205,9 +222,14 @@ export function ClassTuitionScreen({ route }: any) {
                     <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityRole="button" accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <IconZalo size={16} color={colors.zalo} />
-                    </TouchableOpacity>
+                    <View style={{ alignItems: 'center', gap: 2 }}>
+                      <TouchableOpacity style={s.zaloRowBtn} onPress={() => setReminder(d)} accessibilityRole="button" accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <IconZalo size={16} color={colors.zalo} />
+                      </TouchableOpacity>
+                      {remindedLabel(d.student_id) && (
+                        <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textMuted }}>{remindedLabel(d.student_id)}</Text>
+                      )}
+                    </View>
                     <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)}>
                       <IconCheck size={13} color="white" />
                       <Text style={s.tickBtnText}>Tick thu</Text>
@@ -284,7 +306,7 @@ export function ClassTuitionScreen({ route }: any) {
           templateKey="nhac-phi-rieng"
           vars={{ ten: reminder.student_name, tien: VND_FULL(reminder.amount) }}
           hint={`phụ huynh ${reminder.student_name}`}
-          onConfirm={() => setReminder(null)}
+          onConfirm={() => { markReminded(reminder.student_id); setReminder(null); }}
           onClose={() => setReminder(null)}
         />
       )}

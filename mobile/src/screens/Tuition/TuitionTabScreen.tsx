@@ -13,6 +13,7 @@ import { useAuthStore, isDemoToken } from '../../store/auth';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { DemoBanner } from '../../components/ui/DemoBanner';
 import { Mascot } from '../../components/ui/mascot';
+import { storage } from '../../store/storage';
 
 const VND_FULL = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -183,6 +184,9 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const [loading, setLoading] = useState(!isDemo);
   const [showZaloModal, setShowZaloModal] = useState(false);
   const [zaloItem, setZaloItem] = useState<Item | null>(null); // nhắc riêng 1 phụ huynh
+  // Đã nhắc phụ huynh nào trong tháng → { student_id: "YYYY-MM-DD" }. Lưu máy,
+  // để GV không nhắc trùng một người 2 lần trong vài ngày.
+  const [remindedMap, setRemindedMap] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
   const [classFilter, setClassFilter] = useState<string>(route?.params?.filterClassId ?? 'all');
   // Lớp tải lỗi (KHÔNG nuốt im lặng — sót người chưa nộp là tối kỵ của wedge "thu không sót ai")
@@ -197,6 +201,27 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const [ly, lm] = selectedMonth.split('-');
   const monthLabel = `Tháng ${Number(lm)}/${ly}`;
   const atCurrentMonth = selectedMonth >= currentMonth; // string compare hợp lệ cho YYYY-MM
+
+  // Nạp lại danh sách "đã nhắc" khi đổi tháng (mỗi tháng một sổ riêng).
+  useEffect(() => {
+    storage.get('nhac_phi_' + selectedMonth)
+      .then(v => setRemindedMap(v ? JSON.parse(v) : {}))
+      .catch(() => setRemindedMap({}));
+  }, [selectedMonth]);
+
+  const markReminded = (studentId: string) => {
+    const d = new Date();
+    const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const next = { ...remindedMap, [studentId]: ymd };
+    setRemindedMap(next);
+    storage.set('nhac_phi_' + selectedMonth, JSON.stringify(next)).catch(() => {});
+  };
+
+  // "15/07" cho nhãn "Đã nhắc 15/07" dưới nút Zalo.
+  const remindedLabel = (studentId: string) => {
+    const ymd = remindedMap[studentId];
+    return ymd ? `Đã nhắc ${Number(ymd.slice(8, 10))}/${Number(ymd.slice(5, 7))}` : null;
+  };
 
   const shiftMonth = (ym: string, delta: number) => {
     const [y, m] = ym.split('-').map(Number);
@@ -540,15 +565,20 @@ export function TuitionTabScreen({ navigation, route }: any) {
                     <Text style={s.txSub}>{d.className} · {VND_FULL(d.amount)}</Text>
                   </View>
                   {/* Nhắc RIÊNG phụ huynh này — tin có tên + số tiền (không phải nhắc gộp) */}
-                  <TouchableOpacity
-                    style={s.zaloRowBtn}
-                    onPress={() => setZaloItem(d)}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`}
-                  >
-                    <IconZalo size={17} color={colors.zalo} />
-                  </TouchableOpacity>
+                  <View style={{ alignItems: 'center', gap: 2 }}>
+                    <TouchableOpacity
+                      style={s.zaloRowBtn}
+                      onPress={() => setZaloItem(d)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Nhắc học phí phụ huynh ${d.student_name} qua Zalo`}
+                    >
+                      <IconZalo size={17} color={colors.zalo} />
+                    </TouchableOpacity>
+                    {remindedLabel(d.student_id) && (
+                      <Text style={s.remindedText}>{remindedLabel(d.student_id)}</Text>
+                    )}
+                  </View>
                   <TouchableOpacity style={s.tickBtn} onPress={() => markPaid(d)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}>
                     <Text style={s.tickBtnText}>Tick đã thu</Text>
                   </TouchableOpacity>
@@ -570,7 +600,7 @@ export function TuitionTabScreen({ navigation, route }: any) {
           templateKey="nhac-phi-rieng"
           vars={{ ten: zaloItem.student_name.split(' ').slice(-1)[0], tien: VND_FULL(zaloItem.amount), thang: monthLabel.toLowerCase() }}
           hint={`phụ huynh của ${zaloItem.student_name}`}
-          onConfirm={() => setZaloItem(null)}
+          onConfirm={() => { markReminded(zaloItem.student_id); setZaloItem(null); }}
           onClose={() => setZaloItem(null)}
         />
       )}
@@ -656,6 +686,7 @@ const s = StyleSheet.create({
   tickBtn: { paddingHorizontal: 12, minHeight: 40, justifyContent: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.green200, backgroundColor: 'white', marginLeft: 8 },
   tickBtnText: { fontSize: 13, fontWeight: '600', color: colors.green700 },
   zaloRowBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#e8f2fb', alignItems: 'center', justifyContent: 'center' },
+  remindedText: { fontSize: 10, fontWeight: '600', color: colors.textMuted },
   untickText: { fontSize: 12, fontWeight: '600', color: colors.textMuted, textDecorationLine: 'underline' },
 
   failStrip: {

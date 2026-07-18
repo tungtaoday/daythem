@@ -66,7 +66,7 @@ const VND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
 // ── Student row ───────────────────────────────────────────────
 
-function StuRow({ stu, onPress, last, isDemo }: { stu: StuItem; onPress: () => void; last?: boolean; isDemo?: boolean }) {
+function StuRow({ stu, onPress, onThiep, last, isDemo }: { stu: StuItem; onPress: () => void; onThiep?: () => void; last?: boolean; isDemo?: boolean }) {
   const cfg = STATUS_CFG[stu.status];
   return (
     <TouchableOpacity style={[sr.row, !last && sr.divider]} onPress={onPress} activeOpacity={0.85}>
@@ -84,6 +84,18 @@ function StuRow({ stu, onPress, last, isDemo }: { stu: StuItem; onPress: () => v
             : (stu.parent_phone ? `PH: ${stu.parent_phone}` : 'Chưa có dữ liệu')}
         </Text>
       </View>
+      {/* Gửi thiệp khen ngay từ danh sách — đỡ phải vào hồ sơ rồi mới bấm */}
+      {onThiep && (
+        <TouchableOpacity
+          style={sr.thiepBtn}
+          onPress={onThiep}
+          hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Gửi thiệp khen cho ${stu.name}`}
+        >
+          <Text style={sr.thiepBtnText}>Thiệp</Text>
+        </TouchableOpacity>
+      )}
       {isDemo && (
         <View style={[sr.badge, { backgroundColor: cfg.bg }]}>
           <Text style={[sr.badgeText, { color: cfg.color }]}>{cfg.label}</Text>
@@ -106,6 +118,11 @@ const sr = StyleSheet.create({
   sub: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
   badge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8, flexShrink: 0 },
   badgeText: { fontSize: 12, fontWeight: '600' },
+  thiepBtn: {
+    paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10, flexShrink: 0,
+    backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100,
+  },
+  thiepBtnText: { fontSize: 12, fontWeight: '700', color: colors.green700 },
 });
 
 // ── Inline student profile ────────────────────────────────────
@@ -117,7 +134,7 @@ const HERO = {
   star: { bg: colors.honey500, grad: ['#e9b84d', '#c8902a'] as const, fg: '#5e4715', fgDim: 'rgba(94,71,21,0.72)', chipBg: 'rgba(94,71,21,0.10)', statBg: 'rgba(255,255,255,0.42)', btnBg: 'rgba(94,71,21,0.10)', label: 'Xuất sắc ★' },
 } as const;
 
-function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete, className, subject, sessions }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; onUpdate?: (id: string, body: { name?: string; parent_name?: string; parent_phone?: string; note?: string }) => Promise<void>; onDelete?: (id: string) => Promise<void>; className?: string; subject?: string; sessions?: any[] }) {
+function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete, className, subject, sessions, autoOpenThiep }: { student: StuItem; isDemo: boolean; onClose: () => void; onSetFee?: (id: string, amt: number | null, note: string) => Promise<void>; onUpdate?: (id: string, body: { name?: string; parent_name?: string; parent_phone?: string; note?: string }) => Promise<void>; onDelete?: (id: string) => Promise<void>; className?: string; subject?: string; sessions?: any[]; autoOpenThiep?: boolean }) {
   const insets = useSafeAreaInsets();
 
   // Lịch sử điểm danh thật của em này (từ các buổi đã điểm danh).
@@ -146,6 +163,8 @@ function StudentProfile({ student, isDemo, onClose, onSetFee, onUpdate, onDelete
     } catch {}
     setShowThiep(true);
   };
+  // Vào từ nút "Thiệp" trên danh sách → bung thẳng thiệp, khỏi bấm thêm lần nữa.
+  useEffect(() => { if (autoOpenThiep) openThiep(); }, []);
   const saveThiepNote = async () => {
     try {
       await storage.set('tpl_thiep-note', thiepNote.split(firstName).join('{ten}'));
@@ -730,6 +749,8 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   };
 
   const [profileStu, setProfileStu] = useState<StuItem | null>(null);
+  // true = vào hồ sơ từ nút "Thiệp" trên danh sách → tự bung thiệp luôn.
+  const [autoThiep, setAutoThiep] = useState(false);
   const [sessions, setSessions] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
@@ -862,7 +883,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
   };
 
   if (profileStu) {
-    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => setProfileStu(null)} onSetFee={handleSetFee} onUpdate={isDemo ? undefined : handleUpdateStudent} onDelete={isDemo ? undefined : handleDeleteStudent} className={className} subject={klass?.subject} sessions={sessions} />;
+    return <StudentProfile student={profileStu} isDemo={isDemo} onClose={() => { setProfileStu(null); setAutoThiep(false); }} onSetFee={handleSetFee} onUpdate={isDemo ? undefined : handleUpdateStudent} onDelete={isDemo ? undefined : handleDeleteStudent} className={className} subject={klass?.subject} sessions={sessions} autoOpenThiep={autoThiep} />;
   }
 
   if (loading) {
@@ -923,6 +944,7 @@ export function ClassStudentsScreen({ route, navigation }: any) {
                 isDemo={isDemo}
                 last={i === displayStus.length - 1}
                 onPress={() => setProfileStu(stu)}
+                onThiep={() => { setAutoThiep(true); setProfileStu(stu); }}
               />
             ))}
           </View>

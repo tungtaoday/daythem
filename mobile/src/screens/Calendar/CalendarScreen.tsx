@@ -12,7 +12,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Mascot } from '../../components/ui/mascot';
 import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, daysLabel, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
-import { getCancelledDates } from '../../api/announcements';
+import { getCancelledDates, getConfirmedMakeups } from '../../api/announcements';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -46,10 +46,13 @@ export function CalendarScreen({ navigation }: any) {
   const [mode, setMode] = useState<'week' | 'month'>('week');
   // Ngày đã báo nghỉ của từng lớp → hiện trạng thái trên lịch.
   const [cancelMap, setCancelMap] = useState<Record<string, Set<string>>>({});
+  // Buổi học bù ĐÃ CHỐT của từng lớp: classId → { "YYYY-MM-DD": "19:00" }.
+  const [makeupMap, setMakeupMap] = useState<Record<string, Record<string, string>>>({});
   useEffect(() => {
     let alive = true;
     classes.forEach((c: any) => {
       getCancelledDates(c.id).then(set => { if (alive) setCancelMap(prev => ({ ...prev, [c.id]: set })); });
+      getConfirmedMakeups(c.id).then(map => { if (alive) setMakeupMap(prev => ({ ...prev, [c.id]: map })); });
     });
     return () => { alive = false; };
   }, [classes.length]);
@@ -151,13 +154,20 @@ export function CalendarScreen({ navigation }: any) {
     return `${days[selectedDate.getDay()]}, ${selectedDate.getDate()}/${selectedDate.getMonth() + 1}`;
   };
 
+  // Lớp có buổi HỌC BÙ đúng ngày đang chọn nhưng KHÔNG nằm trong lịch cố định
+  // hôm đó → phải thêm hàng riêng, nếu không buổi bù "biến mất" khỏi lịch.
+  const makeupClasses = classes.filter(
+    (c: any) => makeupMap[c.id]?.[selYmd] && !selectedClasses.some((sc: any) => sc.id === c.id)
+  );
+  const totalSessions = selectedClasses.length + makeupClasses.length;
+
   // Danh sách buổi học của ngày đang chọn — dùng chung cho cả 2 chế độ.
   const renderSessionsSection = () => (
     <View style={s.section}>
       <Text style={s.sectionLabel}>
-        {selDateLabel().toUpperCase()} · {selectedClasses.length > 0 ? `${selectedClasses.length} buổi học` : 'Không có lớp'}
+        {selDateLabel().toUpperCase()} · {totalSessions > 0 ? `${totalSessions} buổi học` : 'Không có lớp'}
       </Text>
-      {selectedClasses.length > 0 ? (
+      {totalSessions > 0 ? (
         <View style={s.card}>
           {selectedClasses.map((cls: any, i: number) => {
             // Giờ + địa điểm của ĐÚNG buổi vào thứ đang chọn (mỗi buổi có giờ riêng).
@@ -199,6 +209,32 @@ export function CalendarScreen({ navigation }: any) {
             </View>
             );
           })}
+          {makeupClasses.map((cls: any, i: number) => (
+            <View key={`mk-${cls.id}`} style={[s.classRow, (selectedClasses.length + i) > 0 && s.divider]}>
+              <View style={[s.classBar, { backgroundColor: colors.green500 }]} />
+              <View style={{ flex: 1 }}>
+                <View style={s.nameRow}>
+                  <View style={[s.colorDot, { backgroundColor: classColor(cls.color).dot }]} />
+                  <Text style={s.className}>{cls.name} · {cls.subject}</Text>
+                </View>
+                <Text style={s.classSub}>
+                  {makeupMap[cls.id][selYmd] ? `${makeupMap[cls.id][selYmd]} · ` : ''}Buổi học bù đã chốt
+                </Text>
+              </View>
+              {isPastOrToday ? (
+                <TouchableOpacity
+                  style={s.attendBtn}
+                  onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
+                >
+                  <Text style={s.attendBtnText}>Điểm danh</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={{ backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 }}>
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.green700 }}>Học bù</Text>
+                </View>
+              )}
+            </View>
+          ))}
         </View>
       ) : (
         <View style={s.emptyDay}>
@@ -311,13 +347,13 @@ export function CalendarScreen({ navigation }: any) {
           <>
             {/* Week nav */}
             <View style={s.monthNav}>
-              <TouchableOpacity onPress={() => shiftWeek(-7)} style={s.monthArrow}>
+              <TouchableOpacity onPress={() => shiftWeek(-7)} style={s.monthArrow} accessibilityRole="button" accessibilityLabel="Tuần trước">
                 <View style={{ transform: [{ rotate: '180deg' }] }}>
                   <IconChevron size={16} color={colors.textSecondary} />
                 </View>
               </TouchableOpacity>
               <Text style={s.monthLabel}>{getMonthLabel(selectedDate.getFullYear(), selectedDate.getMonth())}</Text>
-              <TouchableOpacity onPress={() => shiftWeek(7)} style={s.monthArrow}>
+              <TouchableOpacity onPress={() => shiftWeek(7)} style={s.monthArrow} accessibilityRole="button" accessibilityLabel="Tuần sau">
                 <IconChevron size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>

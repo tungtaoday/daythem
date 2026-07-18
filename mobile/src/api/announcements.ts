@@ -23,3 +23,20 @@ export const getCancelledDates = (classId: string): Promise<Set<string>> =>
   listAnnouncements(classId)
     .then((list: any[]) => new Set<string>((list || []).filter(a => a.type === 'cancel' && a.session_date).map(a => a.session_date)))
     .catch(() => new Set<string>());
+
+// Buổi HỌC BÙ ĐÃ CHỐT của lớp: map "YYYY-MM-DD" → nhãn giờ (vd "19:00 · 1h30").
+// Đọc từ makeup.confirmed_option trong danh sách thông báo — không cần endpoint riêng.
+export const getConfirmedMakeups = (classId: string): Promise<Record<string, string>> =>
+  listAnnouncements(classId)
+    .then((list: any[]) => {
+      const map: Record<string, string> = {};
+      (list || []).forEach(a => {
+        const m = a.makeup;
+        if (m && m.confirmed_option !== null && m.confirmed_option !== undefined) {
+          const opt = m.options?.[m.confirmed_option];
+          if (opt?.date) map[opt.date] = opt.time || opt.label || '';
+        }
+      });
+      return map;
+    })
+    .catch(() => ({}));

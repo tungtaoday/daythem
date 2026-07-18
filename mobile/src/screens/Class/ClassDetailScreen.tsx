@@ -11,7 +11,7 @@ import { classColor } from '../../theme/classColors';
 import { useClassesStore } from '../../store/classes';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getTuition } from '../../api/tuition';
-import { getCancelledDates } from '../../api/announcements';
+import { getCancelledDates, getConfirmedMakeups } from '../../api/announcements';
 import { listSessions } from '../../api/attendance';
 import {
   IconCheck, IconWallet, IconBell, IconChart, IconUsers, IconSettings, IconClock,
@@ -50,6 +50,7 @@ export function ClassDetailScreen({ route, navigation }: any) {
   const [attendedToday, setAttendedToday] = useState(false);
   const [attendPct, setAttendPct] = useState<number | null>(null);
   const [cancelledToday, setCancelledToday] = useState(false);
+  const [makeupNext, setMakeupNext] = useState<{ date: string; time: string } | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [addName, setAddName] = useState('');
   const [addParentName, setAddParentName] = useState('');
@@ -72,6 +73,11 @@ export function ClassDetailScreen({ route, navigation }: any) {
     const todayYmd = localDate();
     // Trạng thái báo nghỉ hôm nay — để lớp không rủ điểm danh buổi đã nghỉ.
     getCancelledDates(classId).then(set => setCancelledToday(set.has(todayYmd))).catch(() => {});
+    // Buổi học bù ĐÃ CHỐT sắp tới (hôm nay trở đi) → nhắc trên thẻ lớp.
+    getConfirmedMakeups(classId).then(map => {
+      const next = Object.keys(map).filter(d => d >= todayYmd).sort()[0];
+      setMakeupNext(next ? { date: next, time: map[next] } : null);
+    }).catch(() => {});
     listSessions(classId)
       .then((arr: any[]) => {
         if (!Array.isArray(arr)) return;
@@ -179,6 +185,15 @@ export function ClassDetailScreen({ route, navigation }: any) {
         <View style={{ backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Text style={{ fontSize: 14.5, fontWeight: '700', color: colors.coral700, flex: 1 }}>Hôm nay lớp ĐÃ BÁO NGHỈ</Text>
           <Text style={{ fontSize: 12.5, color: colors.coral700 }}>Cần học bù? → Học bù</Text>
+        </View>
+      )}
+
+      {/* ── Buổi học bù đã chốt (sắp tới) ── */}
+      {makeupNext && (
+        <View style={{ backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100, borderRadius: 14, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 14.5, fontWeight: '700', color: colors.green700, flex: 1 }}>
+            Học bù đã chốt: {makeupNext.date.slice(8, 10)}/{makeupNext.date.slice(5, 7)}{makeupNext.time ? ` · ${makeupNext.time}` : ''}
+          </Text>
         </View>
       )}
 
