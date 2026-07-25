@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
 } from 'react-native';
@@ -13,6 +14,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Mascot } from '../../components/ui/mascot';
 import { getDays, hasClassOnDayN, nextOccurrence, sessionForDay, sessionTimeStr, daysLabel, DAY_FULL, DAY_SHORT } from '../../utils/schedule';
 import { getCancelledDates, getConfirmedMakeups } from '../../api/announcements';
+import { listSessions } from '../../api/attendance';
 
 const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
@@ -48,14 +50,24 @@ export function CalendarScreen({ navigation }: any) {
   const [cancelMap, setCancelMap] = useState<Record<string, Set<string>>>({});
   // Buổi học bù ĐÃ CHỐT của từng lớp: classId → { "YYYY-MM-DD": "19:00" }.
   const [makeupMap, setMakeupMap] = useState<Record<string, Record<string, string>>>({});
-  useEffect(() => {
+  // Buổi ĐÃ điểm danh của từng lớp: classId → Set("YYYY-MM-DD") — soi buổi còn thiếu.
+  const [attendedMap, setAttendedMap] = useState<Record<string, Set<string>>>({});
+  // Nạp lại mỗi lần màn được focus — quay về từ màn Điểm danh là số liệu tươi ngay.
+  useFocusEffect(useCallback(() => {
     let alive = true;
     classes.forEach((c: any) => {
       getCancelledDates(c.id).then(set => { if (alive) setCancelMap(prev => ({ ...prev, [c.id]: set })); });
       getConfirmedMakeups(c.id).then(map => { if (alive) setMakeupMap(prev => ({ ...prev, [c.id]: map })); });
+      if (!isDemo) {
+        listSessions(c.id)
+          .then((arr: any[]) => {
+            if (alive && Array.isArray(arr)) setAttendedMap(prev => ({ ...prev, [c.id]: new Set<string>(arr.map((sx: any) => sx.session_date)) }));
+          })
+          .catch(() => {});
+      }
     });
     return () => { alive = false; };
-  }, [classes.length]);
+  }, [classes.length, isDemo]));
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -95,7 +107,43 @@ export function CalendarScreen({ navigation }: any) {
   // Ngày đã chọn là buổi đã qua / hôm nay → cho điểm danh đúng buổi đó.
   const ymd = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const selYmd = ymd(selectedDate);
-  const isPastOrToday = selYmd <= ymd(new Date());
+  const todayYmd = ymd(new Date());
+  const isPastOrToday = selYmd <= todayYmd;
+
+  // Lớp c có buổi (định kỳ hoặc học bù) vào ngày dYmd mà CHƯA điểm danh?
+  // Chỉ tính buổi ĐÃ QUA (trước hôm nay — buổi hôm nay có thể chưa diễn ra),
+  // bỏ buổi đã báo nghỉ và ngày trước khi lớp được tạo (khỏi đếm oan).
+  const isMissed = (c: any, dYmd: string, dayN: number) => {
+    if (isDemo || dYmd >= todayYmd) return false;
+    const scheduled = hasClassOnDayN(c.schedule, dayN) || !!makeupMap[c.id]?.[dYmd];
+    if (!scheduled) return false;
+    if (c.created_at && dYmd < String(c.created_at).slice(0, 10)) return false;
+    if (cancelMap[c.id]?.has(dYmd)) return false;
+    return !attendedMap[c.id]?.has(dYmd);
+  };
+  const missedOnDate = (d: Date) => {
+    const dow = d.getDay();
+    return classes.some((c: any) => isMissed(c, ymd(d), dow === 0 ? 7 : dow));
+  };
+
+  // Đếm trong 1 tháng: buổi đã qua CHƯA điểm danh + buổi đã báo nghỉ (số thật).
+  const countMonthlyStatus = (y: number, m: number) => {
+    let missed = 0, cancelled = 0;
+    const dim = getDaysInMonth(y, m);
+    for (let day = 1; day <= dim; day++) {
+      const d = new Date(y, m, day);
+      const dYmd = ymd(d);
+      const dow = d.getDay();
+      const dayN = dow === 0 ? 7 : dow;
+      for (const c of classes) {
+        const scheduled = hasClassOnDayN(c.schedule, dayN) || !!makeupMap[c.id]?.[dYmd];
+        if (!scheduled) continue;
+        if (cancelMap[c.id]?.has(dYmd)) { cancelled++; continue; }
+        if (isMissed(c, dYmd, dayN)) missed++;
+      }
+    }
+    return { missed, cancelled };
+  };
 
   // Monthly stats — "Buổi định kỳ" tính thật: với mỗi lớp, đếm số ngày trong
   // tháng đang xem có thứ ∈ getDays(schedule); cộng dồn tất cả lớp.
@@ -115,8 +163,8 @@ export function CalendarScreen({ navigation }: any) {
     return total;
   };
   const monthlyScheduled = countMonthlyScheduled(year, month);
-  const monthlyMakeup = 1;
-  const monthlyCancelled = 1;
+  const monthlyMakeup = 1; // demo only
+  const monthlyCancelled = 1; // demo only
 
   // Week navigation: dịch tuần bằng cách dời selectedDate ±7 ngày.
   const shiftWeek = (delta: number) => {
@@ -191,9 +239,19 @@ export function CalendarScreen({ navigation }: any) {
                 <View style={{ backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 }}>
                   <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.coral700 }}>Đã báo nghỉ</Text>
                 </View>
+              ) : !isDemo && attendedMap[cls.id]?.has(selYmd) ? (
+                <TouchableOpacity
+                  style={{ backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 }}
+                  onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Xem điểm danh ${cls.name} ngày ${selYmd}`}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.green700 }}>✓ Đã điểm danh</Text>
+                </TouchableOpacity>
               ) : isPastOrToday ? (
                 <TouchableOpacity
-                  style={s.attendBtn}
+                  // Buổi đã QUA mà chưa điểm danh → nút cam cho dễ thấy sót
+                  style={[s.attendBtn, !isDemo && selYmd < todayYmd && { backgroundColor: colors.coral500 }]}
                   onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
                 >
                   <Text style={s.attendBtnText}>Điểm danh</Text>
@@ -221,9 +279,16 @@ export function CalendarScreen({ navigation }: any) {
                   {makeupMap[cls.id][selYmd] ? `${makeupMap[cls.id][selYmd]} · ` : ''}Buổi học bù đã chốt
                 </Text>
               </View>
-              {isPastOrToday ? (
+              {!isDemo && attendedMap[cls.id]?.has(selYmd) ? (
                 <TouchableOpacity
-                  style={s.attendBtn}
+                  style={{ backgroundColor: colors.green50, borderWidth: 1, borderColor: colors.green100, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7 }}
+                  onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
+                >
+                  <Text style={{ fontSize: 12.5, fontWeight: '700', color: colors.green700 }}>✓ Đã điểm danh</Text>
+                </TouchableOpacity>
+              ) : isPastOrToday ? (
+                <TouchableOpacity
+                  style={[s.attendBtn, !isDemo && selYmd < todayYmd && { backgroundColor: colors.coral500 }]}
                   onPress={() => navigation.navigate('Attendance', { classId: cls.id, className: cls.name, sessionDate: selYmd })}
                 >
                   <Text style={s.attendBtnText}>Điểm danh</Text>
@@ -309,6 +374,8 @@ export function CalendarScreen({ navigation }: any) {
                   const dayN = dow === 0 ? 7 : dow;
                   return classes.some((c: any) => hasClassOnDayN(c.schedule, dayN));
                 })();
+                // Chấm CAM = ngày có buổi đã qua chưa điểm danh — nhìn lướt là thấy sót.
+                const missedMark = d !== null && missedOnDate(d);
                 return (
                   <TouchableOpacity
                     key={col}
@@ -319,8 +386,8 @@ export function CalendarScreen({ navigation }: any) {
                     <Text style={[s.cellText, active && s.cellTextSelected, todayMark && !active && s.cellTextToday, !d && { opacity: 0 }]}>
                       {d ? d.getDate() : '·'}
                     </Text>
-                    {hasCls && !active && <View style={[s.dot, todayMark && { backgroundColor: colors.green500 }]} />}
-                    {hasCls && active && <View style={[s.dot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
+                    {(hasCls || missedMark) && !active && <View style={[s.dot, todayMark && { backgroundColor: colors.green500 }, missedMark && { backgroundColor: colors.coral500 }]} />}
+                    {(hasCls || missedMark) && active && <View style={[s.dot, { backgroundColor: 'rgba(255,255,255,0.7)' }]} />}
                   </TouchableOpacity>
                 );
               })}
@@ -336,6 +403,16 @@ export function CalendarScreen({ navigation }: any) {
           <Text style={s.sectionLabel}>TỔNG QUAN THÁNG {month + 1}</Text>
           <View style={s.statsCard}>
             <StatItem value={String(monthlyScheduled)} label="Buổi định kỳ" color={colors.green700} bg={colors.green100} />
+            {(() => {
+              if (isDemo) return null;
+              const st = countMonthlyStatus(year, month);
+              return (
+                <>
+                  {st.missed > 0 && <StatItem value={String(st.missed)} label="Chưa điểm danh" color={colors.coral700} bg="#ffe5da" />}
+                  {st.cancelled > 0 && <StatItem value={String(st.cancelled)} label="Buổi nghỉ" color="#8a6d30" bg={colors.honey100} />}
+                </>
+              );
+            })()}
             {isDemo && <StatItem value={String(monthlyMakeup)} label="Buổi bù" color="#8a6d30" bg={colors.honey100} />}
             {isDemo && <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />}
           </View>
@@ -366,6 +443,7 @@ export function CalendarScreen({ navigation }: any) {
                 const active = isSelected(d);
                 const todayMark = isToday(d);
                 const hasCls = classes.some((c: any) => hasClassOnDayN(c.schedule, dayN));
+                const missedMark = missedOnDate(d);
                 return (
                   <TouchableOpacity
                     key={i}
@@ -377,7 +455,7 @@ export function CalendarScreen({ navigation }: any) {
                     <Text style={[s.weekDate, active && s.weekTextSelected, todayMark && !active && s.weekDateToday]}>
                       {d.getDate()}
                     </Text>
-                    {hasCls && <View style={[s.weekDot, active && { backgroundColor: 'rgba(255,255,255,0.8)' }]} />}
+                    {(hasCls || missedMark) && <View style={[s.weekDot, missedMark && !active && { backgroundColor: colors.coral500 }, active && { backgroundColor: 'rgba(255,255,255,0.8)' }]} />}
                   </TouchableOpacity>
                 );
               })}
@@ -417,6 +495,16 @@ export function CalendarScreen({ navigation }: any) {
               <Text style={s.sectionLabel}>TỔNG QUAN THÁNG {selectedDate.getMonth() + 1}</Text>
               <View style={s.statsCard}>
                 <StatItem value={String(countMonthlyScheduled(selectedDate.getFullYear(), selectedDate.getMonth()))} label="Buổi định kỳ" color={colors.green700} bg={colors.green100} />
+                {(() => {
+                  if (isDemo) return null;
+                  const st = countMonthlyStatus(selectedDate.getFullYear(), selectedDate.getMonth());
+                  return (
+                    <>
+                      {st.missed > 0 && <StatItem value={String(st.missed)} label="Chưa điểm danh" color={colors.coral700} bg="#ffe5da" />}
+                      {st.cancelled > 0 && <StatItem value={String(st.cancelled)} label="Buổi nghỉ" color="#8a6d30" bg={colors.honey100} />}
+                    </>
+                  );
+                })()}
                 {isDemo && <StatItem value={String(monthlyMakeup)} label="Buổi bù" color="#8a6d30" bg={colors.honey100} />}
                 {isDemo && <StatItem value={String(monthlyCancelled)} label="Buổi nghỉ" color={colors.coral700} bg="#ffe5da" />}
               </View>
