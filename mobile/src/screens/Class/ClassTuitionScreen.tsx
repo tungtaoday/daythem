@@ -24,7 +24,10 @@ const buildZaloTemplates = (gw: string) => {
   ];
 };
 
-type Item = { student_id: string; student_name: string; amount: number; paid: boolean; parent_phone?: string | null };
+type Item = {
+  student_id: string; student_name: string; amount: number; paid: boolean; parent_phone?: string | null;
+  class_fee_type?: string; session_count?: number | null;
+};
 
 const DEMO_ITEMS: Item[] = [
   { student_id: 'd1', student_name: 'Nguyễn Minh Anh', amount: 500000, paid: true },
@@ -100,7 +103,8 @@ export function ClassTuitionScreen({ route }: any) {
   }, [classId, isDemo, month]);
 
   const paidList = items.filter(d => d.paid);
-  const unpaidList = items.filter(d => !d.paid);
+  // Dòng 0đ không tính "chưa nộp": miễn phí / khoá đã thu / theo buổi chưa học.
+  const unpaidList = items.filter(d => !d.paid && (d.amount || 0) > 0);
   const totalPaid = paidList.reduce((a, d) => a + d.amount, 0);
   const totalUnpaid = unpaidList.reduce((a, d) => a + d.amount, 0);
   const totalTarget = items.reduce((a, d) => a + d.amount, 0);
@@ -219,7 +223,11 @@ export function ClassTuitionScreen({ route }: any) {
                   <Avatar name={d.student_name} size={38} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.stuName}>{d.student_name}</Text>
-                    <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
+                    <Text style={s.stuSub}>
+                      {VND_FULL(d.amount)}
+                      {d.class_fee_type === 'session' && d.session_count != null ? ` · ${d.session_count} buổi có mặt` : ''}
+                      {d.class_fee_type === 'course' ? ' · cả khoá' : ''}
+                    </Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <View style={{ alignItems: 'center', gap: 2 }}>
@@ -271,7 +279,11 @@ export function ClassTuitionScreen({ route }: any) {
                   <Avatar name={d.student_name} size={38} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.stuName}>{d.student_name}</Text>
-                    <Text style={s.stuSub}>{VND_FULL(d.amount)}</Text>
+                    <Text style={s.stuSub}>
+                      {VND_FULL(d.amount)}
+                      {d.class_fee_type === 'session' && d.session_count != null ? ` · ${d.session_count} buổi có mặt` : ''}
+                      {d.class_fee_type === 'course' ? ' · cả khoá' : ''}
+                    </Text>
                   </View>
                   <TouchableOpacity style={s.paidBadge} onPress={() => unmarkPaid(d)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <IconCheck size={13} color="white" />

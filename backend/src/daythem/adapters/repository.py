@@ -123,6 +123,14 @@ class TuitionRepository:
             .where(and_(TuitionORM.student_id == student_id, TuitionORM.month == month))
         )
 
+    def get_paid_any_by_student(self, student_id: str) -> Optional[TuitionORM]:
+        """Kỳ ĐÃ THU bất kỳ của học sinh — dùng cho lớp thu theo KHOÁ (thu 1 lần là xong)."""
+        return self.session.scalar(
+            select(TuitionORM)
+            .where(and_(TuitionORM.student_id == student_id, TuitionORM.paid.is_(True)))
+            .limit(1)
+        )
+
     def list_by_class_month(self, class_id: str, month: str) -> list[TuitionORM]:
         return list(self.session.scalars(
             select(TuitionORM)

@@ -17,6 +17,7 @@ const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const PLACES = ['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'];
 const FEE_PRESETS = [300000, 400000, 500000, 600000, 800000, 1000000];
+import { ClassFeeType, FEE_TYPES, FEE_UNIT, FEE_PRESETS_BY_TYPE } from '../../utils/feeTypes';
 const DURATIONS = [
   { label: '60p', value: 60 },
   { label: '1h30', value: 90 },
@@ -34,6 +35,7 @@ export function SetupScreen() {
 
   const [className, setClassName] = useState('');
   const [fee, setFee] = useState(500000);
+  const [feeType, setFeeType] = useState<ClassFeeType>('month');
   const [days, setDays] = useState<number[]>([3]);
   const [time, setTime] = useState('18:30');
   const [duration, setDuration] = useState(90);
@@ -62,7 +64,7 @@ export function SetupScreen() {
           subject: subjects[0] || 'Toán',
           grade: String(grades[0] || 9),
           default_fee: fee,
-          fee_type: 'month',
+          fee_type: feeType,
           color: 'green',
           schedule: { days, day: days[0], start_time: time, duration, location: place },
         });
@@ -95,6 +97,7 @@ export function SetupScreen() {
           gender={gender}
           className={className} setClassName={setClassName}
           fee={fee} setFee={setFee}
+          feeType={feeType} setFeeType={setFeeType}
           days={days} setDays={setDays}
           time={time} setTime={setTime}
           duration={duration} setDuration={setDuration}
@@ -111,7 +114,7 @@ export function SetupScreen() {
       {step === 'done' && (
         <DoneStep
           name={name} gender={gender}
-          className={className} fee={fee}
+          className={className} fee={fee} feeType={feeType}
           days={days} time={time} place={place}
           isLoading={isLoading}
           onEnter={handleEnter}
@@ -221,7 +224,7 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
 }
 
 // ─── First Class Step ─────────────────────────────────────────────────────────
-function FirstClassStep({ gender, className, setClassName, fee, setFee, days, setDays, time, setTime, duration, setDuration, place, setPlace, onBack, onNext, onSkip }: any) {
+function FirstClassStep({ gender, className, setClassName, fee, setFee, feeType, setFeeType, days, setDays, time, setTime, duration, setDuration, place, setPlace, onBack, onNext, onSkip }: any) {
   const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
 
@@ -310,17 +313,35 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
           ))}
         </View>
 
+        <Text style={[s.sectionLabel, { marginTop: 20 }]}>CÁCH THU HỌC PHÍ</Text>
+        <View style={s.chipWrap}>
+          {FEE_TYPES.map(t => (
+            <TouchableOpacity
+              key={t.id}
+              style={[s.chip, feeType === t.id && s.chipActive]}
+              onPress={() => {
+                setFeeType(t.id);
+                // Đổi cách thu → gợi ý lại mức giá cho đúng đơn vị (150k/buổi ≠ 150k/tháng)
+                setFee(FEE_PRESETS_BY_TYPE[t.id][2]);
+              }}
+            >
+              <Text style={[s.chipText, feeType === t.id && s.chipTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <Text style={s.sectionHint}>{FEE_TYPES.find(t => t.id === feeType)?.hint}</Text>
+
         <Text style={[s.sectionLabel, { marginTop: 20 }]}>HỌC PHÍ MẶC ĐỊNH</Text>
         <Text style={s.sectionHint}>Áp dụng cho cả lớp, có thể chỉnh riêng từng học sinh sau.</Text>
         <View style={s.chipWrap}>
-          {FEE_PRESETS.map(p => (
+          {FEE_PRESETS_BY_TYPE[feeType as ClassFeeType].map((p: number) => (
             <TouchableOpacity
               key={p}
               style={[s.chip, fee === p && s.chipActive]}
               onPress={() => setFee(p)}
             >
               <Text style={[s.chipText, fee === p && s.chipTextActive]}>
-                {(p / 1000).toFixed(0)}k/th
+                {p >= 1000000 ? `${p / 1000000}tr` : `${(p / 1000).toFixed(0)}k`}
               </Text>
             </TouchableOpacity>
           ))}
@@ -330,12 +351,12 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
           <TextInput
             style={s.customFeeInput}
             keyboardType="number-pad"
-            value={FEE_PRESETS.includes(fee) ? '' : String(Math.round(fee / 1000))}
-            onChangeText={t => setFee((parseInt(t.replace(/\D/g, ''), 10) || 0) * 1000)}
+            value={FEE_PRESETS_BY_TYPE[feeType as ClassFeeType].includes(fee) ? '' : String(Math.round(fee / 1000))}
+            onChangeText={(t: string) => setFee((parseInt(t.replace(/\D/g, ''), 10) || 0) * 1000)}
             placeholder="vd 450"
             placeholderTextColor={colors.textMuted}
           />
-          <Text style={s.customFeeUnit}>k/tháng</Text>
+          <Text style={s.customFeeUnit}>k/{FEE_UNIT[feeType as ClassFeeType]}</Text>
         </View>
       </ScrollView>
 
@@ -355,7 +376,7 @@ function FirstClassStep({ gender, className, setClassName, fee, setFee, days, se
 }
 
 // ─── Done Step ────────────────────────────────────────────────────────────────
-function DoneStep({ name, gender, className, fee, days, time, place, isLoading, onEnter }: any) {
+function DoneStep({ name, gender, className, fee, feeType, days, time, place, isLoading, onEnter }: any) {
   const insets = useSafeAreaInsets();
   const pronoun = gender === 'co' ? 'cô' : 'thầy';
   const firstName = name.trim().split(' ').slice(-1)[0];
@@ -382,7 +403,7 @@ function DoneStep({ name, gender, className, fee, days, time, place, isLoading, 
         <View style={[s.summaryRow, s.summaryDivider]}>
           <Text style={s.summaryEmoji}>💰</Text>
           <View style={{ flex: 1 }}>
-            <Text style={s.summaryName}>{fee.toLocaleString('vi-VN')}đ/tháng</Text>
+            <Text style={s.summaryName}>{fee.toLocaleString('vi-VN')}đ/{FEE_UNIT[(feeType as ClassFeeType) || 'month']}</Text>
             <Text style={s.summarySub}>Chỉnh riêng từng học sinh trong Cài đặt lớp</Text>
           </View>
         </View>

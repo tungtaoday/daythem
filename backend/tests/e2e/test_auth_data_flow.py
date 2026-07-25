@@ -202,7 +202,7 @@ def test_teacher_b_cannot_see_teacher_a_classes(two_teachers):
     client.headers["Authorization"] = f"Bearer {token_a}"
     client.post("/api/v1/classes", json={
         "name": "Lớp A của Cô", "subject": "Toán", "grade": "9",
-        "default_fee": 500000, "fee_type": "default",
+        "default_fee": 500000, "fee_type": "month",
     })
 
     # Fetch teacher A's class IDs

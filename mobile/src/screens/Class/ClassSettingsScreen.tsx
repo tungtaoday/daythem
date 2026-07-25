@@ -11,6 +11,7 @@ import { useClassesStore } from '../../store/classes';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { useAuthStore, isDemoToken } from '../../store/auth';
 import { getSessions, sessionTimeStr, DAY_SHORT, Session } from '../../utils/schedule';
+import { FEE_TYPES, FEE_UNIT, normFeeType } from '../../utils/feeTypes';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ function FeeTag({ override, base, note }: { override: number | null; base: numbe
 
 // ── Fee editor modal ──────────────────────────────────────────
 
-function FeeModal({ stu, base, onSave, onClose }: any) {
+function FeeModal({ stu, base, unit, onSave, onClose }: any) {
   const [val, setVal] = useState(stu.override !== null ? String(stu.override / 1000) : String(base / 1000));
   const [note, setNote] = useState(stu.overrideNote || '');
   const PRESETS = [
@@ -130,7 +131,7 @@ function FeeModal({ stu, base, onSave, onClose }: any) {
       <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
         <View style={s.handle} />
         <Text style={s.sheetTitle}>Học phí · {stu.name.split(' ').slice(-1)[0]}</Text>
-        <Text style={s.sheetSub}>Mặc định: {(base / 1000).toFixed(0)}k/tháng</Text>
+        <Text style={s.sheetSub}>Mặc định: {(base / 1000).toFixed(0)}k/{unit || 'tháng'}</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
           {PRESETS.map(p => (
             <TouchableOpacity
@@ -498,6 +499,9 @@ export function ClassSettingsScreen({ route, navigation }: any) {
               ))}
             </View>
           </View>
+          <Text style={{ fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, paddingHorizontal: 16, paddingBottom: 12 }}>
+            {FEE_TYPES.find(t => t.id === normFeeType(feeMode))?.hint}
+          </Text>
         </View>
 
         {/* ── HỌC PHÍ TỪNG HỌC SINH ── */}
@@ -586,6 +590,7 @@ export function ClassSettingsScreen({ route, navigation }: any) {
         <FeeModal
           stu={editingStu}
           base={defaultFee}
+          unit={FEE_UNIT[normFeeType(feeMode)]}
           onSave={handleStuFee}
           onClose={() => setEditingStu(null)}
         />

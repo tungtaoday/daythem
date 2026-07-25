@@ -32,6 +32,8 @@ type Item = {
   student_id: string; student_name: string;
   amount: number; paid: boolean; classId: string; className: string;
   parent_phone?: string | null;
+  class_fee_type?: string;        // month | session | course (loại thu của lớp)
+  session_count?: number | null;  // lớp theo buổi: số buổi có mặt trong tháng
 };
 
 const DEMO_TUITION: Item[] = [
@@ -260,7 +262,9 @@ export function TuitionTabScreen({ navigation, route }: any) {
   const displayData = effectiveFilter === 'all' ? rawData : rawData.filter(d => d.classId === effectiveFilter);
 
   const paidList = displayData.filter(d => d.paid);
-  const unpaidList = displayData.filter(d => !d.paid);
+  // "Chưa nộp" = còn TIỀN phải thu. Dòng 0đ không vào đây: em miễn phí,
+  // lớp theo khoá đã thu đủ, lớp theo buổi chưa học buổi nào trong tháng.
+  const unpaidList = displayData.filter(d => !d.paid && (d.amount || 0) > 0);
   const totalPaid = paidList.reduce((a, d) => a + (d.amount || 0), 0);
   const totalUnpaid = unpaidList.reduce((a, d) => a + (d.amount || 0), 0);
   const totalTarget = displayData.reduce((a, d) => a + (d.amount || 0), 0);
@@ -562,7 +566,11 @@ export function TuitionTabScreen({ navigation, route }: any) {
                   <Avatar name={d.student_name} size={38} />
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={s.txName}>{d.student_name}</Text>
-                    <Text style={s.txSub}>{d.className} · {VND_FULL(d.amount)}</Text>
+                    <Text style={s.txSub}>
+                      {d.className} · {VND_FULL(d.amount)}
+                      {d.class_fee_type === 'session' && d.session_count != null ? ` · ${d.session_count} buổi` : ''}
+                      {d.class_fee_type === 'course' ? ' · cả khoá' : ''}
+                    </Text>
                   </View>
                   {/* Nhắc RIÊNG phụ huynh này — tin có tên + số tiền (không phải nhắc gộp) */}
                   <View style={{ alignItems: 'center', gap: 2 }}>

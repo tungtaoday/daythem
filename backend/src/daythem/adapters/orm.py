@@ -48,7 +48,7 @@ class ClassORM(Base):
     grade: Mapped[str] = mapped_column(String(20))
     schedule: Mapped[Optional[dict]] = mapped_column(JSON)
     default_fee: Mapped[float] = mapped_column(Float, default=0)
-    fee_type: Mapped[str] = mapped_column(String(20), default="monthly")
+    fee_type: Mapped[str] = mapped_column(String(20), default="month")  # month | session | course
     zalo_group_id: Mapped[Optional[str]] = mapped_column(String(100))
     color: Mapped[Optional[str]] = mapped_column(String(20))  # khoá màu nhận diện lớp (vd 'green')
     archived: Mapped[bool] = mapped_column(Boolean, default=False)

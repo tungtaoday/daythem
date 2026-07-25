@@ -391,6 +391,18 @@ def handle_get_tax_declaration(cmd: GetTaxDeclarationCommand, uow: SqlAlchemyUni
         return {"year": cmd.year, "fields": fields, "declaration_text": declaration_text}
 
 
+def _norm_fee_type(value: str) -> str:
+    """Chuẩn hoá loại thu học phí về 1 bộ giá trị: month | session | course.
+
+    'monthly' là giá trị cũ còn sót trong DB/client cũ → quy về 'month'."""
+    v = (value or "month").strip().lower()
+    if v == "monthly":
+        v = "month"
+    if v not in ("month", "session", "course"):
+        raise ValueError("Loại học phí không hợp lệ (month/session/course)")
+    return v
+
+
 def handle_create_class(cmd: CreateClassCommand, uow: SqlAlchemyUnitOfWork) -> ClassORM:
     klass = ClassORM(
         id=str(uuid.uuid4()),
@@ -400,7 +412,7 @@ def handle_create_class(cmd: CreateClassCommand, uow: SqlAlchemyUnitOfWork) -> C
         grade=cmd.grade,
         schedule=cmd.schedule,
         default_fee=cmd.default_fee,
-        fee_type=cmd.fee_type,
+        fee_type=_norm_fee_type(cmd.fee_type),
         color=cmd.color,
     )
     with uow:
@@ -420,7 +432,7 @@ def handle_update_class(cmd: UpdateClassCommand, uow: SqlAlchemyUnitOfWork) -> C
         if cmd.grade is not None: klass.grade = cmd.grade
         if cmd.schedule is not None: klass.schedule = cmd.schedule
         if cmd.default_fee is not None: klass.default_fee = cmd.default_fee
-        if cmd.fee_type is not None: klass.fee_type = cmd.fee_type
+        if cmd.fee_type is not None: klass.fee_type = _norm_fee_type(cmd.fee_type)
         if cmd.zalo_group_id is not None: klass.zalo_group_id = cmd.zalo_group_id
         if cmd.color is not None: klass.color = cmd.color
         if cmd.archived is not None: klass.archived = cmd.archived
@@ -501,18 +513,13 @@ def handle_record_payment(cmd: RecordPaymentCommand, uow: SqlAlchemyUnitOfWork) 
             student = uow.students.get(cmd.student_id)
             if not student:
                 raise ValueError("Không tìm thấy học sinh")
-            fee = student.fee_setting
             amount = cmd.amount
             if amount is None:
-                if fee and fee.fee_type == "free":
-                    amount = 0
-                elif fee and fee.fee_type in ("discount", "custom") and fee.amount is not None:
-                    amount = fee.amount
-                else:
-                    klass = uow.classes.get(cmd.class_id)
-                    if not klass:
-                        raise ValueError("Không tìm thấy lớp")
-                    amount = klass.default_fee
+                klass = uow.classes.get(cmd.class_id)
+                if not klass:
+                    raise ValueError("Không tìm thấy lớp")
+                # Tính theo ĐÚNG loại thu của lớp (khoán/buổi/khoá) — không mặc định khoán.
+                amount = _expected_fee(student, klass, cmd.month, uow)
             tuition = TuitionORM(
                 id=str(uuid.uuid4()),
                 class_id=cmd.class_id,
@@ -606,14 +613,47 @@ def handle_confirm_makeup(cmd: ConfirmMakeupCommand, uow: SqlAlchemyUnitOfWork) 
         return uow.makeups.get(cmd.makeup_id)
 
 
-def _expected_fee(student: StudentORM, klass: ClassORM) -> float:
-    """Resolve a student's monthly fee from their per-student override, else class default."""
+def _expected_fee_detail(
+    student: StudentORM, klass: ClassORM, month: str, uow: SqlAlchemyUnitOfWork
+) -> tuple[float, Optional[int]]:
+    """Học phí DỰ KIẾN của 1 học sinh trong 1 tháng, theo ĐÚNG loại thu của lớp.
+
+    - month (khoán tháng): giá cố định mỗi tháng.
+    - session (theo buổi): đơn giá × số buổi CÓ MẶT trong tháng (điểm danh là
+      nguồn sự thật — chưa điểm danh buổi nào thì tháng đó 0đ).
+    - course (theo khoá): thu 1 lần; đã có kỳ ĐÃ THU ở tháng khác thì các tháng
+      còn lại 0đ (không đòi lại).
+
+    Giá riêng từng em (discount/custom) tính theo CÙNG đơn vị với loại thu của
+    lớp (lớp theo buổi → giá riêng là giá MỖI BUỔI). Trả (số tiền, số buổi|None).
+    """
     fee = student.fee_setting
     if fee and fee.fee_type == "free":
-        return 0
+        return 0, None
     if fee and fee.fee_type in ("discount", "custom") and fee.amount is not None:
-        return fee.amount
-    return klass.default_fee
+        unit = fee.amount
+    else:
+        unit = klass.default_fee
+
+    ftype = klass.fee_type or "month"
+    if ftype == "session":
+        n = 0
+        for s in uow.attendance.list_sessions(klass.id):
+            if s.session_date and s.session_date.startswith(month):
+                if any(r.student_id == student.id and r.present for r in s.records):
+                    n += 1
+        return unit * n, n
+    if ftype == "course":
+        paid = uow.tuitions.get_paid_any_by_student(student.id)
+        if paid and paid.month != month:
+            return 0, None
+        return unit, None
+    # "month" / "monthly" (giá trị cũ) / giá trị lạ → khoán tháng
+    return unit, None
+
+
+def _expected_fee(student: StudentORM, klass: ClassORM, month: str, uow: SqlAlchemyUnitOfWork) -> float:
+    return _expected_fee_detail(student, klass, month, uow)[0]
 
 
 def _report_month(week_start: str) -> str:
@@ -658,7 +698,7 @@ def handle_generate_report(cmd: GenerateReportCommand, uow: SqlAlchemyUnitOfWork
                 "sessions_attended": attended,
                 "sessions_total": len(sessions),
                 "tuition_paid": tuition.paid if tuition else False,
-                "tuition_amount": tuition.amount if tuition else _expected_fee(student, klass),
+                "tuition_amount": tuition.amount if tuition else _expected_fee(student, klass, report_month, uow),
             })
 
         report = ReportORM(

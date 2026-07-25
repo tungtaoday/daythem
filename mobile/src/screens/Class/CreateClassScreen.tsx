@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/Button';
 import { colors, spacing, typography, radius } from '../../theme';
 import { CLASS_COLORS, CLASS_COLOR_KEYS, ClassColorKey } from '../../theme/classColors';
 import { DAY_SHORT } from '../../utils/schedule';
+import { ClassFeeType, FEE_TYPES, FEE_UNIT, FEE_PRESETS_BY_TYPE } from '../../utils/feeTypes';
 import { useClassesStore } from '../../store/classes';
 
 const SUBJECTS = ['Toán', 'Văn', 'Anh', 'Lý', 'Hóa', 'Sinh', 'Sử', 'Địa'];
@@ -14,7 +15,6 @@ const DAYS = [
   { label: 'CN', value: 7 },
 ];
 const TIME_PRESETS = ['17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00'];
-const FEE_PRESETS = [300000, 400000, 500000, 600000, 800000, 1000000];
 const feeLabel = (n: number) => (n >= 1000000 ? `${n / 1000000}tr` : `${n / 1000}k`);
 const DURATIONS = [{ l: '60p', v: 60 }, { l: '1h30', v: 90 }, { l: '2h', v: 120 }, { l: '2h30', v: 150 }];
 const PLACES = ['Tại nhà', 'Zoom', 'Quán cà phê', 'Khác'];
@@ -26,6 +26,7 @@ export function CreateClassScreen({ navigation }: any) {
   const [grade, setGrade] = useState('9');
   const [name, setName] = useState('');
   const [fee, setFee] = useState('800000');
+  const [feeType, setFeeType] = useState<ClassFeeType>('month');
   const [days, setDays] = useState<number[]>([3]);
   const [time, setTime] = useState('18:30');
   const [duration, setDuration] = useState(90);
@@ -64,7 +65,7 @@ export function CreateClassScreen({ navigation }: any) {
         : { days, day: days[0], start_time: time, duration, location: place };
       await createClass({
         name: name || autoName, subject, grade,
-        default_fee: parseFloat(fee) || 0, fee_type: 'month', color,
+        default_fee: parseFloat(fee) || 0, fee_type: feeType, color,
         schedule,
       });
       navigation.goBack();
@@ -90,8 +91,17 @@ export function CreateClassScreen({ navigation }: any) {
       <Text style={styles.label}>Tên lớp (tự đặt hoặc để mặc định)</Text>
       <TextInput style={styles.input} placeholder={autoName} placeholderTextColor={colors.textMuted} value={name} onChangeText={setName} />
 
-      <Text style={styles.label}>Học phí mặc định (đ/tháng)</Text>
-      <View style={styles.chips}>{FEE_PRESETS.map(p => chip(feeLabel(p), fee === String(p), () => setFee(String(p))))}</View>
+      <Text style={styles.label}>Cách thu học phí</Text>
+      <View style={styles.chips}>
+        {FEE_TYPES.map(t => chip(t.label, feeType === t.id, () => {
+          setFeeType(t.id);
+          setFee(String(FEE_PRESETS_BY_TYPE[t.id][2])); // gợi ý lại giá đúng đơn vị
+        }))}
+      </View>
+      <Text style={styles.feeHint}>{FEE_TYPES.find(t => t.id === feeType)?.hint}</Text>
+
+      <Text style={styles.label}>Học phí mặc định (đ/{FEE_UNIT[feeType]})</Text>
+      <View style={styles.chips}>{FEE_PRESETS_BY_TYPE[feeType].map(p => chip(feeLabel(p), fee === String(p), () => setFee(String(p))))}</View>
       <TextInput style={styles.input} placeholder="800000" placeholderTextColor={colors.textMuted} keyboardType="number-pad" value={fee} onChangeText={setFee} />
 
       <Text style={styles.label}>Ngày học trong tuần (chọn nhiều được)</Text>
@@ -153,6 +163,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.md, gap: spacing.sm, paddingBottom: 40 },
   label: { ...typography.label, marginTop: spacing.sm },
+  feeHint: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 18 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   chip: { height: 40, paddingHorizontal: spacing.sm, minWidth: 56 },
   input: { height: 52, borderWidth: 1.5, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, ...typography.body, backgroundColor: colors.surface },

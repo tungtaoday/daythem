@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional
 from daythem.entrypoints.deps import get_uow, get_current_teacher
-from daythem.service.handlers import RecordPaymentCommand, handle_record_payment, _vn_month
+from daythem.service.handlers import RecordPaymentCommand, handle_record_payment, _vn_month, _expected_fee_detail
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.service.activity import record_event
 from daythem.adapters.orm import TeacherORM
@@ -42,17 +42,13 @@ def get_tuition(
             raise HTTPException(404, "Class not found")
 
         students = uow.students.list_by_class(class_id)
+        class_fee_type = "month" if klass.fee_type in (None, "", "monthly") else klass.fee_type
         result = []
         for student in students:
             tuition = uow.tuitions.get_by_student_month(student.id, month)
             fee = student.fee_setting
-            if fee and fee.fee_type == "free":
-                amount = 0
-            elif fee and fee.fee_type in ("discount", "custom") and fee.amount is not None:
-                amount = fee.amount
-            else:
-                amount = klass.default_fee
-
+            # Tính theo ĐÚNG loại thu của lớp (khoán/buổi/khoá) — 1 nguồn sự thật với handler.
+            amount, session_count = _expected_fee_detail(student, klass, month, uow)
             result.append({
                 "student_id": student.id,
                 "student_name": student.name,
@@ -61,6 +57,8 @@ def get_tuition(
                 "paid": tuition.paid if tuition else False,
                 "paid_date": tuition.paid_date if tuition else None,
                 "fee_type": fee.fee_type if fee else "default",
+                "class_fee_type": class_fee_type,
+                "session_count": session_count,
             })
         return result
 
