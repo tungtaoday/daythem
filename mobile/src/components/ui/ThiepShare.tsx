@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Platform, Image, TextInput, KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import ViewShot from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
@@ -75,6 +75,8 @@ export function ThiepShareSheet({ children, onClose, sub, noteValue, onNoteChang
 
   return (
     <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
+      {/* Gõ lời nhắn thì bàn phím không được che ô nhập */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <TouchableOpacity style={s.wrap} activeOpacity={1} onPress={() => {}}>
         {sub ? <Text style={s.subText}>{sub}</Text> : null}
         <ViewShot ref={shotRef} options={{ format: 'png', quality: 1 }}>
@@ -110,6 +112,7 @@ export function ThiepShareSheet({ children, onClose, sub, noteValue, onNoteChang
         </TouchableOpacity>
         <Text style={s.hint}>Ảnh sẽ mở bảng chia sẻ → chọn Zalo → gửi</Text>
       </TouchableOpacity>
+      </KeyboardAvoidingView>
     </TouchableOpacity>
   );
 }

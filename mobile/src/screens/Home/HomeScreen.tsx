@@ -21,6 +21,7 @@ import {
 import { sessionForDay, nextOccurrence, hasClassOnDayN, todayDayN, DAY_FULL } from '../../utils/schedule';
 import { getHomeSummary, HomeSummary, getMonthlyWrap, MonthlyWrap } from '../../api/home';
 import { getCancelledDates } from '../../api/announcements';
+import { countMissedThisMonth } from '../../utils/missedSessions';
 import { DemoBanner } from '../../components/ui/DemoBanner';
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -109,6 +110,13 @@ const TONES: Record<string, any> = {
     iconBg: colors.coral100, iconColor: colors.coral700,
     btnBg: colors.coral500, btnColor: 'white',
     Icon: IconWarn,
+  },
+  attend: {
+    label: 'ĐIỂM DANH BÙ',
+    grad: ['#ec8b73', '#c2593f'] as [string, string], heroBg: '#c2593f',
+    iconBg: colors.coral100, iconColor: colors.coral700,
+    btnBg: colors.coral500, btnColor: 'white',
+    Icon: IconCheck,
   },
   money: {
     label: 'HỌC PHÍ',
@@ -398,6 +406,10 @@ export function HomeScreen({ navigation }: any) {
   const [totalCards, setTotalCards] = useState(0);
   const [summary, setSummary] = useState<HomeSummary | null>(null);
   const [cancelledTodayIds, setCancelledTodayIds] = useState<Set<string>>(new Set());
+  // Số buổi ĐÃ QUA trong tháng chưa điểm danh (cùng luật với màn Lịch).
+  const [missedCount, setMissedCount] = useState(0);
+  // Sheet danh sách học sinh vắng liên tiếp (card "N học sinh vắng" bấm vào).
+  const [riskListOpen, setRiskListOpen] = useState(false);
   const [wrap, setWrap] = useState<MonthlyWrap | null>(null);
 
   useEffect(() => { fetchClasses(); }, []);
@@ -430,6 +442,8 @@ export function HomeScreen({ navigation }: any) {
       await Promise.all(classes.map(c => getCancelledDates(c.id).then(set => { if (set.has(ymd)) ids.add(c.id); })));
       if (alive) setCancelledTodayIds(ids);
     })();
+    // Buổi đã qua chưa điểm danh trong tháng → thẻ nhắc điểm danh bù trên Home.
+    countMissedThisMonth(classes).then(n => { if (alive) setMissedCount(n); }).catch(() => {});
     return () => { alive = false; };
   }, [classes, isLoading, isDemo]));
 
@@ -513,8 +527,22 @@ export function HomeScreen({ navigation }: any) {
         avatarNames: atRisk.slice(0, 4).map(a => a.name),
         classId: first.class_id,
         className: first.class_name,
-        openStudentId: first.student_id, // mở THẲNG hồ sơ em này (nút hứa "hỏi thăm" thì phải tới nơi hỏi thăm)
+        openStudentId: first.student_id, // 1 em → mở THẲNG hồ sơ em đó
+        riskList: atRisk, // nhiều em → mở danh sách chọn em để hỏi thăm (không nhảy bừa em đầu)
         primary: { label: 'Nhắn hỏi thăm', icon: 'send' },
+        secondary: { label: 'Để sau' },
+      });
+    }
+
+    // Card điểm danh bù — tháng này còn buổi ĐÃ QUA chưa điểm danh.
+    if (!isDemo && missedCount > 0) {
+      generated.push({
+        id: 'missed-att',
+        kind: 'attend',
+        title: `${missedCount} buổi chưa điểm danh tháng này`,
+        body: `Điểm danh bù để chuyên cần chính xác${gw === 'cô' ? ' cô nhé' : ' thầy nhé'} — lớp thu theo buổi thì tiền cũng tính từ đây. Buổi nào sót có chấm cam trên lịch.`,
+        meta: 'Cần bù',
+        primary: { label: 'Mở lịch dạy', icon: 'open' },
         secondary: { label: 'Để sau' },
       });
     }
@@ -556,7 +584,7 @@ export function HomeScreen({ navigation }: any) {
 
     setCards(generated);
     setTotalCards(generated.length);
-  }, [classes, isLoading, teacher, isDemo, summary, cancelledTodayIds]);
+  }, [classes, isLoading, teacher, isDemo, summary, cancelledTodayIds, missedCount]);
 
   const dismiss = (id: string) => {
     setCards(prev => prev.filter(c => c.id !== id));
@@ -574,10 +602,18 @@ export function HomeScreen({ navigation }: any) {
       }
       dismiss(card.id); // mở lớp rồi thì thẻ buổi học coi như đã xử lý
     } else if (card.kind === 'risk' && card.classId && card.classId !== 'demo') {
-      navigation.navigate('ClassStudents', {
-        classId: card.classId, className: card.className,
-        openStudentId: card.openStudentId, // mở thẳng hồ sơ em vắng → nút "Nhắn Zalo" ngay đó
-      });
+      if ((card.riskList?.length ?? 0) > 1) {
+        // Nhiều em vắng → hiện DANH SÁCH để cô chọn em cần hỏi thăm trước,
+        // không nhảy thẳng vào 1 em khiến các em còn lại "tàng hình".
+        setRiskListOpen(true);
+      } else {
+        navigation.navigate('ClassStudents', {
+          classId: card.classId, className: card.className,
+          openStudentId: card.openStudentId, // mở thẳng hồ sơ em vắng → nút "Nhắn Zalo" ngay đó
+        });
+      }
+    } else if (card.kind === 'attend') {
+      navigation.navigate('Calendar'); // buổi sót có chấm cam sẵn trên lịch
     } else if (card.kind === 'money') {
       navigation.navigate('Tuition');
     } else if (card.kind === 'report') {
@@ -690,6 +726,51 @@ export function HomeScreen({ navigation }: any) {
         <View style={{ height: 32 }} />
       </ScrollView>
 
+      {/* Danh sách học sinh vắng liên tiếp — chọn em cần hỏi thăm */}
+      {riskListOpen && (
+        <TouchableOpacity
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20,30,25,0.45)', justifyContent: 'flex-end' } as any}
+          activeOpacity={1}
+          onPress={() => setRiskListOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => {}}
+            style={{ backgroundColor: 'white', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: Math.max(insets.bottom + 16, 32) }}
+          >
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: '#e0ddd5', alignSelf: 'center', marginBottom: 14 }} />
+            <Text style={{ fontSize: 17, fontWeight: '700', color: colors.textPrimary, marginBottom: 4 }}>
+              {(summary?.at_risk?.length ?? 0)} học sinh vắng liên tiếp
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 12 }}>
+              Chạm vào một em để mở hồ sơ và nhắn Zalo hỏi thăm phụ huynh.
+            </Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {(summary?.at_risk ?? []).map((a: any) => (
+                <TouchableOpacity
+                  key={a.student_id}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 12 }}
+                  onPress={() => {
+                    setRiskListOpen(false);
+                    navigation.navigate('ClassStudents', {
+                      classId: a.class_id, className: a.class_name, openStudentId: a.student_id,
+                    });
+                  }}
+                >
+                  <Avatar name={a.name} size={38} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14.5, fontWeight: '600', color: colors.textPrimary }}>{a.name}</Text>
+                    <Text style={{ fontSize: 12.5, color: colors.textSecondary, marginTop: 1 }}>{a.class_name}</Text>
+                  </View>
+                  <View style={{ backgroundColor: colors.coral50, borderWidth: 1, borderColor: colors.coral100, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: colors.coral700 }}>vắng {a.absent_streak} buổi</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

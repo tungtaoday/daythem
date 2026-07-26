@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { colors } from '../../theme';
 import { IconZalo, IconCheck } from '../icons';
@@ -107,6 +108,8 @@ export function ZaloCopySheet({ title, recipient, message, hint, phone, template
 
   return (
     <TouchableOpacity style={s.overlay} onPress={onClose} activeOpacity={1}>
+      {/* Bàn phím hiện lên thì đẩy sheet theo — không che mất ô đang gõ */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ justifyContent: 'flex-end' }}>
       <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
         <View style={s.handle} />
 
@@ -212,6 +215,7 @@ export function ZaloCopySheet({ title, recipient, message, hint, phone, template
           <Text style={s.confirmHint}>Copy tin nhắn trước, mở Zalo dán &amp; gửi, rồi xác nhận</Text>
         )}
       </TouchableOpacity>
+      </KeyboardAvoidingView>
     </TouchableOpacity>
   );
 }

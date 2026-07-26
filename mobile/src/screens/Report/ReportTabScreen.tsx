@@ -731,19 +731,22 @@ export function ReportTabScreen({ navigation, route }: any) {
           <TouchableOpacity style={s.pickerSheet} activeOpacity={1} onPress={() => {}}>
             <View style={s.pickerHandle} />
             <Text style={s.pickerTitle}>Gửi thiệp cho lớp nào?</Text>
-            {displayClasses.map((cls: any) => (
-              <TouchableOpacity
-                key={cls.id}
-                style={s.pickerRow}
-                onPress={() => {
-                  setShowThiepPicker(false);
-                  navigation.navigate('ClassStudents', { classId: cls.id, className: cls.name });
-                }}
-              >
-                <Text style={s.pickerRowText}>{cls.name}</Text>
-                <Text style={s.pickerRowSub}>{cls.student_count || 0} học sinh</Text>
-              </TouchableOpacity>
-            ))}
+            {/* Cuộn được — nhiều lớp thì lớp thứ 4+ không bị tràn khỏi màn hình */}
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={displayClasses.length > 5}>
+              {displayClasses.map((cls: any) => (
+                <TouchableOpacity
+                  key={cls.id}
+                  style={s.pickerRow}
+                  onPress={() => {
+                    setShowThiepPicker(false);
+                    navigation.navigate('ClassStudents', { classId: cls.id, className: cls.name });
+                  }}
+                >
+                  <Text style={s.pickerRowText}>{cls.name}</Text>
+                  <Text style={s.pickerRowSub}>{cls.student_count || 0} học sinh</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </TouchableOpacity>
         </TouchableOpacity>
       )}
