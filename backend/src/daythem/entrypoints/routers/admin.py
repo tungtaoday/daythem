@@ -23,8 +23,9 @@ from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
 from daythem.adapters.orm import (
     TeacherORM, ClassORM, StudentORM, PasswordResetRequestORM,
-    TrackedLinkORM, LinkClickORM,
+    TrackedLinkORM, LinkClickORM, PostLogORM,
 )
+import uuid as _uuid
 
 router = APIRouter(tags=["admin"])
 _bearer = HTTPBearer()
@@ -134,6 +135,68 @@ def admin_create_link(body: TrackedLinkBody, _: bool = Depends(require_admin),
             uow._session.add(TrackedLinkORM(code=code, label=body.label, target=body.target))
         uow.commit()
     return {"ok": True, "url": f"https://gieochu.vn/r/{code}"}
+
+
+class PostLogBody(BaseModel):
+    post_date: str
+    channel: str
+    pillar: str | None = None
+    reach: int = 0
+    comments: int = 0
+    shares: int = 0
+    link_code: str | None = None
+    note: str | None = None
+
+
+@router.post("/admin/postlog")
+def admin_create_postlog(body: PostLogBody, _: bool = Depends(require_admin),
+                         uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Ghi 1 bài đăng thủ công (reach/comment/share nhìn tay từ FB/TikTok)."""
+    if not (body.channel or "").strip():
+        raise HTTPException(422, "Thiếu kênh")
+    with uow:
+        uow._session.add(PostLogORM(
+            id=str(_uuid.uuid4()), post_date=body.post_date, channel=body.channel.strip(),
+            pillar=body.pillar, reach=body.reach, comments=body.comments, shares=body.shares,
+            link_code=body.link_code, note=body.note,
+        ))
+        uow.commit()
+    return {"ok": True}
+
+
+@router.get("/admin/postlog")
+def admin_postlog(limit: int = 30, _: bool = Depends(require_admin),
+                  uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Danh sách bài đăng gần đây + tổng reach/comment/share 7 ngày qua."""
+    limit = max(1, min(limit, 100))
+    since = (datetime.utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    with uow:
+        s = uow._session
+        rows = s.scalars(select(PostLogORM).order_by(desc(PostLogORM.post_date), desc(PostLogORM.created_at)).limit(limit)).all()
+        items = [{
+            "id": r.id, "post_date": r.post_date, "channel": r.channel, "pillar": r.pillar,
+            "reach": r.reach, "comments": r.comments, "shares": r.shares,
+            "link_code": r.link_code, "note": r.note,
+        } for r in rows]
+        wk = [r for r in rows if r.post_date >= since]
+        week = {
+            "posts": len(wk),
+            "reach": sum(r.reach for r in wk),
+            "comments": sum(r.comments for r in wk),
+            "shares": sum(r.shares for r in wk),
+        }
+    return {"items": items, "week": week}
+
+
+@router.delete("/admin/postlog/{log_id}")
+def admin_delete_postlog(log_id: str, _: bool = Depends(require_admin),
+                         uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    with uow:
+        row = uow._session.get(PostLogORM, log_id)
+        if row:
+            uow._session.delete(row)
+            uow.commit()
+    return {"ok": True}
 
 
 @router.get("/admin/ops", response_class=HTMLResponse)

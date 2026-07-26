@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select, func
 
 from daythem.service.activity import activation_funnel
-from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM
+from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM, PostLogORM
 
 _VN_TZ = timezone(timedelta(hours=7))
 
@@ -71,6 +71,15 @@ def build_ops_digest(session_factory) -> dict:
             ) or 0
             link_rows.append({"code": lk.code, "label": lk.label, "clicks_7d": wk})
         link_rows.sort(key=lambda x: x["clicks_7d"], reverse=True)
+        # Bài đăng thủ công 7 ngày (reach/comment/share nhìn tay).
+        since_ymd = (datetime.now(_VN_TZ).replace(tzinfo=None) - timedelta(days=7)).strftime("%Y-%m-%d")
+        plogs = session.scalars(select(PostLogORM).where(PostLogORM.post_date >= since_ymd)).all()
+        post_week = {
+            "posts": len(plogs),
+            "reach": sum(p.reach for p in plogs),
+            "comments": sum(p.comments for p in plogs),
+            "shares": sum(p.shares for p in plogs),
+        }
     finally:
         session.close()
 
@@ -100,6 +109,10 @@ def build_ops_digest(session_factory) -> dict:
     if link_rows:
         lines += ["", "<b>🔗 Click theo kênh (7 ngày)</b>"]
         lines += [f"• {r['label']}: <b>{r['clicks_7d']}</b>" for r in link_rows[:6]]
+    if post_week["posts"]:
+        lines += ["", "<b>📣 Bài đăng 7 ngày (nhập tay)</b>",
+                  f"• {post_week['posts']} bài · {post_week['reach']} reach · "
+                  f"{post_week['comments']} bình luận · {post_week['shares']} chia sẻ"]
     if milestones:
         m = milestones[0]
         lines += ["", f"<b>📅 Mốc gần nhất:</b> {m['label']} — còn <b>{m['days']}</b> ngày"]
@@ -112,6 +125,7 @@ def build_ops_digest(session_factory) -> dict:
         "queue": {"reset": pending - del_pending, "delete": del_pending, "total": pending},
         "tasks": tasks,
         "links": link_rows,
+        "post_week": post_week,
         "milestones": milestones,
         "text": text,
     }

@@ -78,6 +78,29 @@
  </div>
 
  <div class="card">
+  <div class="lbl">📣 Nhật ký bài đăng (nhập tay: reach / bình luận / chia sẻ)</div>
+  <div id="pweek" class="sub" style="margin-bottom:8px"></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+   <input id="pdate" type="date" style="flex:1;min-width:130px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+   <select id="ppillar" style="flex:1;min-width:120px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+    <option value="Mẹo">Mẹo tác nghiệp</option>
+    <option value="Pháp lý/thuế">Pháp lý/thuế</option>
+    <option value="Bằng chứng">Bằng chứng</option>
+   </select>
+  </div>
+  <input id="pchan" placeholder="Kênh/group (vd Group Tiểu học, TikTok)" style="width:100%;margin-top:6px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+  <div style="display:flex;gap:6px;margin-top:6px">
+   <input id="preach" type="number" placeholder="reach" style="flex:1;min-width:0;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+   <input id="pcmt" type="number" placeholder="bình luận" style="flex:1;min-width:0;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+   <input id="pshr" type="number" placeholder="chia sẻ" style="flex:1;min-width:0;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+  </div>
+  <input id="pnote" placeholder="ghi chú (link bài, bài này ăn khách vì…)" style="width:100%;margin-top:6px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+  <button class="primary" style="margin-top:8px" onclick="addPost()">+ Ghi bài đăng</button>
+  <div class="msg" id="pmsg"></div>
+  <div id="plist" style="margin-top:10px"></div>
+ </div>
+
+ <div class="card">
   <div class="lbl">📅 Mốc store sắp tới</div>
   <div id="miles"></div>
  </div>
@@ -127,7 +150,36 @@ async function load(){
  document.getElementById('miles').innerHTML=d.milestones.map(m=>
   `<div class="mile"><span>${m.label}</span><b>còn ${m.days} ngày</b></div>`).join('')||'<div class="sub">—</div>';
  loadLinks();
+ loadPosts();
  checkTg();
+}
+
+async function loadPosts(){
+ const r=await fetch('/admin/postlog',{headers:hdr()});
+ const d=await r.json();
+ const w=d.week;
+ document.getElementById('pweek').textContent=`7 ngày: ${w.posts} bài · ${w.reach} reach · ${w.comments} bình luận · ${w.shares} chia sẻ`;
+ const box=document.getElementById('plist');
+ if(!d.items.length){box.innerHTML='<div class="sub">Chưa ghi bài nào. Sau khi đăng, mở bài xem reach/bình luận/chia sẻ rồi nhập vào đây.</div>';return;}
+ box.innerHTML=d.items.slice(0,12).map(p=>
+  `<div class="mile"><span>${p.post_date.slice(5)} · <b>${p.channel}</b> ${p.pillar?'· '+p.pillar:''}`+
+  `<br><span class="sub">${p.reach} reach · ${p.comments} bl · ${p.shares} share${p.note?' · '+p.note:''}</span></span>`+
+  `<span class="sub" style="cursor:pointer;color:#c2593f" onclick="delPost('${p.id}')">xoá</span></div>`).join('');
+}
+async function addPost(){
+ const b={post_date:document.getElementById('pdate').value||new Date().toISOString().slice(0,10),
+  channel:document.getElementById('pchan').value,pillar:document.getElementById('ppillar').value,
+  reach:+document.getElementById('preach').value||0,comments:+document.getElementById('pcmt').value||0,
+  shares:+document.getElementById('pshr').value||0,note:document.getElementById('pnote').value||null};
+ const m=document.getElementById('pmsg');
+ if(!b.channel){m.textContent='Nhập kênh/group';m.style.color='#c2593f';return;}
+ const r=await fetch('/admin/postlog',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify(b)});
+ if((await r.json()).ok){m.textContent='✓ Đã ghi';m.style.color='#2f9e6b';
+  ['pchan','preach','pcmt','pshr','pnote'].forEach(id=>document.getElementById(id).value='');loadPosts();}
+ else{m.textContent='⚠ lỗi';m.style.color='#c2593f';}
+}
+async function delPost(id){
+ await fetch('/admin/postlog/'+id,{method:'DELETE',headers:hdr()});loadPosts();
 }
 
 async function loadLinks(){

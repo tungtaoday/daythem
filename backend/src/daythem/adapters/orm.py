@@ -232,6 +232,23 @@ class LinkClickORM(Base):
     referer: Mapped[Optional[str]] = mapped_column(String(300))
 
 
+class PostLogORM(Base):
+    """Nhật ký bài đăng thủ công — các số CHỈ nhìn tay được (reach/comment/share) trên
+    bài đăng group/TikTok/fanpage. Facebook không cho API bài ở group người khác nên
+    owner tự nhập tay mỗi tuần. Đi kèm link click (tự động) → đủ bức tranh 1 bài."""
+    __tablename__ = "post_logs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    post_date: Mapped[str] = mapped_column(String(10), index=True)  # "YYYY-MM-DD"
+    channel: Mapped[str] = mapped_column(String(120))               # tên kênh/group
+    pillar: Mapped[Optional[str]] = mapped_column(String(40))       # trụ nội dung
+    reach: Mapped[int] = mapped_column(Integer, default=0)
+    comments: Mapped[int] = mapped_column(Integer, default=0)
+    shares: Mapped[int] = mapped_column(Integer, default=0)
+    link_code: Mapped[Optional[str]] = mapped_column(String(40))    # nối với link theo dõi (nếu có)
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class PasswordResetRequestORM(Base):
     """Yêu cầu đặt lại mật khẩu do GV gửi từ app — owner xử lý trên admin dashboard."""
     __tablename__ = "password_reset_requests"
