@@ -212,6 +212,26 @@ class ActivityEventORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
 
 
+class TrackedLinkORM(Base):
+    """Link rút gọn có gắn mã kênh → đo được bài đăng nào (group/TikTok/fanpage) kéo
+    bao nhiêu CLICK thật. Đây là cách duy nhất đo attribution khi đăng tay vào group
+    người khác (Facebook không cho API bài đăng ở group mình không sở hữu)."""
+    __tablename__ = "tracked_links"
+    code: Mapped[str] = mapped_column(String(40), primary_key=True)  # vd 'g1', 'tiktok', 'fanpage'
+    label: Mapped[str] = mapped_column(String(120))                  # tên kênh dễ đọc
+    target: Mapped[str] = mapped_column(Text)                         # URL đích (landing/APK)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class LinkClickORM(Base):
+    """Mỗi lượt bấm 1 link theo dõi — để đếm theo kênh + theo ngày."""
+    __tablename__ = "link_clicks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    code: Mapped[str] = mapped_column(String(40), ForeignKey("tracked_links.code"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+    referer: Mapped[Optional[str]] = mapped_column(String(300))
+
+
 class PasswordResetRequestORM(Base):
     """Yêu cầu đặt lại mật khẩu do GV gửi từ app — owner xử lý trên admin dashboard."""
     __tablename__ = "password_reset_requests"

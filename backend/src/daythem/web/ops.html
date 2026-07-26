@@ -66,6 +66,18 @@
  </div>
 
  <div class="card">
+  <div class="lbl">🔗 Kênh & Link theo dõi (click)</div>
+  <div id="links"></div>
+  <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+   <input id="lcode" placeholder="mã (vd g1)" style="flex:1;min-width:80px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+   <input id="llabel" placeholder="tên kênh" style="flex:2;min-width:110px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+  </div>
+  <input id="ltarget" placeholder="URL đích (vd https://gieochu.vn)" style="width:100%;margin-top:6px;padding:9px;border:1.5px solid var(--line);border-radius:9px;font-size:13px">
+  <button class="primary" style="margin-top:8px" onclick="addLink()">+ Tạo link theo dõi</button>
+  <div class="msg" id="lmsg"></div>
+ </div>
+
+ <div class="card">
   <div class="lbl">📅 Mốc store sắp tới</div>
   <div id="miles"></div>
  </div>
@@ -114,8 +126,28 @@ async function load(){
  ).join('')||'<li>(hôm nay không có việc cố định)</li>';
  document.getElementById('miles').innerHTML=d.milestones.map(m=>
   `<div class="mile"><span>${m.label}</span><b>còn ${m.days} ngày</b></div>`).join('')||'<div class="sub">—</div>';
- // Telegram status: thử gửi test? Không — chỉ hỏi trạng thái qua nút. Dùng dry check:
+ loadLinks();
  checkTg();
+}
+
+async function loadLinks(){
+ const r=await fetch('/admin/links',{headers:hdr()});
+ const d=await r.json();
+ const box=document.getElementById('links');
+ if(!d.items.length){box.innerHTML='<div class="sub">Chưa có link. Tạo 1 link cho mỗi group/TikTok/fanpage để đo kênh nào kéo click.</div>';return;}
+ box.innerHTML=d.items.map(l=>
+  `<div class="mile"><span>${l.label}<br><span class="sub" style="cursor:pointer" onclick="copy('${l.url}')">${l.url} 📋</span></span>`+
+  `<b>${l.clicks_7d}<span class="sub"> /7ngày · ${l.clicks} tổng</span></b></div>`).join('');
+}
+function copy(t){navigator.clipboard.writeText(t);document.getElementById('lmsg').textContent='✓ Đã copy '+t;document.getElementById('lmsg').style.color='#2f9e6b';}
+async function addLink(){
+ const code=document.getElementById('lcode').value,label=document.getElementById('llabel').value,target=document.getElementById('ltarget').value;
+ const m=document.getElementById('lmsg');
+ if(!code||!label||!target){m.textContent='Điền đủ mã + tên + URL';m.style.color='#c2593f';return;}
+ const r=await fetch('/admin/links',{method:'POST',headers:{...hdr(),'Content-Type':'application/json'},body:JSON.stringify({code,label,target})});
+ const d=await r.json();
+ if(d.ok){m.textContent='✓ Tạo xong: '+d.url;m.style.color='#2f9e6b';document.getElementById('lcode').value='';document.getElementById('llabel').value='';document.getElementById('ltarget').value='';loadLinks();}
+ else{m.textContent='⚠ '+(d.detail||'lỗi');m.style.color='#c2593f';}
 }
 function tile(v,l){return `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;}
 function toggle(d,i,el){saveCheck(d,i,el.checked);document.getElementById('tk'+i).className=el.checked?'done':'';}

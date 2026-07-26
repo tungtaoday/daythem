@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from daythem.adapters.database import create_tables
 from daythem.config import settings
-from daythem.entrypoints.routers import auth, classes, students, attendance, tuition, announcements, reports, tax, promo, notify, legal, landing, home, admin, events
+from daythem.entrypoints.routers import auth, classes, students, attendance, tuition, announcements, reports, tax, promo, notify, legal, landing, home, admin, events, links
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("daythem")
@@ -68,6 +68,7 @@ app.include_router(promo.router, prefix="/api/v1")
 app.include_router(notify.router, prefix="/api/v1")
 app.include_router(legal.router)  # /legal, /privacy, /terms — trang công khai
 app.include_router(landing.router)  # / và /landing — trang giới thiệu
+app.include_router(links.router)  # /r/{code} — link theo dõi click (đo attribution kênh)
 
 # Ảnh tĩnh cho landing (screenshot thật của app). check_dir=False: dir có thể chưa tồn tại ở dev.
 _ASSETS_DIR = Path(__file__).resolve().parent.parent / "web" / "assets"

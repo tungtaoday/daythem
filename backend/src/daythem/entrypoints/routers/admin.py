@@ -21,7 +21,10 @@ from daythem.service.activity import activation_funnel
 from daythem.service.ops_digest import build_ops_digest
 from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
-from daythem.adapters.orm import TeacherORM, ClassORM, StudentORM, PasswordResetRequestORM
+from daythem.adapters.orm import (
+    TeacherORM, ClassORM, StudentORM, PasswordResetRequestORM,
+    TrackedLinkORM, LinkClickORM,
+)
 
 router = APIRouter(tags=["admin"])
 _bearer = HTTPBearer()
@@ -87,6 +90,50 @@ def admin_digest_send(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWor
     digest = build_ops_digest(uow._session_factory)
     notify(digest["text"])
     return {"ok": True, "configured": True}
+
+
+class TrackedLinkBody(BaseModel):
+    code: str
+    label: str
+    target: str
+
+
+@router.get("/admin/links")
+def admin_links(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Danh sách link theo dõi + tổng click + click 7 ngày qua (đo attribution kênh)."""
+    since = datetime.utcnow() - timedelta(days=7)
+    with uow:
+        s = uow._session
+        links = s.scalars(select(TrackedLinkORM).order_by(desc(TrackedLinkORM.created_at))).all()
+        out = []
+        for lk in links:
+            total = s.scalar(select(func.count()).select_from(LinkClickORM).where(LinkClickORM.code == lk.code)) or 0
+            wk = s.scalar(
+                select(func.count()).select_from(LinkClickORM)
+                .where(LinkClickORM.code == lk.code).where(LinkClickORM.created_at >= since)
+            ) or 0
+            out.append({
+                "code": lk.code, "label": lk.label, "target": lk.target,
+                "url": f"https://gieochu.vn/r/{lk.code}", "clicks": total, "clicks_7d": wk,
+            })
+    return {"items": out, "total": len(out)}
+
+
+@router.post("/admin/links")
+def admin_create_link(body: TrackedLinkBody, _: bool = Depends(require_admin),
+                      uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Tạo/cập nhật 1 link theo dõi. code = mã kênh (vd g1, tiktok, fanpage)."""
+    code = (body.code or "").strip().lower().replace(" ", "-")
+    if not code:
+        raise HTTPException(422, "Thiếu mã link")
+    with uow:
+        lk = uow._session.get(TrackedLinkORM, code)
+        if lk:
+            lk.label = body.label; lk.target = body.target
+        else:
+            uow._session.add(TrackedLinkORM(code=code, label=body.label, target=body.target))
+        uow.commit()
+    return {"ok": True, "url": f"https://gieochu.vn/r/{code}"}
 
 
 @router.get("/admin/ops", response_class=HTMLResponse)

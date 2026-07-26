@@ -9,7 +9,7 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select, func
 
 from daythem.service.activity import activation_funnel
-from daythem.adapters.orm import PasswordResetRequestORM
+from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM
 
 _VN_TZ = timezone(timedelta(hours=7))
 
@@ -58,6 +58,22 @@ def build_ops_digest(session_factory) -> dict:
     finally:
         session.close()
 
+    # Click theo kênh trong 7 ngày qua (đo bài đăng nào kéo click).
+    session = session_factory()
+    try:
+        since = datetime.now(_VN_TZ).replace(tzinfo=None) - timedelta(days=7)
+        links = session.scalars(select(TrackedLinkORM)).all()
+        link_rows = []
+        for lk in links:
+            wk = session.scalar(
+                select(func.count()).select_from(LinkClickORM)
+                .where(LinkClickORM.code == lk.code).where(LinkClickORM.created_at >= since)
+            ) or 0
+            link_rows.append({"code": lk.code, "label": lk.label, "clicks_7d": wk})
+        link_rows.sort(key=lambda x: x["clicks_7d"], reverse=True)
+    finally:
+        session.close()
+
     tasks = _WEEKLY.get(today.weekday(), [])
     milestones = [
         {"label": label, "date": d.isoformat(), "days": (d - today).days}
@@ -81,6 +97,9 @@ def build_ops_digest(session_factory) -> dict:
         "<b>📋 Việc hôm nay</b>",
     ]
     lines += [f"• {t}" for t in tasks] or ["• (không có)"]
+    if link_rows:
+        lines += ["", "<b>🔗 Click theo kênh (7 ngày)</b>"]
+        lines += [f"• {r['label']}: <b>{r['clicks_7d']}</b>" for r in link_rows[:6]]
     if milestones:
         m = milestones[0]
         lines += ["", f"<b>📅 Mốc gần nhất:</b> {m['label']} — còn <b>{m['days']}</b> ngày"]
@@ -92,6 +111,7 @@ def build_ops_digest(session_factory) -> dict:
         "kpi": funnel,
         "queue": {"reset": pending - del_pending, "delete": del_pending, "total": pending},
         "tasks": tasks,
+        "links": link_rows,
         "milestones": milestones,
         "text": text,
     }
