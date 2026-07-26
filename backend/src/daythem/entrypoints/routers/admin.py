@@ -18,6 +18,8 @@ from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.entrypoints.deps import get_uow
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.service.activity import activation_funnel
+from daythem.service.ops_digest import build_ops_digest
+from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
 from daythem.adapters.orm import TeacherORM, ClassORM, StudentORM, PasswordResetRequestORM
 
@@ -68,6 +70,31 @@ def admin_stats(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = De
 def admin_activation(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
     """Phễu kích hoạt GV (BƯỚC 1 GTM): % tạo lớp, % làm hành động lõi, % kích hoạt trong 24h."""
     return activation_funnel(uow._session_factory)
+
+
+@router.get("/admin/digest")
+def admin_digest(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Bản tin vận hành: KPI + hàng chờ + việc hôm nay + mốc store (cho Ops Cockpit)."""
+    return build_ops_digest(uow._session_factory)
+
+
+@router.post("/admin/digest/send")
+def admin_digest_send(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Gửi bản tin về Telegram của owner ngay bây giờ. Báo rõ nếu chưa cấu hình token."""
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
+        return {"ok": False, "configured": False,
+                "detail": "Chưa cấu hình TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID trong .env"}
+    digest = build_ops_digest(uow._session_factory)
+    notify(digest["text"])
+    return {"ok": True, "configured": True}
+
+
+@router.get("/admin/ops", response_class=HTMLResponse)
+def ops_page() -> str:
+    try:
+        return (_WEB / "ops.html").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "<h1>Ops Cockpit</h1><p>Thiếu ops.html</p>"
 
 
 @router.get("/admin/teachers")

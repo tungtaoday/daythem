@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GieoChữ · Ops Cockpit</title>
+<style>
+ :root{--g:#2f6849;--g2:#429C5A;--coral:#c2593f;--honey:#FEEDC9;--bg:#f6f4ee;--card:#fff;--line:#e6e2d8;--ink:#1a1f1b;--mut:#6b6f68}
+ *{box-sizing:border-box}
+ body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+ .wrap{max-width:720px;margin:0 auto;padding:18px 16px 60px}
+ h1{font-size:20px;color:var(--g);margin:0 0 2px}
+ .sub{color:var(--mut);font-size:13px;margin-bottom:16px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+ .lbl{font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--mut);text-transform:uppercase;margin-bottom:10px}
+ .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+ .kpi{background:var(--bg);border-radius:11px;padding:12px}
+ .kpi b{font-size:24px;color:var(--g)} .kpi span{display:block;font-size:12px;color:var(--mut);margin-top:2px}
+ .q{display:flex;gap:10px} .q .kpi{flex:1;text-align:center}
+ .q .kpi b{color:var(--coral)}
+ ul.tasks{list-style:none;margin:0;padding:0}
+ ul.tasks li{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+ ul.tasks li:last-child{border-bottom:none}
+ ul.tasks input{width:20px;height:20px;accent-color:var(--g2);flex:0 0 auto}
+ .done{color:var(--mut);text-decoration:line-through}
+ .mile{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+ .mile:last-child{border-bottom:none} .mile b{color:var(--g)}
+ button{font:inherit;font-weight:700;border:none;border-radius:11px;padding:12px 16px;cursor:pointer}
+ .primary{background:var(--g2);color:#fff;width:100%}
+ .primary:disabled{opacity:.5}
+ .tgbox{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px}
+ .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+ .ok{background:#2f9e6b}.no{background:#c2593f}
+ .msg{font-size:13px;margin-top:10px;min-height:18px}
+ .login{max-width:340px;margin:80px auto;text-align:center}
+ input.pw{width:100%;padding:12px;border:1.5px solid var(--line);border-radius:11px;font-size:15px;margin:12px 0}
+ a.full{display:inline-block;margin-top:8px;color:var(--g2);font-size:13px}
+ .refresh{background:none;color:var(--mut);font-size:12px;padding:4px 8px}
+</style></head><body>
+
+<div id="login" class="login" style="display:none">
+ <h1>🌿 Ops Cockpit</h1>
+ <input class="pw" id="pw" type="password" placeholder="Mật khẩu admin" onkeydown="if(event.key==='Enter')doLogin()">
+ <button class="primary" onclick="doLogin()">Vào</button>
+ <p id="lerr" style="color:#c2593f;font-size:13px"></p>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div><h1>🌿 Ops Cockpit</h1><div class="sub" id="hdr">Đang tải…</div></div>
+  <button class="refresh" onclick="load()">↻ Làm mới</button>
+ </div>
+
+ <div class="card">
+  <div class="lbl">📊 Kích hoạt</div>
+  <div class="kpis" id="kpis"></div>
+ </div>
+
+ <div class="card">
+  <div class="lbl">🔔 Hàng chờ xử lý</div>
+  <div class="q" id="queue"></div>
+  <a class="full" href="/admin">→ Mở dashboard đầy đủ để xử lý</a>
+ </div>
+
+ <div class="card">
+  <div class="lbl">📋 Việc hôm nay</div>
+  <ul class="tasks" id="tasks"></ul>
+ </div>
+
+ <div class="card">
+  <div class="lbl">📅 Mốc store sắp tới</div>
+  <div id="miles"></div>
+ </div>
+
+ <div class="card">
+  <div class="lbl">✈️ Gửi bản tin về Telegram</div>
+  <div class="tgbox"><span class="dot" id="tgdot"></span><span id="tgtxt">Đang kiểm tra…</span></div>
+  <button class="primary" id="sendbtn" onclick="sendTg()">Gửi bản tin hôm nay về Telegram</button>
+  <div class="msg" id="msg"></div>
+ </div>
+ <button class="refresh" onclick="logout()">Đăng xuất</button>
+</div>
+
+<script>
+const KEY='gc_admin_tok';
+const tok=()=>localStorage.getItem(KEY);
+const hdr=()=>({'Authorization':'Bearer '+tok()});
+function show(app){document.getElementById('app').style.display=app?'block':'none';document.getElementById('login').style.display=app?'none':'block';}
+async function doLogin(){
+ const pw=document.getElementById('pw').value;
+ const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+ if(!r.ok){document.getElementById('lerr').textContent='Sai mật khẩu';return;}
+ localStorage.setItem(KEY,(await r.json()).token);show(true);load();
+}
+function logout(){localStorage.removeItem(KEY);show(false);}
+
+// Checklist state lưu localStorage theo ngày → tick không mất khi làm mới.
+function ckey(d){return 'gc_tasks_'+d;}
+function loadChecks(d){try{return JSON.parse(localStorage.getItem(ckey(d))||'{}')}catch(e){return{}}}
+function saveCheck(d,i,v){const s=loadChecks(d);s[i]=v;localStorage.setItem(ckey(d),JSON.stringify(s));}
+
+async function load(){
+ const r=await fetch('/admin/digest',{headers:hdr()});
+ if(r.status===401){logout();return;}
+ const d=await r.json();
+ document.getElementById('hdr').textContent=d.dow+' · '+d.date.split('-').reverse().join('/');
+ const k=d.kpi;
+ document.getElementById('kpis').innerHTML=
+  tile(k.total_teachers,'Giáo viên')+tile(k.created_class_pct+'%','Tạo lớp')+
+  tile(k.did_core_action_pct+'%','Hành động lõi')+tile(k.activated_24h_pct+'%','Kích hoạt 24h');
+ document.getElementById('queue').innerHTML=
+  tile(d.queue.reset,'Reset mật khẩu')+tile(d.queue.delete,'Xoá tài khoản');
+ const chk=loadChecks(d.date);
+ document.getElementById('tasks').innerHTML=d.tasks.map((t,i)=>
+  `<li><input type="checkbox" ${chk[i]?'checked':''} onchange="toggle('${d.date}',${i},this)"><span id="tk${i}" class="${chk[i]?'done':''}">${t}</span></li>`
+ ).join('')||'<li>(hôm nay không có việc cố định)</li>';
+ document.getElementById('miles').innerHTML=d.milestones.map(m=>
+  `<div class="mile"><span>${m.label}</span><b>còn ${m.days} ngày</b></div>`).join('')||'<div class="sub">—</div>';
+ // Telegram status: thử gửi test? Không — chỉ hỏi trạng thái qua nút. Dùng dry check:
+ checkTg();
+}
+function tile(v,l){return `<div class="kpi"><b>${v}</b><span>${l}</span></div>`;}
+function toggle(d,i,el){saveCheck(d,i,el.checked);document.getElementById('tk'+i).className=el.checked?'done':'';}
+
+async function checkTg(){
+ // Không có endpoint riêng cho trạng thái → suy ra khi bấm gửi. Mặc định hiển thị "sẵn sàng gửi".
+ document.getElementById('tgdot').className='dot ok';
+ document.getElementById('tgtxt').textContent='Bấm nút để gửi (báo lỗi nếu chưa cấu hình token)';
+}
+async function sendTg(){
+ const b=document.getElementById('sendbtn'),m=document.getElementById('msg');
+ b.disabled=true;m.textContent='Đang gửi…';m.style.color='#6b6f68';
+ const r=await fetch('/admin/digest/send',{method:'POST',headers:hdr()});
+ const d=await r.json();b.disabled=false;
+ if(d.ok){m.textContent='✓ Đã gửi về Telegram của bạn';m.style.color='#2f9e6b';
+  document.getElementById('tgdot').className='dot ok';document.getElementById('tgtxt').textContent='Đã kết nối Telegram';}
+ else{m.textContent='⚠ '+(d.detail||'Chưa gửi được');m.style.color='#c2593f';
+  document.getElementById('tgdot').className='dot no';document.getElementById('tgtxt').textContent='Chưa cấu hình token Telegram';}
+}
+show(!!tok());if(tok())load();
+</script>
+</body></html>
