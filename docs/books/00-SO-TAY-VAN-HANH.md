@@ -10,7 +10,8 @@
 
 | Bạn muốn… | Mở |
 |---|---|
-| Biết hôm nay/tuần này làm gì | Cuốn này, mục 2–3 |
+| Hiểu mình là "công ty 1 người" gồm phòng ban nào, ai/cái gì ngồi ghế nào | **Book 04 — Công ty một người** |
+| Biết hôm nay/tuần này làm gì | Cuốn này, mục 2–3 (chi tiết 1 ngày: Book 04 mục 3) |
 | Chiến lược tổng: wedge, kênh, giá, phễu | `docs/gtm-checklist.md` + memory `marketing-gtm` |
 | Đưa app lên iOS + CH Play | `docs/store-launch-checklist.md` |
 | Chạy marketing digital hằng ngày | `docs/marketing-daily-playbook.md` |
@@ -75,6 +76,10 @@ Chi tiết marketing hằng ngày: Book marketing-daily. Chi tiết deploy: Book
 | Sau launch | cuối 08 → 09 | Referral "Mời đồng nghiệp" · Zalo OA · đo Retention W4 · cân nhắc thuê CTV content (Book 03) |
 
 ---
+
+> 🪑 **Bạn là CEO của công ty mà hầu hết nhân viên là phần mềm.** 3 ghế bạn phải ngồi:
+> Chiến lược · Bán hàng (Zalo 1-1) · Kiểm duyệt. Các ghế khác: Claude (kỹ thuật), agent
+> (nội dung), Cockpit (phân tích). Sơ đồ phòng ban đầy đủ + 1 ngày cụ thể: **Book 04**.
 
 ## 5. RANH GIỚI: việc founder giữ vs giao được (bản rút gọn — chi tiết Book 03)
 
