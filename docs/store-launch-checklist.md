@@ -17,6 +17,29 @@
 | Google Play Console | **$25 một lần** | Xác minh CCCD 1–3 ngày |
 | Apple Developer Program | **$99/năm** | Đăng ký cá nhân, xác minh 1–2 ngày, KHÔNG cần máy Mac (EAS build cloud) |
 
+## HƯỚNG DẪN ĐĂNG KÝ GOOGLE PLAY CONSOLE (chi tiết từng bước, 2026)
+
+**Chuẩn bị trước (5 phút):**
+- 1 tài khoản **Google (Gmail)** dùng riêng cho công ty (nên tạo mới, vd gieochu@gmail.com, đừng dùng Gmail cá nhân lẫn lộn).
+- **CCCD** (hoặc hộ chiếu) — ảnh rõ 2 mặt. Có thể bị yêu cầu **chụp selfie** để đối chiếu.
+- **Thẻ thanh toán quốc tế** (Visa/Mastercard, debit cũng được) trả phí $25. ⚠️ **TÊN trên thẻ/hồ sơ thanh toán phải KHỚP tên trên CCCD** — lệch tên là rớt xác minh.
+
+**Các bước:**
+1. Vào **play.google.com/console/signup**, đăng nhập bằng Gmail công ty.
+2. Chọn loại tài khoản: **Cá nhân (Personal)** — không cần cho tổ chức (tổ chức cần mã D-U-N-S, rắc rối hơn).
+3. Điền tên hợp pháp + địa chỉ đúng như trên CCCD. Đây thành **hồ sơ thanh toán Google (Google payments profile)** để xác minh danh tính.
+4. Đồng ý **Developer Distribution Agreement**.
+5. Trả **phí $25 một lần** bằng thẻ (tài khoản sống trọn đời, không phí năm như Apple).
+6. **Xác minh danh tính:** tải ảnh CCCD (+ selfie nếu được hỏi). Google duyệt **vài giờ → 2 ngày làm việc**.
+7. Xác minh xong → vào được Play Console, tạo app.
+
+**Lưu ý 2026 (quan trọng):**
+- Từ 2026 Google siết: **app của nhà phát triển CHƯA xác minh sẽ bị chặn cài trên máy Android** ở một số nước rồi lan rộng → xác minh danh tính là bắt buộc, làm sớm.
+- Sau khi có tài khoản, tài khoản cá nhân MỚI vẫn phải qua **closed testing 12 tester × 14 ngày** rồi mới xin production (xem mục dưới). Đăng ký tài khoản ≠ được lên store ngay.
+- **Làm NGAY tuần này** vì xác minh có thể mất tới 2 ngày, đừng đợi tới 01/08.
+
+---
+
 ## TUẦN NAY (26–31/07) — làm được ngay, không cần build
 
 ### Việc CHỦ TÀI KHOẢN phải tự làm (cần thẻ + CCCD)
