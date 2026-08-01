@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import uuid
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Callable
 
 from sqlalchemy.orm import Session
@@ -45,6 +45,61 @@ def record_event(session_factory: SessionFactory, teacher_id: str, kind: str) ->
             session.close()
     except Exception:
         logger.warning("record_event bỏ qua (kind=%s) — không chặn action lõi", kind)
+
+
+def north_star(session_factory: SessionFactory, weeks: int = 4) -> dict:
+    """★ NORTH STAR — số GV làm ít nhất 1 việc LÕI trong 7 ngày qua (WAT).
+
+    Khác `activation_funnel` (số cộng dồn từ trước tới nay): đây là số ĐANG SỐNG —
+    trả lời câu sinh tử của beta: GV thật có tiếp tục dùng trong tuần dạy thật không?
+    Trả thêm chuỗi mấy tuần gần đây để thấy xu hướng, và tên GV đang hoạt động.
+    """
+    session = session_factory()
+    try:
+        now = datetime.utcnow()
+
+        def wat_between(start, end) -> set[str]:
+            rows = session.scalars(
+                select(distinct(ActivityEventORM.teacher_id)).where(
+                    ActivityEventORM.kind.in_(CORE_KINDS),
+                    ActivityEventORM.created_at >= start,
+                    ActivityEventORM.created_at < end,
+                )
+            ).all()
+            return set(rows)
+
+        cur = wat_between(now - timedelta(days=7), now)
+        prev = wat_between(now - timedelta(days=14), now - timedelta(days=7))
+
+        # Chuỗi N tuần gần nhất (cũ → mới) để nhìn xu hướng.
+        series = []
+        for i in range(weeks - 1, -1, -1):
+            s = now - timedelta(days=7 * (i + 1))
+            e = now - timedelta(days=7 * i)
+            series.append({"weeks_ago": i, "wat": len(wat_between(s, e))})
+
+        # Tên GV đang hoạt động (để biết đang kèm ai, ai vừa rớt).
+        names = []
+        if cur:
+            names = [
+                n or "(chưa đặt tên)"
+                for n in session.scalars(
+                    select(TeacherORM.name).where(TeacherORM.id.in_(cur))
+                ).all()
+            ]
+
+        return {
+            "wat": len(cur),
+            "wat_prev": len(prev),
+            "delta": len(cur) - len(prev),
+            "target_min": 10,
+            "target_max": 15,
+            "series": series,
+            "active_names": names,
+            "definition": "Số GV làm ≥1 việc lõi (điểm danh · thu phí · báo cáo · thêm HS · gửi thiệp) trong 7 ngày qua",
+        }
+    finally:
+        session.close()
 
 
 def activation_funnel(session_factory: SessionFactory) -> dict:

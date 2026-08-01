@@ -17,7 +17,7 @@ from daythem.entrypoints.security import create_token, decode_token
 from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.entrypoints.deps import get_uow
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
-from daythem.service.activity import activation_funnel
+from daythem.service.activity import activation_funnel, north_star
 from daythem.service.ops_digest import build_ops_digest
 from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
@@ -74,6 +74,12 @@ def admin_stats(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = De
 def admin_activation(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
     """Phễu kích hoạt GV (BƯỚC 1 GTM): % tạo lớp, % làm hành động lõi, % kích hoạt trong 24h."""
     return activation_funnel(uow._session_factory)
+
+
+@router.get("/admin/north-star")
+def admin_north_star(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """★ North Star: số GV dùng THẬT trong 7 ngày qua (WAT) + xu hướng 4 tuần."""
+    return north_star(uow._session_factory)
 
 
 @router.get("/admin/digest")

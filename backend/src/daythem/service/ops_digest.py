@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone, timedelta
 
 from sqlalchemy import select, func
 
-from daythem.service.activity import activation_funnel
+from daythem.service.activity import activation_funnel, north_star
 from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM, PostLogORM
 
 _VN_TZ = timezone(timedelta(hours=7))
@@ -42,6 +42,7 @@ def build_ops_digest(session_factory) -> dict:
     """Trả dict {kpi, queue, tasks, milestones, text} — text là bản HTML gọn cho Telegram."""
     today = _today_vn()
     funnel = activation_funnel(session_factory)
+    ns = north_star(session_factory)
 
     # Hàng chờ đang chờ xử lý (reset + xoá tài khoản).
     session = session_factory()
@@ -90,10 +91,14 @@ def build_ops_digest(session_factory) -> dict:
     ]
 
     # Bản tin Telegram (HTML).
+    arrow = "▲" if ns["delta"] > 0 else ("▼" if ns["delta"] < 0 else "—")
     lines = [
         f"<b>🌿 GieoChữ · Ops {_DOW_VN[today.weekday()]} {today.strftime('%d/%m')}</b>",
         "",
-        "<b>📊 Kích hoạt</b>",
+        f"<b>★ NORTH STAR: {ns['wat']} GV dùng thật (7 ngày)</b>",
+        f"   {arrow} {abs(ns['delta'])} so với tuần trước · mục tiêu {ns['target_min']}–{ns['target_max']}",
+        "",
+        "<b>📊 Kích hoạt (cộng dồn)</b>",
         f"• Giáo viên: <b>{funnel.get('total_teachers', 0)}</b>",
         f"• Tạo lớp: {funnel.get('created_class', 0)} ({funnel.get('created_class_pct', 0)}%)",
         f"• Làm hành động lõi: {funnel.get('did_core_action', 0)} ({funnel.get('did_core_action_pct', 0)}%)",
@@ -122,6 +127,7 @@ def build_ops_digest(session_factory) -> dict:
         "date": today.isoformat(),
         "dow": _DOW_VN[today.weekday()],
         "kpi": funnel,
+        "north_star": ns,
         "queue": {"reset": pending - del_pending, "delete": del_pending, "total": pending},
         "tasks": tasks,
         "links": link_rows,
