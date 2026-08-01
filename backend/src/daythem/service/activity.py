@@ -102,6 +102,70 @@ def north_star(session_factory: SessionFactory, weeks: int = 4) -> dict:
         session.close()
 
 
+def attribution(session_factory: SessionFactory) -> dict:
+    """★ ATTRIBUTION — kênh nào ra NGƯỜI DÙNG THẬT, không chỉ ra click.
+
+    Nối 4 tầng cho từng kênh: click(7d) → đăng ký → kích hoạt → còn dùng (WAT).
+    Trước đây click và người dùng là 2 thế giới rời nhau; cột `teachers.source`
+    là mắt xích còn thiếu.
+    """
+    from daythem.adapters.orm import TrackedLinkORM, LinkClickORM
+
+    session = session_factory()
+    try:
+        now = datetime.utcnow()
+        since7 = now - timedelta(days=7)
+
+        # Click 7 ngày theo mã kênh
+        clicks: dict[str, int] = {}
+        labels: dict[str, str] = {}
+        for lk in session.scalars(select(TrackedLinkORM)).all():
+            labels[lk.code] = lk.label
+            clicks[lk.code] = session.scalar(
+                select(func.count()).select_from(LinkClickORM)
+                .where(LinkClickORM.code == lk.code, LinkClickORM.created_at >= since7)
+            ) or 0
+
+        # GV theo nguồn
+        rows = session.execute(select(TeacherORM.id, TeacherORM.source)).all()
+        by_src: dict[str, list[str]] = {}
+        for tid, src in rows:
+            by_src.setdefault(src or "(chưa rõ)", []).append(tid)
+
+        # GV đã làm việc lõi (cộng dồn) và trong 7 ngày (WAT)
+        core_all = set(session.scalars(
+            select(distinct(ActivityEventORM.teacher_id)).where(ActivityEventORM.kind.in_(CORE_KINDS))
+        ).all())
+        core_7d = set(session.scalars(
+            select(distinct(ActivityEventORM.teacher_id)).where(
+                ActivityEventORM.kind.in_(CORE_KINDS), ActivityEventORM.created_at >= since7)
+        ).all())
+
+        codes = sorted(set(list(clicks.keys()) + list(by_src.keys())))
+        items = []
+        for code in codes:
+            tids = by_src.get(code, [])
+            items.append({
+                "code": code,
+                "label": labels.get(code, code),
+                "clicks_7d": clicks.get(code, 0),
+                "signups": len(tids),
+                "activated": len([t for t in tids if t in core_all]),
+                "wat": len([t for t in tids if t in core_7d]),
+            })
+        # Kênh ra người dùng thật xếp trước, rồi tới đăng ký, rồi click
+        items.sort(key=lambda x: (-x["wat"], -x["signups"], -x["clicks_7d"]))
+
+        untracked = len(by_src.get("(chưa rõ)", []))
+        return {
+            "items": items,
+            "untracked_signups": untracked,
+            "note": "wat = GV từ kênh này còn dùng thật trong 7 ngày qua (đây mới là thước đo kênh tốt)",
+        }
+    finally:
+        session.close()
+
+
 def activation_funnel(session_factory: SessionFactory) -> dict:
     """Phễu kích hoạt: % GV tạo lớp, làm hành động lõi, và kích hoạt trong 24h đầu."""
     session = session_factory()

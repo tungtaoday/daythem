@@ -44,6 +44,15 @@ from daythem.config import settings
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 
 
+def _clean_source(v: str | None) -> str | None:
+    """Chuẩn hoá mã kênh: chữ thường, bỏ khoảng trắng, tối đa 40 ký tự.
+    Giá trị lạ vẫn nhận (để không mất dữ liệu) nhưng cắt gọn cho an toàn."""
+    if not v:
+        return None
+    v = str(v).strip().lower().replace(" ", "_")
+    return v[:40] or None
+
+
 # ── Commands ────────────────────────────────────────────────────────────────
 
 class RequestOTPCommand(BaseModel):
@@ -52,10 +61,12 @@ class RequestOTPCommand(BaseModel):
 class VerifyOTPCommand(BaseModel):
     phone: str
     code: str
+    source: Optional[str] = None  # kênh GV đến từ (g1..g5, tiktok, zalo...) — chỉ set khi TẠO MỚI
 
 class LoginWithPasswordCommand(BaseModel):
     phone: str
     password: str
+    source: Optional[str] = None  # kênh GV đến từ — chỉ set khi TẠO MỚI, không ghi đè
 
 class UpdateProfileCommand(BaseModel):
     teacher_id: str
@@ -189,7 +200,8 @@ def handle_verify_otp(cmd: VerifyOTPCommand, uow: SqlAlchemyUnitOfWork) -> Teach
 
         teacher = uow.teachers.get_by_phone(cmd.phone)
         if not teacher:
-            teacher = TeacherORM(id=str(uuid.uuid4()), phone=cmd.phone)
+            teacher = TeacherORM(id=str(uuid.uuid4()), phone=cmd.phone,
+                                 source=_clean_source(cmd.source))
             uow.teachers.add(teacher)
 
         uow.commit()
@@ -208,6 +220,7 @@ def handle_login_with_password(cmd: LoginWithPasswordCommand, uow: SqlAlchemyUni
                 id=str(uuid.uuid4()),
                 phone=cmd.phone,
                 password_hash=_hash_password(cmd.password),
+                source=_clean_source(cmd.source),
             )
             uow.teachers.add(teacher)
         elif teacher.password_hash is None:

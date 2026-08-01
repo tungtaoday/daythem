@@ -25,5 +25,13 @@ def redirect(code: str, request: Request, uow: SqlAlchemyUnitOfWork = Depends(ge
         uow._session.add(LinkClickORM(id=str(uuid.uuid4()), code=code, referer=ref[:300]))
         uow.commit()
         target = link.target
+    # Gắn ?ref=<code> vào URL đích để trang landing biết khách đến từ kênh nào
+    # (mắt xích nối click → đăng ký → người dùng thật).
+    sep = "&" if "?" in target else "?"
+    if "ref=" not in target:
+        target = f"{target}{sep}ref={code}"
     # 302 để trình duyệt không cache vĩnh viễn (đếm được click lần sau).
-    return RedirectResponse(url=target, status_code=302)
+    resp = RedirectResponse(url=target, status_code=302)
+    # Cookie 30 ngày: giữ nguồn qua nhiều lần vào, kể cả khi mất query string.
+    resp.set_cookie("gc_ref", code, max_age=30 * 24 * 3600, samesite="lax")
+    return resp

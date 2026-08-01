@@ -31,6 +31,11 @@ class TeacherORM(Base):
     notif_tags: Mapped[Optional[list]] = mapped_column(JSON)
     tax_id: Mapped[Optional[str]] = mapped_column(String(20))
     full_legal_name: Mapped[Optional[str]] = mapped_column(String(200))
+    # ── ATTRIBUTION: GV này đến từ kênh nào (khớp mã link theo dõi: g1..g5, tiktok,
+    # fanpage, zalo, gioi_thieu...). Nhờ cột này mới nối được click → người dùng THẬT.
+    # Nguồn điền: app gửi khi đăng ký (deep-link ref / tự khai) hoặc owner set trên admin.
+    source: Mapped[Optional[str]] = mapped_column(String(40), index=True)
+    source_note: Mapped[Optional[str]] = mapped_column(String(200))
     id_number: Mapped[Optional[str]] = mapped_column(String(20))
     date_of_birth: Mapped[Optional[str]] = mapped_column(String(10))
     address: Mapped[Optional[str]] = mapped_column(Text)

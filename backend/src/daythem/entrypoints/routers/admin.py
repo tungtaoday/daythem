@@ -17,7 +17,7 @@ from daythem.entrypoints.security import create_token, decode_token
 from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.entrypoints.deps import get_uow
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
-from daythem.service.activity import activation_funnel, north_star
+from daythem.service.activity import activation_funnel, north_star, attribution
 from daythem.service.ops_digest import build_ops_digest
 from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
@@ -80,6 +80,31 @@ def admin_activation(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork
 def admin_north_star(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
     """★ North Star: số GV dùng THẬT trong 7 ngày qua (WAT) + xu hướng 4 tuần."""
     return north_star(uow._session_factory)
+
+
+@router.get("/admin/attribution")
+def admin_attribution(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """★ Kênh nào ra người dùng THẬT: click → đăng ký → kích hoạt → còn dùng."""
+    return attribution(uow._session_factory)
+
+
+class SourceBody(BaseModel):
+    source: str | None = None
+    source_note: str | None = None
+
+
+@router.put("/admin/teacher/{teacher_id}/source")
+def admin_set_source(teacher_id: str, body: SourceBody, _: bool = Depends(require_admin),
+                     uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Owner gán nguồn cho GV được onboard thủ công qua Zalo (app không tự biết)."""
+    with uow:
+        t = uow._session.get(TeacherORM, teacher_id)
+        if not t:
+            raise HTTPException(404, "Không tìm thấy giáo viên")
+        t.source = (body.source or "").strip().lower().replace(" ", "_")[:40] or None
+        t.source_note = (body.source_note or "").strip()[:200] or None
+        uow.commit()
+    return {"ok": True, "source": t.source}
 
 
 @router.get("/admin/digest")

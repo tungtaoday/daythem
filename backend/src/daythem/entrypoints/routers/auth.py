@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
@@ -27,11 +28,13 @@ class RequestOTPBody(BaseModel):
 class VerifyOTPBody(BaseModel):
     phone: str
     code: str
+    source: Optional[str] = None
 
 
 class LoginBody(BaseModel):
     phone: str
     password: str
+    source: Optional[str] = None  # kênh GV đến từ (app gửi khi đăng ký lần đầu)
 
 class ChangePasswordBody(BaseModel):
     current_password: str
@@ -86,7 +89,7 @@ def login_with_password(body: LoginBody, request: Request, uow: SqlAlchemyUnitOf
     rate_limit("login_phone", body.phone, limit=10, window_seconds=300)
     try:
         teacher = handle_login_with_password(
-            LoginWithPasswordCommand(phone=body.phone, password=body.password), uow
+            LoginWithPasswordCommand(phone=body.phone, password=body.password, source=body.source), uow
         )
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
@@ -123,7 +126,7 @@ def verify_otp(body: VerifyOTPBody, request: Request, uow: SqlAlchemyUnitOfWork 
     # Throttle OTP guessing.
     rate_limit("otp_verify_phone", body.phone, limit=8, window_seconds=600)
     try:
-        teacher = handle_verify_otp(VerifyOTPCommand(phone=body.phone, code=body.code), uow)
+        teacher = handle_verify_otp(VerifyOTPCommand(phone=body.phone, code=body.code, source=body.source), uow)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     token = create_token(teacher.id)
