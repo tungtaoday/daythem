@@ -185,3 +185,19 @@ giáo viên THAM KHẢO, tự nộp qua cổng thuế điện tử. App không n
 | "Tự nộp thuế / kê khai thay" | App chỉ **tính + tạo tờ khai tham khảo** |
 | "Tiết kiệm 30 phút", "X% hài lòng", số thành tích | App đang **beta**, chưa có số đo thật |
 | Tính năng chưa có (chấm điểm tự động, học online, thanh toán trong app) | Bịa tính năng → **Apple từ chối** ngay |
+
+---
+
+## 11. ẢNH ĐÃ SINH SẴN ✅
+
+Toàn bộ ảnh nằm ở **`C:\DayThem\store-assets\`** — upload thẳng, không cần chỉnh:
+
+| File | Kích thước | Dùng cho |
+|---|---|---|
+| `ios_1..5_1290x2796.png` | 1290×2796 | App Store — iPhone 6.7" |
+| `play_1..5_1080x1920.png` | 1080×1920 | CH Play — điện thoại |
+| `play_feature_graphic_1024x500.png` | 1024×500 | CH Play — **bắt buộc** |
+| `icon_512x512.png` | 512×512 | Icon store |
+
+Sinh lại (sau khi đổi màn app hoặc chữ): `python -c "from src.tools.store_screenshots import build_all; build_all()"`
+trong `C:\DayThem\marketing`. Sửa danh sách `SHOTS` trong `store_screenshots.py` để đổi màn/chữ.
