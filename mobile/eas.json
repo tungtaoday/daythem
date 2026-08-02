@@ -9,19 +9,22 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "http://10.0.2.2:8000/api/v1"
-      }
+      },
+      "channel": "development"
     },
     "preview": {
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://daythem.doitay.vn/api/v1"
-      }
+      },
+      "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://daythem.doitay.vn/api/v1"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {

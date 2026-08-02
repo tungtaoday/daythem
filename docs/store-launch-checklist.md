@@ -40,6 +40,56 @@
 
 ---
 
+## HƯỚNG DẪN ĐĂNG KÝ APPLE DEVELOPER (chi tiết từng bước, 2026)
+
+**Chuẩn bị trước (10 phút):**
+- **Apple ID** đã **BẬT xác thực 2 lớp (2FA)** — bắt buộc, không bật thì không đăng ký được.
+  Dùng Apple ID cá nhân của bạn (nếu chưa có: tạo ở appleid.apple.com rồi bật 2FA trong
+  Settings → Sign-In and Security → Two-Factor Authentication).
+- **Thẻ tín dụng quốc tế ĐỨNG TÊN CHÍNH BẠN** (Visa/Mastercard). ⚠️ Apple yêu cầu thẻ
+  của chính người đăng ký — dùng thẻ người khác sẽ **bị chậm duyệt** và Apple đòi thêm
+  **giấy tờ tuỳ thân có ảnh do nhà nước cấp** (CCCD/hộ chiếu). Tên trên thẻ phải khớp tên
+  đăng ký.
+- Đủ tuổi thành niên theo luật VN (18+).
+- **KHÔNG cần máy Mac** — EAS build trên cloud.
+
+**Các bước:**
+1. Vào **developer.apple.com/programs/enroll** → *Start Your Enrollment*.
+2. Đăng nhập Apple ID (sẽ hỏi mã 2FA gửi về máy).
+3. Điền thông tin cá nhân **đúng như giấy tờ** (họ tên, địa chỉ, số điện thoại).
+4. Chọn loại: **Individual / Sole Proprietor** — KHÔNG chọn Company/Organization
+   (loại đó cần mã **D-U-N-S**, mất thêm 1–2 tuần chờ cấp, không cần cho giai đoạn này).
+5. Đọc + đồng ý **Apple Developer Program License Agreement**.
+6. Trả **$99 USD/năm** bằng thẻ. Giá hiển thị theo tiền tệ khu vực.
+7. Chờ Apple xác minh — **thường 24–48 giờ**. Có thể được yêu cầu bổ sung giấy tờ.
+8. Duyệt xong → vào được **App Store Connect** để tạo app.
+
+**Khác biệt quan trọng so với CH Play (đọc kỹ để lên kế hoạch đúng):**
+
+| | Google Play | Apple |
+|---|---|---|
+| Phí | **$25 một lần**, sống trọn đời | **$99/NĂM**, tự động gia hạn |
+| Bắt buộc closed testing | **CÓ** — 12 tester × 14 ngày | **KHÔNG** |
+| Thời gian tới khi live | ~3–4 tuần (do luật 14 ngày) | **~3–7 ngày** |
+| Xác minh | CCCD + selfie | Thẻ đứng tên + có thể đòi giấy tờ |
+
+→ **iOS lên store TRƯỚC Android** vì không vướng luật 12 tester. Đây là lý do nên đăng ký
+Apple sớm ngang với Play.
+
+**Lưu ý phí $99/năm:**
+- **Tự động gia hạn** hằng năm trừ khi huỷ. Hết hạn mà không gia hạn → **app bị gỡ khỏi
+  App Store**. Đặt nhắc lịch trước ngày hết hạn.
+- Đây là chi phí cố định của việc có mặt trên iOS, không tránh được.
+
+**Sau khi được duyệt (tôi làm giúp phần này):**
+- Tạo app trên App Store Connect, upload bản build (`eas submit -p ios`)
+- Điền mô tả, ảnh chụp màn hình (1290×2796 cho iPhone 6.7")
+- Khai **Privacy Nutrition Labels** (khớp gieochu.vn/legal)
+- Tạo **tài khoản demo cho reviewer** + ghi chú review (đăng nhập SĐT+mật khẩu, không cần OTP)
+- App miễn phí nên **CHƯA cần** khai thông tin thuế/ngân hàng. Chỉ cần khi bán gói trả phí.
+
+---
+
 ## TUẦN NAY (26–31/07) — làm được ngay, không cần build
 
 ### Việc CHỦ TÀI KHOẢN phải tự làm (cần thẻ + CCCD)

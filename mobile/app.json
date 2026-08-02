@@ -49,6 +49,14 @@
           "color": "#409858"
         }
       ]
-    ]
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/19e7f754-c256-40d4-a22c-0783776521fc",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
