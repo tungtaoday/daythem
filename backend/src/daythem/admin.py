@@ -10,6 +10,7 @@ from datetime import timedelta
 
 from sqlalchemy import select, func
 
+from daythem.phone import normalize_phone
 from daythem.adapters.database import SessionLocal
 from daythem.adapters.orm import (
     TeacherORM, ClassORM, StudentORM, AttendanceSessionORM, TuitionORM,
@@ -46,6 +47,7 @@ def _reset_password(phone: str, new_password: str) -> None:
     if len(new_password) < 6:
         print("Lỗi: mật khẩu mới phải ≥ 6 ký tự.")
         return
+    phone = normalize_phone(phone)
     s = SessionLocal()
     try:
         teacher = s.scalar(select(TeacherORM).where(TeacherORM.phone == phone))

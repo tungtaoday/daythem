@@ -7,6 +7,7 @@ from daythem.adapters.orm import (
     TuitionORM, AnnouncementORM, MakeupORM, MakeupVoteORM,
     ReportORM, OTPORM,
 )
+from daythem.phone import normalize_phone
 
 
 class TeacherRepository:
@@ -20,7 +21,14 @@ class TeacherRepository:
         return self.session.get(TeacherORM, id)
 
     def get_by_phone(self, phone: str) -> Optional[TeacherORM]:
-        return self.session.scalar(select(TeacherORM).where(TeacherORM.phone == phone))
+        """Tìm GV theo SĐT — luôn chuẩn hoá trước khi so khớp.
+
+        Chuẩn hoá đặt ở ĐÂY (không chỉ ở router) để mọi đường gọi — router, script,
+        code viết sau này — đều an toàn, không ai quên được.
+        """
+        return self.session.scalar(
+            select(TeacherORM).where(TeacherORM.phone == normalize_phone(phone))
+        )
 
 
 class ClassRepository:
@@ -225,8 +233,10 @@ class OTPRepository:
         self.session.add(otp)
 
     def get_latest(self, phone: str) -> Optional[OTPORM]:
+        # Chuẩn hoá y như TeacherRepository: mã gửi cho "0905..." phải xác thực được
+        # khi người dùng nhập lại số ở dạng "+84905...".
         return self.session.scalar(
             select(OTPORM)
-            .where(and_(OTPORM.phone == phone, OTPORM.used == False))
+            .where(and_(OTPORM.phone == normalize_phone(phone), OTPORM.used == False))
             .order_by(OTPORM.created_at.desc())
         )

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select, func, desc
 
 from daythem.config import settings
+from daythem.phone import normalize_phone
 from daythem.entrypoints.security import create_token, decode_token
 from daythem.entrypoints.ratelimit import rate_limit, _client_ip
 from daythem.entrypoints.deps import get_uow
@@ -269,7 +270,10 @@ def admin_reset_requests(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOf
         ).all()
         items = []
         for r in rows:
-            t = s.scalar(select(TeacherORM).where(TeacherORM.phone == r.phone))
+            # Yêu cầu cũ có thể lưu SĐT dạng thô ("+8490...") → chuẩn hoá khi đối chiếu,
+            # nếu không owner sẽ thấy "chưa có tài khoản" cho GV thật sự đã đăng ký.
+            t = s.scalar(select(TeacherORM).where(
+                TeacherORM.phone == normalize_phone(r.phone)))
             items.append({
                 "id": r.id,
                 "phone": r.phone,
@@ -295,19 +299,21 @@ def admin_reset_password(
     """Owner đặt lại mật khẩu cho GV (không cần OTP) + đánh dấu yêu cầu đã xử lý."""
     if len(body.new_password) < 6:
         raise HTTPException(422, "Mật khẩu mới phải có ít nhất 6 ký tự")
-    phone = (body.phone or "").strip()
+    phone = normalize_phone(body.phone)
     with uow:
         s = uow._session
         teacher = s.scalar(select(TeacherORM).where(TeacherORM.phone == phone))
         if not teacher:
             raise HTTPException(404, f"Không tìm thấy giáo viên với SĐT {phone}")
         teacher.password_hash = _hash_password(body.new_password)
-        reqs = s.scalars(
-            select(PasswordResetRequestORM).where(
-                PasswordResetRequestORM.phone == phone,
-                PasswordResetRequestORM.status == "pending",
-            )
-        ).all()
+        # Đóng cả yêu cầu lưu dạng thô lẫn dạng chuẩn (dữ liệu cũ trước khi chuẩn hoá).
+        reqs = [
+            r for r in s.scalars(
+                select(PasswordResetRequestORM).where(
+                    PasswordResetRequestORM.status == "pending")
+            ).all()
+            if normalize_phone(r.phone) == phone
+        ]
         for r in reqs:
             r.status = "done"
             r.handled_at = datetime.utcnow()

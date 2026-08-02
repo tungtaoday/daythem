@@ -41,6 +41,7 @@ from daythem.adapters.orm import (
     ReportORM, OTPORM, NotifEventORM,
 )
 from daythem.config import settings
+from daythem.phone import normalize_phone
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 
 
@@ -181,7 +182,7 @@ def handle_request_otp(cmd: RequestOTPCommand, uow: SqlAlchemyUnitOfWork) -> str
     code = "123456" if settings.OTP_DEV_MODE else str(random.randint(100000, 999999))
     otp = OTPORM(
         id=str(uuid.uuid4()),
-        phone=cmd.phone,
+        phone=normalize_phone(cmd.phone),
         code=code,
         expires_at=_now() + timedelta(minutes=10),
     )
@@ -200,7 +201,7 @@ def handle_verify_otp(cmd: VerifyOTPCommand, uow: SqlAlchemyUnitOfWork) -> Teach
 
         teacher = uow.teachers.get_by_phone(cmd.phone)
         if not teacher:
-            teacher = TeacherORM(id=str(uuid.uuid4()), phone=cmd.phone,
+            teacher = TeacherORM(id=str(uuid.uuid4()), phone=normalize_phone(cmd.phone),
                                  source=_clean_source(cmd.source))
             uow.teachers.add(teacher)
 
@@ -218,7 +219,7 @@ def handle_login_with_password(cmd: LoginWithPasswordCommand, uow: SqlAlchemyUni
             # New phone → register a new account with this password.
             teacher = TeacherORM(
                 id=str(uuid.uuid4()),
-                phone=cmd.phone,
+                phone=normalize_phone(cmd.phone),
                 password_hash=_hash_password(cmd.password),
                 source=_clean_source(cmd.source),
             )
@@ -791,7 +792,7 @@ def handle_reset_password(phone: str, code: str, new_password: str, uow: SqlAlch
         otp.used = True
         teacher = uow.teachers.get_by_phone(phone)
         if not teacher:
-            teacher = TeacherORM(id=str(uuid.uuid4()), phone=phone)
+            teacher = TeacherORM(id=str(uuid.uuid4()), phone=normalize_phone(phone))
             uow.teachers.add(teacher)
         teacher.password_hash = _hash_password(new_password)
         uow.commit()

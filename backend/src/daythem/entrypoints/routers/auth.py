@@ -1,8 +1,9 @@
 import uuid
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator
+from daythem.phone import normalize_phone, is_valid_vn_mobile
 from daythem.entrypoints.deps import get_uow, get_current_teacher
 from daythem.adapters.telegram import notify
 from daythem.entrypoints.security import create_token
@@ -21,18 +22,25 @@ from daythem.config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+# SĐT được chuẩn hoá NGAY khi parse request. Quan trọng gấp đôi:
+#  1) mọi so khớp tài khoản dùng chung một dạng → không đẻ tài khoản trùng;
+#  2) khoá rate-limit cũng thành một → kẻ dò mật khẩu không thể lách giới hạn
+#     bằng cách đổi cách viết ("0905...", "+84905...", "090 5..." từng là 3 bộ đếm riêng).
+Phone = Annotated[str, BeforeValidator(normalize_phone)]
+
+
 class RequestOTPBody(BaseModel):
-    phone: str
+    phone: Phone
 
 
 class VerifyOTPBody(BaseModel):
-    phone: str
+    phone: Phone
     code: str
     source: Optional[str] = None
 
 
 class LoginBody(BaseModel):
-    phone: str
+    phone: Phone
     password: str
     source: Optional[str] = None  # kênh GV đến từ (app gửi khi đăng ký lần đầu)
 
@@ -41,7 +49,7 @@ class ChangePasswordBody(BaseModel):
     new_password: str
 
 class ResetPasswordBody(BaseModel):
-    phone: str
+    phone: Phone
     code: str
     new_password: str
 
@@ -113,6 +121,10 @@ def request_otp(body: RequestOTPBody, request: Request, uow: SqlAlchemyUnitOfWor
     # Throttle to prevent SMS-bombing / cost abuse.
     rate_limit("otp_req_ip", _client_ip(request), limit=15, window_seconds=3600)
     rate_limit("otp_req_phone", body.phone, limit=3, window_seconds=600)
+    # Chặn số sai định dạng TRƯỚC khi sinh mã: khi nối SMS thật, mỗi tin nhắn gửi
+    # vào số rác là tiền mất mà không ai nhận được.
+    if not is_valid_vn_mobile(body.phone):
+        raise HTTPException(status_code=422, detail="Số điện thoại không hợp lệ")
     code = handle_request_otp(RequestOTPCommand(phone=body.phone), uow)
     # In production: send SMS, never echo the code. Only dev mode returns it.
     resp = {"message": "OTP đã gửi"}
@@ -150,7 +162,7 @@ def reset_password(body: ResetPasswordBody, request: Request, uow: SqlAlchemyUni
 
 
 class CheckPhoneBody(BaseModel):
-    phone: str
+    phone: Phone
 
 
 @router.post("/check-phone")
@@ -159,12 +171,12 @@ def check_phone(body: CheckPhoneBody, request: Request, uow: SqlAlchemyUnitOfWor
     (có ô nhập lại, chống gõ nhầm) khỏi UI 'Nhập mật khẩu'. Rate-limit chống dò số."""
     rate_limit("check_phone_ip", _client_ip(request), limit=30, window_seconds=600)
     with uow:
-        teacher = uow.teachers.get_by_phone((body.phone or "").strip())
+        teacher = uow.teachers.get_by_phone(body.phone)
         return {"exists": teacher is not None and teacher.password_hash is not None}
 
 
 class ResetRequestBody(BaseModel):
-    phone: str
+    phone: Phone
     note: str | None = None
 
 
@@ -174,7 +186,7 @@ def reset_request(body: ResetRequestBody, request: Request, uow: SqlAlchemyUnitO
     Không cần email/SMS: owner thấy yêu cầu trong dashboard (+ Telegram nếu đã bật)."""
     rate_limit("reset_req_ip", _client_ip(request), limit=10, window_seconds=3600)
     rate_limit("reset_req_phone", body.phone, limit=3, window_seconds=600)
-    phone = (body.phone or "").strip()
+    phone = body.phone  # đã chuẩn hoá ở Pydantic validator
     if not phone:
         raise HTTPException(status_code=422, detail="Vui lòng nhập số điện thoại đăng ký")
     note = (body.note or "").strip() or None
@@ -191,7 +203,7 @@ def delete_request(body: ResetRequestBody, request: Request, uow: SqlAlchemyUnit
     có đường xoá NGOÀI app). Vào chung hàng chờ với reset — note đánh dấu
     [XOÁ TÀI KHOẢN] để owner phân biệt trên dashboard và xử lý thủ công."""
     rate_limit("delete_req_ip", _client_ip(request), limit=5, window_seconds=3600)
-    phone = (body.phone or "").strip()
+    phone = body.phone  # đã chuẩn hoá ở Pydantic validator
     if not phone:
         raise HTTPException(status_code=422, detail="Vui lòng nhập số điện thoại đăng ký")
     note = "[XOÁ TÀI KHOẢN] " + ((body.note or "").strip() or "yêu cầu từ web")
