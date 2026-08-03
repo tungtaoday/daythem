@@ -64,8 +64,16 @@ _PHASES: list[Phase] = [
              "docs/zalo-oa-setup.md"),
         Task("Zalo OA", "Tạo app trên developers.zalo.me, lấy App ID + Secret",
              "docs/zalo-oa-setup.md"),
-        Task("Marketing", "Nhắn riêng tuyển 18–20 GV beta (dư 50% so với mức 12 bắt buộc)",
-             "docs/store-launch-checklist.md"),
+        Task("Kiếm khách", "Lọc danh bạ ra 40 tên, chia N1/N2/N3 — nhắn hết N1 trước",
+             "docs/books/05 §A1"),
+        Task("Kiếm khách", "Nhắn riêng 18–20 GV beta (dư 50% so với mức 12 bắt buộc). "
+             "Nhóm lạ tối đa 10–15 người/ngày kẻo Zalo khoá", "docs/books/05 §A2"),
+        Task("Kiếm khách", "Mỗi ngày trả lời 2 câu hỏi trong nhóm FB — chủ đề và mẫu trả lời "
+             "có trong bản tin Telegram sáng", "docs/books/05 §B2"),
+        Task("Kiếm khách", "Đăng bài XIN GIÚP (không phải bài bán hàng) vào 5 nhóm",
+             "docs/books/05 §A-BIS"),
+        Task("Kiếm khách", "Gọi kèm tay từng người vừa cài tới 'aha' đầu trong 24h",
+             "docs/books/05 §A6"),
         Task("Bảo mật", "Vá: token không thu hồi khi đổi mật khẩu + OTP dùng `random`",
              "review 02/08", owner="claude"),
     ]),

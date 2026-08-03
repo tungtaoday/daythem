@@ -20,11 +20,19 @@
 | Deploy backend / build APK / sửa sự cố | **Book 01 — Product & Deploy Runbook** |
 | Giao việc cho cộng tác viên | **Book 03 — CTV Playbook** |
 | Xử lý yêu cầu reset/xoá tài khoản, chăm GV mới | **Book 02 — Support & Onboarding Runbook** |
+| **Kiếm giáo viên thật: nhắn ai, nói gì, script từng bước** | **Book 05 — Tuyển giáo viên beta** |
 | Hiểu tệp khách + nỗi đau | `docs/personas-journey-pains.md`, `docs/fb-groups-pain-analysis.md` |
 
-**Sự thật nền:** backend LIVE `https://daythem.doitay.vn`; landing `gieochu.vn`;
-admin `gieochu.vn/admin` (mật khẩu Vuivui@123); GATE 0 "sự thật hoá" đã xong;
-nút thắt hiện tại = **build APK reset quota 01/08** + **20 GV beta đầu tiên**.
+**Sự thật nền (cập nhật 03/08/2026):** backend LIVE `https://daythem.doitay.vn`;
+landing `gieochu.vn`; admin `gieochu.vn/admin`. AAB đã lên track Closed testing
+(Release 2 · 1.0.0).
+
+⚠️ **Kiểm dữ liệu prod 03/08 phát hiện: 9 tài khoản đều là tài khoản thử của chính
+mình hoặc dữ liệu seed → SỐ GIÁO VIÊN THẬT = 0.** Mọi chỉ số activation/North Star
+trước ngày này đều đang đo dữ liệu giả, đừng tin.
+
+**Nút thắt hiện tại = 12 tester opt-in cho CH Play, và cũng là 12 khách hàng thật
+đầu tiên. Hai việc là MỘT → mở Book 05.**
 
 ---
 

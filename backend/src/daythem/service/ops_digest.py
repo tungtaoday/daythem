@@ -9,6 +9,8 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select, func
 
 from daythem.service.activity import activation_funnel, north_star
+from daythem.service.seeding import seeding_lines
+from daythem.service.weekly_report import TARGET_POSTS_PER_WEEK
 from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM, PostLogORM
 
 _VN_TZ = timezone(timedelta(hours=7))
@@ -111,6 +113,24 @@ def build_ops_digest(session_factory) -> dict:
         "<b>📋 Việc hôm nay</b>",
     ]
     lines += [f"• {t}" for t in tasks] or ["• (không có)"]
+
+    # Seeding: việc kiếm khách hằng ngày ở giai đoạn 0 người dùng.
+    monday = today - timedelta(days=today.weekday())
+    posts_week = sum(1 for p in plogs if p.post_date >= monday.isoformat())
+    lines += seeding_lines(today, posts_week, TARGET_POSTS_PER_WEEK)
+
+    # Bài đã đăng gần đây — để biết đã seeding chỗ nào, khỏi đăng trùng nhóm.
+    if plogs:
+        lines += ["", "<b>📋 Bài đã đăng (7 ngày)</b>"]
+        for p in sorted(plogs, key=lambda x: x.post_date, reverse=True)[:5]:
+            d = "/".join(reversed(p.post_date.split("-")[1:]))
+            lines.append(
+                f"• {d} · {p.channel} · <i>{p.pillar}</i> — "
+                f"{p.reach} reach · {p.comments} bl · {p.shares} chia sẻ"
+            )
+    else:
+        lines += ["", "<b>📋 Bài đã đăng (7 ngày):</b> <b>chưa có bài nào</b> — phễu đầu vào đang đứng"]
+
     if link_rows:
         lines += ["", "<b>🔗 Click theo kênh (7 ngày)</b>"]
         lines += [f"• {r['label']}: <b>{r['clicks_7d']}</b>" for r in link_rows[:6]]
