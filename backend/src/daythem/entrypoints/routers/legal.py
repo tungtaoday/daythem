@@ -39,15 +39,21 @@ _HTML = """<!DOCTYPE html>
  <li>Thông tin thuế (MST/CCCD/ngày sinh/địa chỉ) chỉ khi bạn dùng tính năng thuế.</li>
  <li>Mã thông báo đẩy (để gửi nhắc nhở) nếu bạn bật thông báo.</li>
 </ul>
-<h3>2. Lưu trữ &amp; truy cập</h3>
+<h3>2. Quét ảnh danh sách lớp (tuỳ chọn)</h3>
+<p>Khi bạn dùng tính năng <b>nhập nhanh danh sách học sinh từ ảnh hoặc tệp</b>, ảnh/tệp đó được gửi tới dịch vụ nhận dạng chữ của <b>Google (Gemini)</b> để đọc ra tên học sinh, rồi trả về cho bạn kiểm tra và chỉnh sửa.</p>
+<p>Ảnh/tệp <b>chỉ được xử lý tức thời, không lưu lại</b> trên máy chủ của chúng tôi. Nếu bạn không dùng tính năng này, không có ảnh nào được gửi đi.</p>
+<h3>3. Lưu trữ, bảo mật &amp; truy cập</h3>
 <p>Dữ liệu được lưu trên máy chủ riêng của GieoChữ. Chỉ tài khoản của bạn (sau khi đăng nhập) mới xem được dữ liệu của mình. Email và thông tin ngân hàng (nếu nhập) được lưu trên máy của bạn.</p>
-<h3>3. Điều chúng tôi KHÔNG làm</h3>
-<p>GieoChữ <b>không đọc tin nhắn Zalo riêng tư</b> giữa bạn và phụ huynh. Ứng dụng chỉ soạn sẵn nội dung để bạn tự sao chép và gửi. Chúng tôi không bán dữ liệu của bạn cho bên thứ ba.</p>
-<h3>4. Xoá dữ liệu / tài khoản</h3>
-<p>Bạn có thể xoá toàn bộ dữ liệu và tài khoản bất cứ lúc nào trong ứng dụng: <b>Hồ sơ → Xoá tài khoản</b>. Thao tác này xoá vĩnh viễn lớp, học sinh, điểm danh, học phí của bạn và không thể khôi phục.</p>
-<h3>5. Quên mật khẩu</h3>
+<p>Toàn bộ dữ liệu truyền giữa ứng dụng và máy chủ được <b>mã hoá bằng HTTPS</b>. Mật khẩu được lưu dưới dạng băm một chiều (PBKDF2-SHA256), chúng tôi không đọc được mật khẩu của bạn.</p>
+<h3>4. Thời gian lưu dữ liệu</h3>
+<p>Dữ liệu của bạn được lưu <b>cho tới khi bạn xoá tài khoản</b>. Sau khi xoá, dữ liệu bị xoá vĩnh viễn khỏi hệ thống đang hoạt động. Bản sao lưu định kỳ của máy chủ có thể còn chứa dữ liệu trong <b>tối đa 7 ngày</b>, sau đó tự động bị ghi đè.</p>
+<h3>5. Điều chúng tôi KHÔNG làm</h3>
+<p>GieoChữ <b>không đọc tin nhắn Zalo riêng tư</b> giữa bạn và phụ huynh. Ứng dụng chỉ soạn sẵn nội dung để bạn tự sao chép và gửi. Chúng tôi không bán dữ liệu của bạn cho bên thứ ba, không dùng dữ liệu để quảng cáo, và không tích hợp công cụ theo dõi hành vi nào.</p>
+<h3>6. Xoá dữ liệu / tài khoản</h3>
+<p>Bạn có thể xoá toàn bộ dữ liệu và tài khoản bất cứ lúc nào trong ứng dụng: <b>Hồ sơ → Xoá tài khoản</b>. Thao tác này xoá vĩnh viễn lớp, học sinh, điểm danh, học phí của bạn và không thể khôi phục. Nếu không mở được app, xem hướng dẫn tại <a href="/delete-account">gieochu.vn/delete-account</a>.</p>
+<h3>7. Quên mật khẩu</h3>
 <p>Nếu quên mật khẩu, liên hệ hỗ trợ để được đặt lại: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a>.</p>
-<h3>6. Liên hệ</h3>
+<h3>8. Liên hệ</h3>
 <p>Mọi thắc mắc về dữ liệu và quyền riêng tư: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a>.</p>
 
 <hr>
@@ -100,7 +106,14 @@ Tài khoản cùng toàn bộ lớp, học sinh, điểm danh, học phí bị x
 <ul>
  <li>Tài khoản (số điện thoại, tên, mật khẩu) và thông tin thuế nếu có.</li>
  <li>Toàn bộ lớp học, học sinh, phụ huynh, điểm danh, học phí, ghi chú.</li>
+ <li>Mã thông báo đẩy và lịch sử thông báo.</li>
 </ul>
+
+<h2>Dữ liệu nào được giữ lại?</h2>
+<p>Sau khi xoá, chúng tôi <b>không giữ lại bất kỳ dữ liệu nào</b> của bạn trên hệ thống đang hoạt động.</p>
+<p>Riêng <b>bản sao lưu định kỳ</b> của máy chủ có thể còn chứa dữ liệu trong <b>tối đa 7 ngày</b>, sau đó bản sao lưu cũ tự động bị ghi đè và dữ liệu biến mất hoàn toàn. Bản sao lưu này chỉ dùng để khôi phục khi máy chủ gặp sự cố kỹ thuật, không dùng cho mục đích nào khác.</p>
+<p>Ảnh danh sách lớp bạn từng quét (nếu có dùng tính năng nhập từ ảnh) <b>không được lưu</b> ngay từ đầu, nên không còn gì để xoá.</p>
+
 <p class="muted">Thắc mắc: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a> · <a href="/legal">Chính sách bảo mật</a></p>
 <script>
 document.getElementById('f').addEventListener('submit', async function(e){
