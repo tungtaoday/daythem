@@ -20,6 +20,7 @@ from daythem.entrypoints.deps import get_uow
 from daythem.service.unit_of_work import SqlAlchemyUnitOfWork
 from daythem.service.activity import activation_funnel, north_star, attribution
 from daythem.service.ops_digest import build_ops_digest
+from daythem.service.weekly_report import build_weekly_report
 from daythem.adapters.telegram import notify
 from daythem.service.handlers import _hash_password
 from daythem.adapters.orm import (
@@ -122,6 +123,23 @@ def admin_digest_send(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWor
                 "detail": "Chưa cấu hình TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID trong .env"}
     digest = build_ops_digest(uow._session_factory)
     notify(digest["text"])
+    return {"ok": True, "configured": True}
+
+
+@router.get("/admin/weekly-report")
+def admin_weekly_report(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Báo cáo tuần: nhìn lại tuần qua bằng số thật + việc phải làm tuần này."""
+    return build_weekly_report(uow._session_factory)
+
+
+@router.post("/admin/weekly-report/send")
+def admin_weekly_report_send(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Gửi báo cáo tuần về Telegram ngay bây giờ (không chờ tới sáng Thứ 2)."""
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
+        return {"ok": False, "configured": False,
+                "detail": "Chưa cấu hình TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID trong .env"}
+    report = build_weekly_report(uow._session_factory)
+    notify(report["text"])
     return {"ok": True, "configured": True}
 
 
