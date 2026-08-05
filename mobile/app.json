@@ -13,7 +13,7 @@
       "backgroundColor": "#faf8f2"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "vn.daythem.app",
       "buildNumber": "1",
       "infoPlist": {
