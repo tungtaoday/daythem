@@ -142,7 +142,15 @@ Số điện thoại: 0905550002
 Mật khẩu: test123
 ```
 
-**Ghi chú review (dán vào ô App Review Notes / Hướng dẫn kiểm thử):**
+⚠️ **DÙNG BẢN TIẾNG ANH:** [app-review-notes-EN.md](app-review-notes-EN.md)
+
+Người duyệt Apple/Google **đọc tiếng Anh**, mà giao diện app 100% tiếng Việt — không có
+bản đồ điều hướng tiếng Anh thì họ không biết bấm đâu, và hai giới hạn quan trọng
+(Zalo không tự gửi · thuế chỉ tham khảo) sẽ không được đọc.
+
+Bản tiếng Việt dưới đây **giữ để tham khảo**, đừng dán vào form:
+
+**Ghi chú review (bản tiếng Việt — CŨ, không dùng):**
 ```
 Đăng nhập bằng SỐ ĐIỆN THOẠI + MẬT KHẨU ở trên (không cần mã OTP).
 Tài khoản đã có sẵn lớp và học sinh mẫu để xem đầy đủ tính năng.
