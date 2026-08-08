@@ -310,6 +310,100 @@ Trả lời **mọi bình luận trong 24 giờ**. Trang mới mà bỏ bình lu
 
 ---
 
+# PHẦN E — ĐỊNH HƯỚNG NỘI DUNG GIAI ĐOẠN ĐẦU
+
+Phần A cho 8 bài cụ thể. Phần này trả lời câu **"sau 8 bài đó thì viết gì tiếp"** — và
+quan trọng hơn, **vì sao viết cái này mà không viết cái kia**.
+
+## E1. Người đọc thật của anh lúc này là ai
+
+Không phải người lướt newsfeed. Là **một cô giáo vừa bấm từ bình luận của anh trong nhóm
+sang**, đang xem anh có đáng tin không. Cô đọc từ trên xuống khoảng 30 giây rồi quyết
+định nhắn tin hay thoát.
+
+Nội dung phải trả lời đúng thứ tự câu hỏi trong đầu cô ấy:
+
+| Thứ tự | Câu hỏi trong đầu | Bài trả lời |
+|---|---|---|
+| 1 | Cái này là gì? | Bài ghim giới thiệu |
+| 2 | Ai làm? Có thật không? | Câu chuyện người làm · bài hậu trường |
+| 3 | Người này **có hiểu nghề của tôi** không? | Mẹo vận hành cụ thể |
+| 4 | Nó **KHÔNG** làm gì? Có lừa tôi không? | Bài minh bạch giới hạn |
+| 5 | Tôi thử thế nào? | Bài tuyển dùng thử |
+
+Bài nào không phục vụ một trong 5 câu này thì **chưa tới lúc đăng**.
+
+## E2. Tỷ lệ nội dung giai đoạn đầu
+
+| Loại | Tỷ lệ | Vì sao |
+|---|---|---|
+| **Chứng minh hiểu nghề** — mẹo cụ thể về học phí, điểm danh, báo cáo | **~40%** | Trả lời câu hỏi số 3, câu quyết định nhất |
+| **Minh bạch & giới hạn** — app không làm gì, giá, dữ liệu | **~25%** | Tệp thầy cô bị app khác hứa hão nhiều rồi |
+| **Hậu trường & tiến độ** — tuần này sửa gì, ai đang dùng thử | **~20%** | Chứng minh trang còn sống, có người làm thật |
+| **Pháp lý & thuế** | **~15%** | Hữu ích, dễ được chia sẻ |
+| **Quảng cáo tính năng** | **0%** | Không ai theo dõi một trang liệt kê tính năng |
+
+Khác hẳn tỷ lệ của giai đoạn sau. Khi đã có vài trăm người theo dõi thì mới đảo sang
+nội dung kéo reach.
+
+## E3. Nguồn bài không bao giờ cạn
+
+**Mỗi câu hỏi thầy cô hỏi anh = một bài.**
+
+Anh trả lời trong nhóm, trong inbox, trong lúc gọi kèm tay — mỗi câu hỏi lặp lại từ
+2 người trở lên là đã đủ để thành bài đăng. Người này hỏi thì người khác cũng đang thắc mắc.
+
+Cách làm: giữ một ghi chú trên điện thoại, ai hỏi gì chép vào. Cuối tuần nhìn lại, chọn
+câu được hỏi nhiều nhất, viết thành bài.
+
+Nguồn này **tốt hơn mọi ý tưởng nghĩ ra trong đầu**, vì nó đến từ nỗi đau có thật, được
+diễn đạt bằng chính chữ của thầy cô.
+
+## E4. Bài hậu trường — loại bị đánh giá thấp nhất
+
+Mỗi 1–2 tuần một bài kiểu này. Rất dễ viết, mà hiệu quả bất ngờ ở giai đoạn đầu:
+
+```
+Tuần này GieoChữ sửa gì
+
+• Một cô nhắn là màn thu học phí khó thấy ai chưa đóng → đã đổi, giờ ai chưa đóng
+  hiện đỏ lên đầu danh sách
+• Sửa lỗi nhập tên học sinh có dấu bị lỗi font trên vài máy Android
+• Đang làm: nhắc tự động cuối tháng, tuần sau xong
+
+Thầy cô thấy chỗ nào khó dùng cứ nhắn, sửa được là sửa ngay ạ.
+```
+
+Vì sao hiệu quả: nó chứng minh **có người thật đang làm và đang nghe**. Với tệp đã từng
+tải app rồi bị bỏ rơi, đây là tín hiệu mạnh hơn mọi lời quảng cáo.
+
+Điều kiện: phải **nói thật những gì đã sửa**. Bịa ra danh sách sửa lỗi là tự đào hố.
+
+## E5. ĐỪNG đăng những thứ này
+
+Đây là các loại bài mặc định ai cũng đăng, mà ở giai đoạn này **làm hại nhiều hơn lợi**:
+
+| Đừng | Vì sao |
+|---|---|
+| Bài chúc mừng 20/11, Tết, ngày lễ | Trang chưa có gì mà đã đăng bài xã giao → nhìn như trang rác |
+| Câu nói truyền cảm hứng về nghề giáo | Ai cũng đăng, không ai nhớ, không nói lên anh là ai |
+| Ảnh stock giáo viên cười | Mất niềm tin ngay lập tức — thầy cô nhận ra ảnh mạng |
+| "5 lý do nên dùng GieoChữ" | Bán hàng khi người ta còn chưa biết anh là ai |
+| Bài dài về tầm nhìn, sứ mệnh | Chưa có sản phẩm được kiểm chứng thì nghe rỗng |
+| Đăng lại nguyên bài từ nhóm | Giọng khác nhau — bài nhóm viết giọng giáo viên, trang là giọng người làm |
+
+## E6. Nhịp đăng
+
+**1–2 bài/tuần. Đều đặn quan trọng hơn nhiều.**
+
+Trang đăng 3 bài rồi im 2 tháng còn tệ hơn trang chỉ có 8 bài mà tuần nào cũng có bài mới —
+người ghé thăm nhìn ngày đăng cuối để đoán trang còn sống hay đã bỏ.
+
+Nếu tuần nào không có gì để viết: đăng **một câu hỏi thầy cô vừa hỏi + câu trả lời**.
+Luôn có sẵn, luôn hữu ích.
+
+---
+
 ## Liên quan
 
 - [Gói nội dung beta](marketing-beta-content-pack.md) — 5 bài **group** + 5 reel *(giọng khác, đừng dùng lẫn)*
