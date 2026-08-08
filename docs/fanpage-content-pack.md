@@ -404,8 +404,168 @@ Luôn có sẵn, luôn hữu ích.
 
 ---
 
+# PHẦN F — BÀI GIỚI THIỆU TÍNH NĂNG (có ảnh sản phẩm)
+
+## F0. Đính chính chính mình
+
+Mục E2 tôi viết **"quảng cáo tính năng: 0%"** — *"không ai theo dõi một trang liệt kê tính năng"*.
+
+Câu đó vẫn đúng với **cách viết liệt kê**: *"GieoChữ có 5 tính năng: điểm danh, học phí,
+báo cáo…"*. Kiểu đó không ai đọc.
+
+Nhưng có cách viết khác **hoàn toàn hợp lệ ở giai đoạn này**: mở bài bằng **nỗi đau bằng
+chữ của thầy cô**, rồi mới cho thấy màn hình thật giải quyết nó ra sao. Lúc đó nó không
+còn là quảng cáo tính năng — nó là **bằng chứng mình hiểu nghề**, tức là đúng nhóm 40%
+lớn nhất trong tỷ lệ ở mục E2.
+
+Khác biệt nằm ở **câu đầu tiên**:
+
+| ❌ Liệt kê tính năng | ✅ Nỗi đau trước |
+|---|---|
+| "GieoChữ có tính năng nhắc học phí tự động" | "Nhắc học phí mà sợ phụ huynh nghĩ mình tính toán — ai từng vậy chưa ạ?" |
+| "App hỗ trợ điểm danh nhanh" | "Cuối tháng lật sổ tính tiền theo buổi, nhìn mà rối" |
+
+Năm bài dưới đây viết theo cột phải.
+
+## F1. Ảnh đã sinh sẵn
+
+Ở **`C:\DayThem\marketing\data\social\`** — mỗi tính năng có 2 khổ:
+
+| Bài | Ảnh vuông (feed) | Ảnh 4:5 (chiếm nhiều diện tích hơn) |
+|---|---|---|
+| Nhắc học phí | `nhacphi_sq_1080x1080.png` | `nhacphi_p45_1080x1350.png` |
+| Điểm danh | `diemdanh_sq_…` | `diemdanh_p45_…` |
+| Thu học phí | `hocphi_sq_…` | `hocphi_p45_…` |
+| Thiệp báo cáo | `baocao_sq_…` | `baocao_p45_…` |
+| Tổng quan lớp | `tongquan_sq_…` | `tongquan_p45_…` |
+
+**Dùng khổ 4:5 khi đăng Facebook** — nó chiếm nhiều chiều cao hơn khi người ta lướt.
+Khổ vuông để dành cho ảnh trong bài nhiều ảnh, hoặc khi đăng chéo sang nền tảng khác.
+
+Sinh lại (sau khi đổi màn app hoặc chữ trên chip):
+```bash
+cd C:\DayThem\marketing
+python -c "from src.tools.social_posts import build_all; print(build_all())"
+```
+Sửa danh sách `POSTS` trong `src/tools/social_posts.py` để đổi tiêu đề/chip.
+
+---
+
+## Bài F-1 — Nhắc học phí *(đăng đầu tiên — nỗi đau được kêu nhiều nhất)*
+
+**Ảnh:** `nhacphi_p45_1080x1350.png`
+
+```
+Nhắc học phí mà sợ phụ huynh nghĩ mình tính toán — thầy cô nào từng vậy chưa ạ?
+
+Em nghe nhiều thầy cô kể chuyện này. Nhắc thì ngại, không nhắc thì cuối tháng
+thiếu. Có cô nhắc nhầm người đã đóng rồi, kể lại mà còn đỏ mặt.
+
+Trong GieoChữ em làm phần này kỹ nhất:
+• App soạn sẵn tin có tên con và số tiền — thầy cô đọc lại rồi mở Zalo gửi
+• Gửi RIÊNG từng phụ huynh, không nhắc chung trong nhóm lớp
+• Nhắc ai rồi app nhớ giúp, khỏi nhắc trùng
+
+Nói rõ: app không tự gửi tin cho ai. Nó chỉ soạn sẵn, thầy cô bấm gửi.
+
+Thầy cô muốn thử thì nhắn tin cho trang, em hướng dẫn cài ạ 🌿
+```
+
+## Bài F-2 — Điểm danh
+
+**Ảnh:** `diemdanh_p45_1080x1350.png`
+
+```
+Vì sao GieoChữ để cả lớp MẶC ĐỊNH CÓ MẶT?
+
+Lớp 10 em thì thường chỉ 1–2 em vắng. Bắt tích tên 8–9 em có mặt là làm việc
+thừa — mà làm nhiều thì sinh lười, lười thì bỏ, bỏ thì cuối tháng tính tiền
+theo buổi bị lệch.
+
+Nên app làm ngược: mở lớp ra là cả lớp có mặt sẵn, ai vắng thầy cô chạm một
+cái. Chạm được luôn lý do: ốm, bận việc nhà, xin nghỉ.
+
+Sau này phụ huynh hỏi "sao tháng này con học ít thế", thầy cô có câu trả lời
+ngay, không phải nhớ lại.
+
+Chi tiết nhỏ thôi nhưng em nghĩ mãi mới ra 😅
+```
+
+## Bài F-3 — Thu học phí
+
+**Ảnh:** `hocphi_p45_1080x1350.png`
+
+```
+"Tháng này ai đóng rồi, ai chưa?" — câu hỏi làm khổ thầy cô nhất cuối tháng.
+
+Nhất là khi dạy 2–3 lớp cùng lúc, mỗi lớp thu một kiểu.
+
+Trong app: ai đóng thì tick một cái, app tự biết còn ai chưa. Hỗ trợ cả ba
+cách thu mà thầy cô hay dùng:
+• Theo tháng — cố định
+• Theo buổi — app tự tính từ điểm danh, không phải đếm tay
+• Theo khoá
+
+Em riêng từng em cũng đặt được, vì lớp nào cũng có bé được giảm hoặc miễn.
+
+Thầy cô đang thu theo cách nào ạ? Em hỏi thật để xem còn thiếu kiểu nào không.
+```
+
+## Bài F-4 — Thiệp báo cáo
+
+**Ảnh:** `baocao_p45_1080x1350.png`
+
+```
+Một việc nhỏ mà phụ huynh nhớ rất lâu.
+
+Thay vì nhắn chung trong nhóm lớp, cuối tuần gửi RIÊNG cho từng phụ huynh một
+tấm thiệp: tên con, số buổi đã học, chuyên cần, và một câu nhận xét thật.
+
+Vì sao gửi riêng lại khác:
+• Phụ huynh đọc kỹ hơn hẳn tin nhắn nhóm
+• Con nào học chưa tốt thì không bị nêu trước mặt cả lớp
+• Phụ huynh thấy con mình được để ý riêng, không phải một cái tên trong danh sách
+
+App dựng sẵn thiệp từ dữ liệu điểm danh, thầy cô thêm một câu nhận xét rồi mở
+Zalo gửi. Mỗi tuần một lần là đủ.
+```
+
+## Bài F-5 — Tổng quan lớp
+
+**Ảnh:** `tongquan_p45_1080x1350.png`
+
+```
+Mở app ra là thấy ngay ba thứ cần biết:
+
+• Hôm nay dạy lớp nào, mấy giờ, ở đâu
+• Ai chưa đóng học phí
+• Buổi nào chưa điểm danh
+
+Không phải bấm qua ba màn để ghép lại. Em thiết kế màn này cho lúc thầy cô
+vừa dạy xong, mệt, chỉ muốn liếc một cái rồi cất máy.
+
+Thầy cô mở app quản lý lớp lúc nào là nhiều nhất — trước buổi dạy hay sau ạ?
+Em hỏi để sắp lại thứ tự cho đúng.
+```
+
+---
+
+## F2. Cách dùng bộ này
+
+**Đừng đăng 5 bài liền nhau.** Xen vào giữa các bài giá trị ở Phần A — cứ 2 bài giá trị
+thì 1 bài tính năng. Đăng liền là trang thành catalog sản phẩm, đúng thứ mục E2 cảnh báo.
+
+**Ba bài đều kết bằng câu hỏi** (F-3, F-5 hỏi thẳng). Đó là cố ý: bình luận trả lời làm
+bài sống lâu hơn trên newsfeed, mà anh cũng biết thêm về tệp của mình. Câu trả lời của
+họ chính là nguồn bài cho tuần sau (xem E3).
+
+**Câu "app không tự gửi tin cho ai" ở bài F-1 đừng bỏ.** Nó vừa trung thực, vừa là điểm
+khác biệt — nhiều thầy cô sợ app tự nhắn linh tinh cho phụ huynh.
+
+---
+
 ## Liên quan
 
 - [Gói nội dung beta](marketing-beta-content-pack.md) — 5 bài **group** + 5 reel *(giọng khác, đừng dùng lẫn)*
 - [Sách 05 — Tuyển giáo viên beta](books/05-TUYEN-GIAO-VIEN-BETA.md) — nơi thật sự có khách
-- Ảnh: `C:\DayThem\store-assets\`
+- Ảnh store: `C:\DayThem\store-assets\` · Ảnh mạng xã hội: `C:\DayThem\marketing\data\social\`
