@@ -254,6 +254,31 @@ class PostLogORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class GtmTaskORM(Base):
+    """Một việc trong kế hoạch GTM, CÓ TRẠNG THÁI.
+
+    Vì sao cần bảng này: trước đây bản tin ngày/tuần chỉ LIỆT KÊ việc từ lộ trình
+    cứng trong code — hôm nào cũng hiện y hệt dù đã làm hay chưa. Không có trạng
+    thái thì không có traceback, và người đọc nhanh chóng bỏ qua bản tin.
+
+    `key` là mã ổn định trong `service/gtm_plan.py` — dùng để gieo lại mà không
+    tạo trùng, và để đánh dấu xong bằng lệnh cho gọn.
+    """
+    __tablename__ = "gtm_tasks"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    key: Mapped[str] = mapped_column(String(60), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    block: Mapped[str] = mapped_column(String(40), index=True)   # Store | Kiếm khách | Sản phẩm...
+    why: Mapped[Optional[str]] = mapped_column(Text)             # 1 dòng: làm cái này để mở khoá gì
+    source: Mapped[Optional[str]] = mapped_column(String(120))   # tài liệu gốc, để lần ngược
+    priority: Mapped[int] = mapped_column(Integer, default=100, index=True)  # nhỏ = làm trước
+    owner: Mapped[str] = mapped_column(String(20), default="anh")  # anh | claude
+    status: Mapped[str] = mapped_column(String(20), default="todo", index=True)  # todo | doing | done | skip
+    done_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    note: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class PasswordResetRequestORM(Base):
     """Yêu cầu đặt lại mật khẩu do GV gửi từ app — owner xử lý trên admin dashboard."""
     __tablename__ = "password_reset_requests"

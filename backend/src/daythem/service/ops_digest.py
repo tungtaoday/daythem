@@ -9,6 +9,7 @@ from datetime import date, datetime, timezone, timedelta
 from sqlalchemy import select, func
 
 from daythem.service.activity import activation_funnel, north_star
+from daythem.service.gtm_plan import digest_lines as gtm_lines
 from daythem.service.seeding import seeding_lines
 from daythem.service.weekly_report import TARGET_POSTS_PER_WEEK
 from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM, PostLogORM
@@ -96,6 +97,13 @@ def build_ops_digest(session_factory) -> dict:
     arrow = "▲" if ns["delta"] > 0 else ("▼" if ns["delta"] < 0 else "—")
     lines = [
         f"<b>🌿 GieoChữ · Ops {_DOW_VN[today.weekday()]} {today.strftime('%d/%m')}</b>",
+    ]
+
+    # Việc hôm nay đặt TRÊN CÙNG, trên cả số liệu — đọc bản tin là biết ngay
+    # phải làm gì, không phải cuộn qua bốn khối chỉ số mới thấy.
+    lines += gtm_lines(session_factory)
+
+    lines += [
         "",
         f"<b>★ NORTH STAR: {ns['wat']} GV dùng thật (7 ngày)</b>",
         f"   {arrow} {abs(ns['delta'])} so với tuần trước · mục tiêu {ns['target_min']}–{ns['target_max']}",
