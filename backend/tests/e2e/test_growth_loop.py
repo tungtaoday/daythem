@@ -72,3 +72,41 @@ def test_bao_cao_tuan_gom_bang_diem(sf):
     text = build_weekly_report(sf)["text"]
     assert "BẢNG ĐIỂM THỬ NGHIỆM" in text
     assert "Khối dán cho Claude" in text
+
+
+# ── Nhận xét vận hành (/ghi) ─────────────────────────────────────────────────
+
+def test_ghi_nhan_xet_gan_kenh_tu_dong(sf):
+    from daythem.service.growth_loop import add_note
+    r = add_note(sf, "g3 toàn bài tuyển sinh, không hợp seeding")
+    assert r["channel"] == "g3"
+    assert "tuyển sinh" in r["text"] and not r["text"].startswith("g3")
+
+
+def test_ghi_khong_co_kenh_van_nhan(sf):
+    from daythem.service.growth_loop import add_note
+    r = add_note(sf, "bài về thuế được hỏi nhiều hơn mình tưởng")
+    assert r["channel"] is None
+
+
+def test_ghi_rong_bao_loi_kem_vi_du(sf):
+    from daythem.service.growth_loop import add_note
+    with pytest.raises(ValueError, match="/ghi"):
+        add_note(sf, "  ")
+
+
+def test_nhan_xet_chay_vao_khoi_dan_cho_claude(sf):
+    """Đây là mấu chốt: gõ vào Telegram → Claude TỰ đọc được ở phiên điều chỉnh."""
+    from daythem.service.growth_loop import add_note
+    add_note(sf, "g3 toàn bài tuyển sinh, không hợp seeding")
+    cb = scoreboard(sf)["claude_block"]
+    assert "tuyển sinh" in cb
+    assert "Nhận xét của owner" in cb
+    assert "hạng nhất" in cb, "khối phải dặn Claude ưu tiên nhận xét của owner"
+
+
+def test_xu_ly_xong_thi_tuan_sau_khong_lap_lai(sf):
+    from daythem.service.growth_loop import add_note, mark_notes_handled
+    add_note(sf, "g3 không hợp")
+    assert mark_notes_handled(sf) == 1
+    assert "g3 không hợp" not in scoreboard(sf)["claude_block"]

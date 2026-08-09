@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 
-from daythem.adapters.orm import LinkClickORM, PostLogORM, TeacherORM
+from daythem.adapters.orm import GrowthNoteORM, LinkClickORM, PostLogORM, TeacherORM
 from daythem.service.activity import north_star
 from daythem.service.seeding import GROUPS, TOPICS
 
@@ -87,6 +87,52 @@ def set_last_post_metrics(session_factory, reach: int, comments: int, shares: in
         s.close()
 
 
+def add_note(session_factory, raw: str) -> dict:
+    """Ghi nhận xét vận hành. Từ đầu tiên nếu là mã kênh (g1..g5/fb/tt/zl) thì
+    gắn ghi chú vào kênh đó — "g3 toàn bài tuyển sinh" tự hiểu là nói về nhóm 3."""
+    raw = (raw or "").strip()
+    if len(raw) < 3:
+        raise ValueError("Ghi chú trống. Ví dụ: /ghi g3 toàn bài tuyển sinh, không hợp seeding")
+    parts = raw.split(None, 1)
+    channel = None
+    if parts[0].lower() in CHANNELS and len(parts) > 1:
+        channel = parts[0].lower()
+        raw = parts[1]
+    s = session_factory()
+    try:
+        s.add(GrowthNoteORM(id=str(uuid.uuid4()), text=raw, channel=channel))
+        s.commit()
+    finally:
+        s.close()
+    return {"text": raw, "channel": channel,
+            "channel_name": CHANNELS.get(channel) if channel else None}
+
+
+def open_notes(session_factory) -> list[GrowthNoteORM]:
+    s = session_factory()
+    try:
+        return list(s.scalars(
+            select(GrowthNoteORM).where(GrowthNoteORM.status == "open")
+            .order_by(GrowthNoteORM.created_at)
+        ).all())
+    finally:
+        s.close()
+
+
+def mark_notes_handled(session_factory) -> int:
+    """Phiên điều-chỉnh-chiến-lược gọi SAU KHI đã xử lý — để tuần sau không lặp lại."""
+    s = session_factory()
+    try:
+        rows = s.scalars(
+            select(GrowthNoteORM).where(GrowthNoteORM.status == "open")).all()
+        for r in rows:
+            r.status = "handled"
+        s.commit()
+        return len(rows)
+    finally:
+        s.close()
+
+
 def scoreboard(session_factory, days: int = 7) -> dict:
     """Bảng điểm thử nghiệm N ngày: bài × trụ × kênh, click theo mã, đăng ký theo source.
 
@@ -146,6 +192,14 @@ def scoreboard(session_factory, days: int = 7) -> dict:
         lines.append("🌱 Đăng ký theo nguồn: " + " · ".join(
             f"{src}={n}" for src, n in sorted(signups.items(), key=lambda x: -x[1])))
 
+    notes = open_notes(session_factory)
+    if notes:
+        lines.append("")
+        lines.append(f"<b>👁 Nhận xét của anh (chưa xử lý: {len(notes)})</b>")
+        for n in notes[:6]:
+            tag = f"[{CHANNELS.get(n.channel, n.channel)}] " if n.channel else ""
+            lines.append(f"• {tag}{n.text}")
+
     # ── Khối dán cho Claude — text thuần, đủ ngữ cảnh để ra quyết định ──
     cb = [
         f"GROWTH {now.strftime('%d/%m/%Y')} (cửa sổ {days} ngày)",
@@ -160,10 +214,18 @@ def scoreboard(session_factory, days: int = 7) -> dict:
         ", ".join(f"{c}={n}" for c, n in sorted(clicks.items(), key=lambda x: -x[1])) or "0"))
     cb.append("Đăng ký theo nguồn: " + (
         ", ".join(f"{s0}={n}" for s0, n in sorted(signups.items(), key=lambda x: -x[1])) or "0"))
+    if notes:
+        cb.append("Nhận xét của owner (chưa xử lý):")
+        for n in notes:
+            tag = f"[{CHANNELS.get(n.channel, n.channel)}] " if n.channel else ""
+            cb.append(f"* {tag}{n.text}")
     cb.append("---")
-    cb.append("Claude: dựa vào số trên, đề xuất TỐI ĐA 3 điều chỉnh cho tuần tới "
-              "(trọng số chủ đề seeding, thứ tự bài fanpage, kế hoạch /viec). "
-              "Chỉ đề xuất điều có dữ liệu chống lưng; thiếu dữ liệu thì nói thiếu gì.")
+    cb.append("Claude: dựa vào SỐ và NHẬN XÉT CỦA OWNER ở trên, đề xuất TỐI ĐA 3 điều "
+              "chỉnh cho tuần tới (trọng số chủ đề seeding, danh sách nhóm, thứ tự bài "
+              "fanpage, kế hoạch /viec). Nhận xét của owner là dữ liệu hạng nhất — ưu "
+              "tiên xử lý trước. Chỉ đề xuất điều có dữ liệu chống lưng; thiếu thì nói "
+              "thiếu gì. Xử lý xong ghi chú thì gọi mark_notes_handled() để tuần sau "
+              "không lặp lại.")
 
     lines += ["", "<b>📋 Khối dán cho Claude (giữ tin nhắn → Copy):</b>",
               "<code>" + "\n".join(cb) + "</code>"]

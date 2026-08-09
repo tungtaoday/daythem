@@ -279,6 +279,22 @@ class GtmTaskORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class GrowthNoteORM(Base):
+    """Nhận xét vận hành owner gõ qua Telegram (/ghi) — mắt người trong vòng growth.
+
+    Số đo (click, reach) nói CÁI GÌ xảy ra; ghi chú kiểu "nhóm g3 toàn bài tuyển
+    sinh, không hợp seeding" nói VÌ SAO — thứ máy không tự thấy. Bảng điểm và
+    khối-dán-cho-Claude gộp cả hai, nên phiên điều chỉnh chiến lược đọc được
+    ngay mà owner không phải nhắc lại.
+    """
+    __tablename__ = "growth_notes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    text: Mapped[str] = mapped_column(Text)
+    channel: Mapped[Optional[str]] = mapped_column(String(40))  # g1..g5/fb/tt/zl nếu trỏ về một kênh
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)  # open | handled
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+
+
 class PasswordResetRequestORM(Base):
     """Yêu cầu đặt lại mật khẩu do GV gửi từ app — owner xử lý trên admin dashboard."""
     __tablename__ = "password_reset_requests"

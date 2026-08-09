@@ -32,7 +32,8 @@ except (AttributeError, OSError):
 from daythem.adapters.database import SessionLocal  # noqa: E402
 from daythem.config import settings  # noqa: E402
 from daythem.service.growth_loop import (  # noqa: E402
-    CHANNELS, PILLARS, log_post, scoreboard, set_last_post_metrics,
+    CHANNELS, PILLARS, add_note, log_post, open_notes, scoreboard,
+    set_last_post_metrics,
 )
 from daythem.service.gtm_plan import (  # noqa: E402
     mark, next_tasks, progress, recently_done,
@@ -60,6 +61,7 @@ HELP = (
     "<b>3. Vòng growth — ghi thử nghiệm</b>\n"
     "/post g1 hocphi — vừa đăng bài trụ 'học phí' vào nhóm 1\n"
     "/kq 1200 14 3 — bài vừa ghi đạt 1200 reach, 14 bl, 3 share\n"
+    "/ghi g3 toàn bài tuyển sinh — THẤY GÌ GHI NẤY, Claude đọc khi điều chỉnh\n"
     "/tuan — bảng điểm thử nghiệm + khối dán cho Claude\n\n"
     "<i>Kênh: g1..g5 (nhóm theo thứ tự bản tin) · fb · tt · zl</i>\n\n"
     "/chude — chủ đề seeding hôm nay"
@@ -243,6 +245,31 @@ def handle(msg: dict) -> None:
                       f"reach <b>{r['reach']}</b> · {r['comments']} bl · {r['shares']} share")
         return
 
+    if text.startswith("/ghi"):
+        body = text[len("/ghi"):].strip()
+        if not body:
+            notes = open_notes(SessionLocal)
+            if not notes:
+                send(chat_id, "Chưa có nhận xét nào chờ xử lý.\n"
+                              "Thấy gì ghi nấy: <code>/ghi g3 toàn bài tuyển sinh</code>")
+            else:
+                out = [f"<b>👁 Nhận xét chờ xử lý ({len(notes)})</b>"]
+                for n in notes:
+                    tag = f"[{CHANNELS.get(n.channel, n.channel)}] " if n.channel else ""
+                    out.append(f"• {tag}{n.text}")
+                out.append("\n<i>Claude sẽ đọc và xử lý ở phiên điều chỉnh chiến lược tới.</i>")
+                send(chat_id, "\n".join(out))
+            return
+        try:
+            r = add_note(SessionLocal, body)
+        except ValueError as e:
+            send(chat_id, f"❌ {e}")
+            return
+        tag = f" (kênh: {r['channel_name']})" if r["channel_name"] else ""
+        send(chat_id, f"👁 Đã ghi{tag}: <i>{r['text']}</i>\n"
+                      "Claude sẽ đọc ở phiên điều chỉnh chiến lược tới — không cần nhắc lại.")
+        return
+
     if text.startswith("/tuan"):
         send(chat_id, "\n".join(scoreboard(SessionLocal)["lines"]).strip())
         return
@@ -270,7 +297,10 @@ def handle(msg: dict) -> None:
             out = reply_for_text(text)
         else:
             send(chat_id, "Gửi <b>ảnh chụp màn hình</b> bài đăng, hoặc <b>chép nội dung</b> "
-                          "bài dán vào (ít nhất vài dòng) nhé.\n\n/help để xem hướng dẫn.")
+                          "bài dán vào (ít nhất vài dòng) nhé.\n\n"
+                          "💡 Còn nếu anh định <b>ghi nhận xét</b> (vd nhóm nào không hợp) "
+                          "thì dùng <code>/ghi ...</code> — Claude sẽ đọc khi điều chỉnh.\n\n"
+                          "/help để xem hướng dẫn.")
             return
         send(chat_id, format_out(out))
     except ValueError as e:
