@@ -51,8 +51,16 @@ Khi store live thì đổi sang link tải (mục 4).
 
 ## Bài 1 — GHIM LÊN ĐẦU TRANG · Giới thiệu
 
-**Ảnh:** `store-assets/play_feature_graphic_1024x500.png`
+**Ảnh:** `marketing/data/social/gioithieu_p45_1080x1350.png`
 **Ghim:** có — đây là bài người lạ đọc đầu tiên
+
+> ⚠️ **Đừng dùng `play_feature_graphic_1024x500.png`** cho bài này (bản đầu tôi gán nhầm).
+> Đó là banner **2:1 làm cho CH Play** — trên newsfeed nó thành một dải mỏng, trông như
+> quảng cáo băng-rôn. Mà đây lại là ảnh quan trọng nhất trang.
+>
+> Ảnh đúng là khổ **4:5**, có logo và tên lớn (nhấn vào DANH TÍNH, không phải một tính
+> năng đơn lẻ), 4 việc chính để người mới hiểu ngay app làm gì, và dòng "Miễn phí dùng
+> thử" ở chân — câu người lạ muốn biết nhất.
 
 ```
 GieoChữ là gì?
