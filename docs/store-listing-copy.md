@@ -131,7 +131,7 @@ Bản đầu tiên của GieoChữ 🌿
 | Website hỗ trợ | https://gieochu.vn |
 | Chính sách bảo mật | https://gieochu.vn/legal |
 | Xoá tài khoản | https://gieochu.vn/delete-account |
-| Email hỗ trợ | *(điền email bạn dùng)* |
+| Email hỗ trợ | `gieochu@doitay.vn` — đã kiểm SMTP 09/08: hộp thư tồn tại, nhận được thư |
 
 ---
 

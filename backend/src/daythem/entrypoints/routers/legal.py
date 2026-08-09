@@ -34,7 +34,7 @@ _HTML = """<!DOCTYPE html>
 <h2>Chính sách bảo mật</h2>
 <h3>1. Dữ liệu chúng tôi thu thập</h3>
 <ul>
- <li>Số điện thoại, tên, giới tính bạn cung cấp khi đăng ký.</li>
+ <li>Số điện thoại và tên bạn cung cấp khi đăng ký.</li>
  <li>Dữ liệu bạn nhập: lớp, học sinh, tên/SĐT phụ huynh, điểm danh, học phí, ghi chú.</li>
  <li>Thông tin thuế (MST/CCCD/ngày sinh/địa chỉ) chỉ khi bạn dùng tính năng thuế.</li>
  <li>Mã thông báo đẩy (để gửi nhắc nhở) nếu bạn bật thông báo.</li>
@@ -52,9 +52,9 @@ _HTML = """<!DOCTYPE html>
 <h3>6. Xoá dữ liệu / tài khoản</h3>
 <p>Bạn có thể xoá toàn bộ dữ liệu và tài khoản bất cứ lúc nào trong ứng dụng: <b>Hồ sơ → Xoá tài khoản</b>. Thao tác này xoá vĩnh viễn lớp, học sinh, điểm danh, học phí của bạn và không thể khôi phục. Nếu không mở được app, xem hướng dẫn tại <a href="/delete-account">gieochu.vn/delete-account</a>.</p>
 <h3>7. Quên mật khẩu</h3>
-<p>Nếu quên mật khẩu, liên hệ hỗ trợ để được đặt lại: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a>.</p>
+<p>Nếu quên mật khẩu, liên hệ hỗ trợ để được đặt lại: <a href="mailto:gieochu@doitay.vn">gieochu@doitay.vn</a>.</p>
 <h3>8. Liên hệ</h3>
-<p>Mọi thắc mắc về dữ liệu và quyền riêng tư: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a>.</p>
+<p>Mọi thắc mắc về dữ liệu và quyền riêng tư: <a href="mailto:gieochu@doitay.vn">gieochu@doitay.vn</a>.</p>
 
 <hr>
 <p class="muted">© 2026 GieoChữ · Made in Vietnam 🌿</p>
@@ -114,7 +114,7 @@ Tài khoản cùng toàn bộ lớp, học sinh, điểm danh, học phí bị x
 <p>Riêng <b>bản sao lưu định kỳ</b> của máy chủ có thể còn chứa dữ liệu trong <b>tối đa 7 ngày</b>, sau đó bản sao lưu cũ tự động bị ghi đè và dữ liệu biến mất hoàn toàn. Bản sao lưu này chỉ dùng để khôi phục khi máy chủ gặp sự cố kỹ thuật, không dùng cho mục đích nào khác.</p>
 <p>Ảnh danh sách lớp bạn từng quét (nếu có dùng tính năng nhập từ ảnh) <b>không được lưu</b> ngay từ đầu, nên không còn gì để xoá.</p>
 
-<p class="muted">Thắc mắc: <a href="mailto:support@gieochu.vn">support@gieochu.vn</a> · <a href="/legal">Chính sách bảo mật</a></p>
+<p class="muted">Thắc mắc: <a href="mailto:gieochu@doitay.vn">gieochu@doitay.vn</a> · <a href="/legal">Chính sách bảo mật</a></p>
 <script>
 document.getElementById('f').addEventListener('submit', async function(e){
  e.preventDefault();
