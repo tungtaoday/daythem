@@ -57,7 +57,7 @@ def test_khoi_telegram_co_du_thanh_phan():
     lines = seeding_lines(date(2026, 8, 4), posts_this_week=0, target_posts=5)
     text = "\n".join(lines)
     assert "SEEDING HÔM NAY" in text
-    assert "tìm trong nhóm" in text.lower()
+    assert "Bấm là ra bài đang hỏi" in text, "phải có link bấm thẳng, không bắt người dùng tự gõ từ khoá"
     assert "0/5" in text, "thiếu bài phải nhắc số bài còn thiếu"
 
 
@@ -65,3 +65,40 @@ def test_du_bai_thi_khong_nhac_nua():
     lines = seeding_lines(date(2026, 8, 4), posts_this_week=5, target_posts=5)
     assert not any("Bài đăng tuần này" in ln for ln in lines), \
         "đăng đủ rồi mà vẫn nhắc là gây nhiễu"
+
+
+# ── Link nhóm trong bản tin ──────────────────────────────────────────────────
+
+def test_ban_tin_co_du_5_link_nhom():
+    from daythem.service.seeding import GROUPS, group_link_lines
+    text = "\n".join(group_link_lines(date(2026, 8, 10)))
+    for g in GROUPS:
+        assert g.url in text, f"thiếu link nhóm {g.name}"
+    assert text.count("<a href=") == len(GROUPS) == 5
+
+
+def test_link_tim_dung_dinh_dang_va_ma_hoa():
+    """Facebook nhận /search/?q= với từ khoá đã URL-encode — kiểm cả chiều giải mã."""
+    from urllib.parse import unquote
+    from daythem.service.seeding import GROUPS, search_url, topic_of_day
+    kw = topic_of_day(date(2026, 8, 10)).keywords[0]
+    u = search_url(GROUPS[0], kw)
+    assert "/search/?q=" in u and u.startswith(GROUPS[0].url)
+    assert unquote(u.split("q=")[1]) == kw, "mã hoá rồi giải mã phải ra đúng từ khoá gốc"
+
+
+def test_tu_khoa_xoay_de_5_link_khong_trung_het():
+    """5 link một sáng phải phủ nhiều từ khoá, không phải cùng một từ."""
+    import re
+    from daythem.service.seeding import group_link_lines
+    text = "\n".join(group_link_lines(date(2026, 8, 10)))
+    kws = set(re.findall(r"“(.+?)”", text))
+    assert len(kws) >= 2, f"cả 5 nhóm cùng một từ khoá: {kws}"
+
+
+def test_seeding_lines_gom_ca_link_va_mau():
+    from daythem.service.seeding import seeding_lines
+    text = "\n".join(seeding_lines(date(2026, 8, 10), 0, 5))
+    assert "Bấm là ra bài đang hỏi" in text
+    assert "<a href=" in text
+    assert "Mẫu trả lời" in text

@@ -34,7 +34,7 @@ from daythem.config import settings  # noqa: E402
 from daythem.service.gtm_plan import (  # noqa: E402
     mark, next_tasks, progress, recently_done,
 )
-from daythem.service.seeding import topic_of_day  # noqa: E402
+from daythem.service.seeding import group_link_lines, topic_of_day  # noqa: E402
 from daythem.service.seeding_reply import reply_for_image, reply_for_text  # noqa: E402
 
 API = "https://api.telegram.org/bot{tok}/{method}"
@@ -201,10 +201,11 @@ def handle(msg: dict) -> None:
 
     if text == "/chude":
         from datetime import date
-        t = topic_of_day(date.today())
-        send(chat_id, f"🌱 <b>Chủ đề hôm nay: {t.name}</b>\n\n"
-                      f"Tìm trong nhóm: <code>{' · '.join(t.keywords)}</code>\n\n"
-                      f"<b>Mẫu chung:</b>\n<code>{t.reply}</code>")
+        d = date.today()
+        t = topic_of_day(d)
+        send(chat_id, f"🌱 <b>Chủ đề hôm nay: {t.name}</b>\n"
+                      + "\n".join(group_link_lines(d))
+                      + f"\n\n<b>Mẫu chung:</b>\n<code>{t.reply}</code>")
         return
 
     photos = msg.get("photo") or []

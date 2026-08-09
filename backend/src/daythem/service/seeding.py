@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
+from urllib.parse import quote
 
 
 @dataclass(frozen=True)
@@ -107,15 +108,58 @@ def topic_of_day(d: date) -> Topic:
     return TOPICS[CYCLE[d.toordinal() % len(CYCLE)]]
 
 
+# ── 5 nhóm giáo viên mục tiêu ────────────────────────────────────────────────
+# Nguồn gốc ở marketing/data/posting_targets.json (máy owner) — chép vào đây vì
+# bản tin chạy trên VPS không đọc được file đó. Số thành viên đếm thật 08/08/2026.
+@dataclass(frozen=True)
+class Group:
+    name: str        # tên rút gọn cho vừa một dòng Telegram
+    url: str
+    members: str
+
+
+GROUPS: list[Group] = [
+    Group("GV Tiểu Học (Cộng Đồng)", "https://www.facebook.com/groups/Congdonggiaovientieuhoc", "356K"),
+    Group("GV Tiểu Học (Chúng Tôi Là)", "https://www.facebook.com/groups/474649736790838", "291K"),
+    Group("GV Tiếng Anh", "https://www.facebook.com/groups/1947317768815047", "141K"),
+    Group("GV Toán THCS", "https://www.facebook.com/groups/1424149971115622", "68K"),
+    Group("GV Chia Sẻ", "https://www.facebook.com/groups/752362219465019", "44K"),
+]
+
+
+def search_url(group: Group, keyword: str) -> str:
+    """Link tìm kiếm TRONG nhóm — owner tự bấm bằng phiên Facebook của mình.
+    Cố ý KHÔNG tự động hoá gì thêm: crawl cần mượn phiên đăng nhập, vi phạm
+    điều khoản Facebook và rủi ro khoá tài khoản (kênh kiếm khách chính)."""
+    return f"{group.url.rstrip('/')}/search/?q={quote(keyword)}"
+
+
+def group_link_lines(d: date) -> list[str]:
+    """5 dòng link bấm-là-ra-bài-đang-hỏi, cho bản tin Telegram (HTML).
+
+    Mỗi nhóm gắn MỘT từ khoá, xoay theo cả ngày lẫn thứ tự nhóm — để 5 link
+    của một sáng phủ nhiều từ khoá, và cùng một nhóm mỗi ngày tìm một ý khác.
+    Chỉ 5 link vì mục tiêu mỗi ngày là TRẢ LỜI 2 CÂU — đưa 20 link là quá tải.
+    """
+    t = topic_of_day(d)
+    kws = t.keywords
+    lines = ["", "<b>👉 Bấm là ra bài đang hỏi:</b>"]
+    for i, g in enumerate(GROUPS):
+        kw = kws[(d.toordinal() + i) % len(kws)]
+        lines.append(f'• <a href="{search_url(g, kw)}">{g.name}</a> ({g.members}) — “{kw}”')
+    return lines
+
+
 def seeding_lines(d: date, posts_this_week: int, target_posts: int) -> list[str]:
     """Khối 'Seeding hôm nay' cho bản tin Telegram (HTML)."""
     t = topic_of_day(d)
-    kw = " · ".join(t.keywords[:3])
     lines = [
         "",
         f"<b>🌱 SEEDING HÔM NAY — {t.name}</b>",
-        f"<i>Vào 5 nhóm, tìm trong nhóm:</i> {kw}",
-        f"<i>Trả lời 2 câu. KHÔNG nhắc app.</i>",
+        "<i>Trả lời 2 câu. KHÔNG nhắc app. Bài hay thì chụp gửi bot lấy câu trả lời riêng.</i>",
+    ]
+    lines += group_link_lines(d)
+    lines += [
         "",
         "<b>Mẫu trả lời:</b>",
         f"<code>{t.reply}</code>",
