@@ -29,7 +29,11 @@ try:
 except (AttributeError, OSError):
     pass
 
+from daythem.adapters.database import SessionLocal  # noqa: E402
 from daythem.config import settings  # noqa: E402
+from daythem.service.gtm_plan import (  # noqa: E402
+    mark, next_tasks, progress, recently_done,
+)
 from daythem.service.seeding import topic_of_day  # noqa: E402
 from daythem.service.seeding_reply import reply_for_image, reply_for_text  # noqa: E402
 
@@ -39,14 +43,78 @@ POLL_TIMEOUT = 50          # long polling — không đốt CPU
 MAX_IMAGE_BYTES = 8_000_000
 
 HELP = (
-    "🌱 <b>Bot seeding GieoChữ</b>\n\n"
+    "🌱 <b>Bot GieoChữ</b>\n\n"
+    "<b>1. Soạn câu trả lời seeding</b>\n"
     "Đang lướt nhóm thấy bài ai đó đang hỏi? Gửi vào đây:\n"
     "• <b>Ảnh chụp màn hình</b> bài đăng (tiện nhất)\n"
     "• Hoặc <b>chép nội dung</b> bài rồi dán vào\n\n"
-    "Bot đọc rồi soạn câu trả lời, chép dán thẳng vào bình luận.\n\n"
-    "<i>Câu trả lời KHÔNG nhắc tên app — đó là cố ý. Ai hỏi lại thì mới nói.</i>\n\n"
-    "/chude — xem chủ đề seeding hôm nay"
+    "<i>Câu trả lời KHÔNG nhắc tên app — đó là cố ý.</i>\n\n"
+    "<b>2. Báo việc đã làm</b>\n"
+    "/viec — xem việc cần làm, có đánh số\n"
+    "/xong 1 — báo việc số 1 đã xong\n"
+    "/dang 2 — đang làm việc số 2\n"
+    "/bo 5 — bỏ qua việc số 5\n\n"
+    "<i>Dùng số thứ tự hoặc mã việc đều được.</i>\n\n"
+    "/chude — chủ đề seeding hôm nay"
 )
+
+
+def _open_tasks() -> list:
+    """Việc chưa xong, đúng thứ tự ưu tiên — dùng chung cho /viec và /xong N."""
+    return next_tasks(SessionLocal, 99)
+
+
+def _resolve(arg: str) -> str | None:
+    """Nhận số thứ tự (theo /viec) hoặc mã việc → trả về mã việc."""
+    arg = arg.strip()
+    if arg.isdigit():
+        tasks = _open_tasks()
+        i = int(arg) - 1
+        return tasks[i].key if 0 <= i < len(tasks) else None
+    return arg or None
+
+
+def _viec_text() -> str:
+    tasks = _open_tasks()
+    pg = progress(SessionLocal)
+    if not tasks:
+        return "🎉 <b>Hết việc trong kế hoạch!</b>\n\nMở gtm_plan.py thêm chặng mới."
+    lines = [f"<b>📋 VIỆC CẦN LÀM</b>  <i>({pg['done']}/{pg['total']} việc lớn đã xong)</i>", ""]
+    for i, t in enumerate(tasks[:8], 1):
+        icon = "🔸" if t.status == "doing" else "⬜"
+        who = "" if t.owner == "anh" else " <i>(Claude)</i>"
+        lines.append(f"{icon} <b>{i}. {t.title}</b>{who}")
+        lines.append(f"     <code>{t.key}</code>")
+    if len(tasks) > 8:
+        lines.append(f"\n<i>…và {len(tasks) - 8} việc nữa</i>")
+    just = recently_done(SessionLocal, 72)
+    if just:
+        lines += ["", "<b>✅ Vừa xong (3 ngày)</b>"]
+        lines += [f"• {t.title}" for t in just[:5]]
+    lines += ["", "<i>Báo xong: /xong 1 — hoặc /xong &lt;mã việc&gt;</i>"]
+    return "\n".join(lines)
+
+
+def _mark_text(arg: str, status: str) -> str:
+    key = _resolve(arg)
+    if not key:
+        return "Thiếu số thứ tự hoặc mã việc.\nVí dụ: <code>/xong 1</code>\n\n/viec để xem danh sách."
+    try:
+        r = mark(SessionLocal, key, status)
+    except ValueError as e:
+        return f"❌ {e}\n\n/viec để xem mã việc đúng."
+    icon = {"done": "✅", "doing": "🔸", "todo": "⬜", "skip": "⏭"}[status]
+    out = [f"{icon} <b>{r['title']}</b> → {r['status']}"]
+    if status == "done":
+        pg = progress(SessionLocal)
+        out.append(f"\n<i>Tiến độ: {pg['done']}/{pg['total']} việc lớn</i>")
+        nxt = next_tasks(SessionLocal, 1)
+        if nxt:
+            out.append(f"\n<b>Tiếp theo:</b> {nxt[0].title}")
+            out.append(f"<i>{nxt[0].why}</i>")
+        else:
+            out.append("\n🎉 Hết việc trong kế hoạch!")
+    return "\n".join(out)
 
 
 def tg(method: str, **params) -> dict:
@@ -118,6 +186,19 @@ def handle(msg: dict) -> None:
     if text in ("/start", "/help"):
         send(chat_id, HELP)
         return
+
+    # ── Báo cáo tiến độ công việc ──
+    # Đặt TRƯỚC nhánh xử lý bài đăng: lệnh bắt đầu bằng "/" nên không lẫn, nhưng
+    # để trước cho rõ ý — đây là đường riêng, không đi qua model.
+    if text.startswith("/viec"):
+        send(chat_id, _viec_text())
+        return
+    for cmd, st in (("/xong", "done"), ("/dang", "doing"),
+                    ("/bo", "skip"), ("/lam_lai", "todo")):
+        if text.startswith(cmd):
+            send(chat_id, _mark_text(text[len(cmd):].strip(), st))
+            return
+
     if text == "/chude":
         from datetime import date
         t = topic_of_day(date.today())
