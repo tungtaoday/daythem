@@ -238,6 +238,11 @@ def build_weekly_report(session_factory) -> dict:
             who = "" if t.owner == "anh" else "  <i>(Claude làm được)</i>"
             lines.append(f"• {t.text}{who}")
 
+    # Bảng điểm thử nghiệm + khối dán cho Claude — nhịp chỉnh chiến lược mỗi Thứ 2:
+    # nhận báo cáo → dán khối cho Claude → Claude đề xuất tối đa 3 điều chỉnh → deploy.
+    from daythem.service.growth_loop import scoreboard
+    lines += scoreboard(session_factory)["lines"]
+
     lines += ["", "<i>Việc lấy từ lộ trình cứng trong docs/ — không sinh bằng AI.</i>"]
 
     return {

@@ -31,6 +31,9 @@ except (AttributeError, OSError):
 
 from daythem.adapters.database import SessionLocal  # noqa: E402
 from daythem.config import settings  # noqa: E402
+from daythem.service.growth_loop import (  # noqa: E402
+    CHANNELS, PILLARS, log_post, scoreboard, set_last_post_metrics,
+)
 from daythem.service.gtm_plan import (  # noqa: E402
     mark, next_tasks, progress, recently_done,
 )
@@ -54,7 +57,11 @@ HELP = (
     "/xong 1 — báo việc số 1 đã xong\n"
     "/dang 2 — đang làm việc số 2\n"
     "/bo 5 — bỏ qua việc số 5\n\n"
-    "<i>Dùng số thứ tự hoặc mã việc đều được.</i>\n\n"
+    "<b>3. Vòng growth — ghi thử nghiệm</b>\n"
+    "/post g1 hocphi — vừa đăng bài trụ 'học phí' vào nhóm 1\n"
+    "/kq 1200 14 3 — bài vừa ghi đạt 1200 reach, 14 bl, 3 share\n"
+    "/tuan — bảng điểm thử nghiệm + khối dán cho Claude\n\n"
+    "<i>Kênh: g1..g5 (nhóm theo thứ tự bản tin) · fb · tt · zl</i>\n\n"
     "/chude — chủ đề seeding hôm nay"
 )
 
@@ -198,6 +205,47 @@ def handle(msg: dict) -> None:
         if text.startswith(cmd):
             send(chat_id, _mark_text(text[len(cmd):].strip(), st))
             return
+
+    # ── Vòng growth: ghi thử nghiệm ──
+    if text.startswith("/post"):
+        args = text.split()[1:]
+        if len(args) < 2:
+            send(chat_id, "Cú pháp: <code>/post &lt;kênh&gt; &lt;trụ&gt; [mã link] [ghi chú]</code>\n"
+                          f"Kênh: {' '.join(sorted(CHANNELS))}\n"
+                          f"Trụ: {' '.join(sorted(PILLARS))}\n"
+                          "Ví dụ: <code>/post g1 hocphi</code>")
+            return
+        try:
+            r = log_post(SessionLocal, args[0], args[1],
+                         link_code=args[2] if len(args) > 2 else None,
+                         note=" ".join(args[3:]) or None)
+        except ValueError as e:
+            send(chat_id, f"❌ {e}")
+            return
+        code = f" · mã link <code>{r['link_code']}</code>" if r.get("link_code") else \
+               "\n<i>💡 Lần sau kèm mã link (/post g1 hocphi gp1) để đo được click theo bài.</i>"
+        send(chat_id, f"📝 Đã ghi: <b>{r['channel']}</b> · {r['pillar']}{code}\n"
+                      f"Có số reach thì gõ <code>/kq &lt;reach&gt; &lt;bl&gt; &lt;share&gt;</code>")
+        return
+
+    if text.startswith("/kq"):
+        args = text.split()[1:]
+        if len(args) != 3 or not all(a.isdigit() for a in args):
+            send(chat_id, "Cú pháp: <code>/kq &lt;reach&gt; &lt;bình luận&gt; &lt;chia sẻ&gt;</code>"
+                          " — áp cho bài ghi gần nhất.\nVí dụ: <code>/kq 1200 14 3</code>")
+            return
+        try:
+            r = set_last_post_metrics(SessionLocal, *map(int, args))
+        except ValueError as e:
+            send(chat_id, f"❌ {e}")
+            return
+        send(chat_id, f"📊 {r['channel']} · {r['pillar']} ({r['post_date']}): "
+                      f"reach <b>{r['reach']}</b> · {r['comments']} bl · {r['shares']} share")
+        return
+
+    if text.startswith("/tuan"):
+        send(chat_id, "\n".join(scoreboard(SessionLocal)["lines"]).strip())
+        return
 
     if text == "/chude":
         from datetime import date
