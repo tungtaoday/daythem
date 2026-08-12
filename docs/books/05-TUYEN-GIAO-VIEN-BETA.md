@@ -158,6 +158,17 @@ bên phải → email hiện ra ngay ở đó ạ. Cô chụp màn hình gửi e
 
 ## A5. Bước 5 — Dẫn qua bước cài (gửi kèm, đừng để họ tự mò)
 
+> 🎉 **CẬP NHẬT 12/08: iOS ĐÃ LÊN APP STORE.** Cô thầy dùng iPhone giờ KHÔNG cần
+> opt-in gì cả — gửi thẳng link này (link có đo click):
+>
+> ```
+> Cô tải GieoChữ trên App Store ạ: https://gieochu.vn/r/appstore
+> ```
+>
+> Câu mở đầu khi nhắn 40 người cũng đổi được từ "cô cài giúp em bản thử nghiệm"
+> thành **"app em có trên App Store rồi, cô tải thử ạ"** — mạnh hơn hẳn.
+> Hai bước opt-in bên dưới CHỈ còn cần cho người dùng Android.
+
 ```
 Cô làm giúp em 2 bước này nhé ạ:
 

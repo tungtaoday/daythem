@@ -41,9 +41,10 @@ Hệ quả về thứ tự ưu tiên: đăng đủ 8 bài nền này **một l�
 | Hứa tính năng chưa có | Chấm điểm tự động, học online, thanh toán trong app |
 | Nêu ngưỡng thuế như chân lý | Quy định đang đổi — luôn kết bằng "đối chiếu chi cục thuế" |
 
-⚠️ **CTA phụ thuộc app đã lên store chưa.** Tính tới 08/08: iOS đang chờ duyệt, Android đang
-closed testing → **chưa có link tải công khai**. Dùng CTA "nhắn tin nhận bản dùng thử".
-Khi store live thì đổi sang link tải (mục 4).
+🎉 **CẬP NHẬT 12/08: iOS ĐÃ LÊN APP STORE.** CTA cho iPhone dùng link có đo click:
+`https://gieochu.vn/r/appstore`. Android vẫn đang closed testing (~19–21/08 mới apply
+production) → với người dùng Android vẫn là "nhắn tin nhận bản dùng thử".
+Bài mốc "GieoChữ đã có trên App Store" ở Phần C — **đăng được ngay hôm nay**.
 
 ---
 
@@ -283,7 +284,7 @@ Sau khi App Store / CH Play duyệt xong, sửa CTA cuối các bài:
 
 ```
 Tải GieoChữ:
-• iPhone: [link App Store]
+• iPhone: https://gieochu.vn/r/appstore
 • Android: [link CH Play]
 Miễn phí, không quảng cáo.
 ```
@@ -298,7 +299,7 @@ app được sửa đúng theo lời thầy cô nói.
 
 App vẫn miễn phí. Có gì chưa vừa ý, thầy cô cứ nhắn, chúng tôi sửa tiếp.
 
-[link tải]
+https://gieochu.vn/r/appstore
 ```
 
 ---
