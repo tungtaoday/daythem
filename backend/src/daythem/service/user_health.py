@@ -53,6 +53,7 @@ FEATURE_OF_EVENT = {
 
 @dataclass
 class UserHealth:
+    teacher_id: str          # để trang quản trị hỏi được bước chân của đúng người này
     phone: str
     name: str
     joined: datetime
@@ -126,6 +127,7 @@ def user_list(session_factory) -> dict:
                     feats[f] = feats.get(f, 0) + 1
             stamps = sorted([t.created_at] + [e.created_at for e in evs if e.created_at])
             u = UserHealth(
+                teacher_id=t.id,
                 phone=t.phone, name=t.name or "(chưa đặt tên)", joined=t.created_at,
                 days_since_join=(_now() - t.created_at).days,
                 days_quiet=(_now() - stamps[-1]).days,

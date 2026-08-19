@@ -217,6 +217,27 @@ class ActivityEventORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
 
 
+class UiEventORM(Base):
+    """Bước chân của GV trong app: mở màn nào, bấm gì, theo thứ tự thời gian.
+
+    CỐ Ý tách khỏi `activity_events`. Bảng kia là phễu kích hoạt sạch với 8 loại
+    event lõi, và `user_health` đếm số thao tác trực tiếp từ nó — đổ vài trăm lượt
+    xem màn hình vào đấy là north_star, phễu và trang /admin/users sai hết.
+
+    `session_id` do client sinh mỗi lần mở app → ghép được một phiên liền mạch,
+    thứ cho biết GV đi đường nào rồi bỏ ở đâu (cái mà đếm tổng không nói được).
+    """
+    __tablename__ = "ui_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    teacher_id: Mapped[str] = mapped_column(String(36), ForeignKey("teachers.id"), index=True)
+    screen: Mapped[str] = mapped_column(String(60), index=True)
+    action: Mapped[Optional[str]] = mapped_column(String(60))   # None = chỉ mở màn
+    session_id: Mapped[Optional[str]] = mapped_column(String(36), index=True)
+    platform: Mapped[Optional[str]] = mapped_column(String(12))  # ios | android | web
+    app_version: Mapped[Optional[str]] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+
+
 class TrackedLinkORM(Base):
     """Link rút gọn có gắn mã kênh → đo được bài đăng nào (group/TikTok/fanpage) kéo
     bao nhiêu CLICK thật. Đây là cách duy nhất đo attribution khi đăng tay vào group

@@ -295,6 +295,31 @@ def admin_users(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = De
     }
 
 
+@router.get("/admin/journey")
+def admin_journey(
+    teacher_id: str = "",
+    days: int = 30,
+    _: bool = Depends(require_admin),
+    uow: SqlAlchemyUnitOfWork = Depends(get_uow),
+):
+    """Bước chân trong app: đường đi từng phiên + màn nào hay là ngõ cụt.
+
+    Không có teacher_id → chỉ trả bảng ngõ cụt (nhìn toàn cục).
+    Có teacher_id → trả thêm các phiên gần nhất của đúng người đó.
+    """
+    from dataclasses import asdict
+
+    from daythem.service.journey import drop_off, sessions_of
+
+    out: dict = {"drop_off": drop_off(uow._session_factory, days=days)}
+    if teacher_id:
+        out["sessions"] = [
+            {**asdict(s), "seconds": s.seconds, "bounced": s.bounced}
+            for s in sessions_of(uow._session_factory, teacher_id)
+        ]
+    return out
+
+
 @router.get("/admin/users/page", response_class=HTMLResponse)
 def admin_users_page() -> str:
     # Trang tự gọi /admin/users bằng token trong localStorage (như ops.html).

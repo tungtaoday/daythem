@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore } from '../store/auth';
+import { startJourney, stopJourney, trackScreen } from '../api/journey';
 import { IconHome, IconBook, IconUsers, IconWallet, IconChart } from '../components/icons';
 
 // Auth screens
@@ -118,6 +119,13 @@ export function AppNavigator() {
     loadMe().finally(() => setBooting(false));
   }, []);
 
+  // Đăng xuất phải cắt phiên đo: nếu không, bước chân của người vừa thoát sẽ
+  // dính sang tài khoản đăng nhập kế tiếp trên cùng máy.
+  useEffect(() => {
+    if (token) startJourney();
+    else stopJourney();
+  }, [token]);
+
   if (booting) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#faf8f2' }}>
@@ -129,7 +137,17 @@ export function AppNavigator() {
   const needsSetup = token && teacher && !teacher.name;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      // Móc ở đây thay vì rắc trackScreen vào 23 màn: một chỗ duy nhất, và màn
+      // mới thêm sau này tự có mặt, không ai phải nhớ.
+      onReady={() => { if (token) startJourney(); }}
+      onStateChange={(state) => {
+        if (!token) return;
+        let r = state?.routes?.[state.index ?? 0];
+        while (r?.state) r = (r.state as typeof state)?.routes?.[(r.state as typeof state)?.index ?? 0];
+        if (r?.name) trackScreen(r.name);
+      }}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!token ? (
           <>

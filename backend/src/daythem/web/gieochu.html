@@ -504,5 +504,69 @@ h1,h2,h3{letter-spacing:-1px}
   </div>
 </div></footer>
 
+<script>
+/* Đo hành trình trên landing.
+   Trước đây GA4 chỉ có pageview mặc định: biết bao nhiêu người GHÉ, mù hoàn toàn
+   đoạn quan trọng nhất — bao nhiêu người thật sự BẤM TẢI, và bấm ở chỗ nào.
+   Không thu thập gì thuộc về người xem, chỉ đếm hành vi trên trang. */
+(function () {
+  var ga = function (name, params) {
+    if (typeof gtag === 'function') gtag('event', name, params || {});
+  };
+
+  /* 1. Bấm tải App Store — kèm vị trí, để biết chỗ nào thật sự ăn khách.
+        Bốn huy hiệu đặt ở bốn nơi khác nhau; gộp chung thì không rút ra được gì. */
+  var WHERE = [
+    ['.nav', 'nav'], ['.hero', 'hero'],
+    ['.pricing', 'bang_gia'], ['.finalcta', 'cta_cuoi'],
+  ];
+  document.querySelectorAll('a.appstore').forEach(function (a) {
+    var pos = 'khac';
+    WHERE.forEach(function (w) { if (a.closest(w[0])) pos = w[1]; });
+    a.addEventListener('click', function () {
+      ga('click_appstore', { vi_tri: pos });
+    });
+  });
+
+  /* 2. Đọc tới đâu thì bỏ. Mỗi mốc chỉ bắn MỘT lần/phiên xem — không thì cuộn
+        lên cuộn xuống sẽ thổi phồng số và mốc nào cũng như nhau. */
+  var seen = {};
+  var MARKS = [
+    ['#tinh-nang', 'tinh_nang'], ['#cach-dung', 'cach_dung'],
+    ['#hoc-phi', 'bang_gia'], ['#hoi-dap', 'hoi_dap'],
+  ];
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var id = e.target.id;
+        if (seen[id]) return;
+        seen[id] = 1;
+        var name = (MARKS.find(function (m) { return m[0] === '#' + id; }) || [, id])[1];
+        ga('xem_muc', { muc: name });
+      });
+    }, { threshold: 0.4 });
+    MARKS.forEach(function (m) {
+      var el = document.querySelector(m[0]);
+      if (el) io.observe(el);
+    });
+  }
+
+  /* 3. Mở câu hỏi nào — cho biết thầy cô đang lăn tăn điều gì trước khi tải.
+        Câu đầu để <details open>, và trình duyệt bắn 'toggle' cho nó ngay lúc
+        dựng trang. Không chặn thì câu đó cộng 1 mỗi lượt truy cập và vĩnh viễn
+        đứng đầu bảng dù chẳng ai bấm — hỏng đúng chỉ số mình cần đọc. */
+  var sanSang = false;
+  setTimeout(function () { sanSang = true; }, 0);
+  document.querySelectorAll('details.qa').forEach(function (d) {
+    d.addEventListener('toggle', function () {
+      if (!d.open || !sanSang) return;
+      var q = d.querySelector('.q');
+      ga('mo_cau_hoi', { cau_hoi: (q ? q.textContent : '').slice(0, 80) });
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
