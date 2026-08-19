@@ -186,7 +186,8 @@ it was approved on the first submission.
 - [x] ~~≥3 giáo viên thật~~ → **đã có 1 người dùng thật sâu** (5 lớp, 3 ngày) + 1 ca rơi. Q3 kể cả hai, đủ trung thực để nộp
 - [ ] Play Console → **Quality: 0 crash / 0 ANR** — nếu có thì sửa câu Q9 cho khớp
 - [ ] **Q8 — quyết định một trong hai:** để tôi vá validation SĐT (15 phút) **hoặc xoá dòng "Tightened phone-number validation"**. Tính tới 19/08 chưa vá
-- [ ] Cập nhật lại **số test** ở Q9 (đang ghi 246) và **số liệu của Lê To Co So Mi** ở Q3 — cô ấy vẫn đang dùng nên số sẽ tăng. Xem tại `daythem.doitay.vn/admin/users/page`
+- [x] Số test ở Q9 = **246, đã chạy lại 19/08: 246 passed, 0 failed** ✅
+- [ ] Cập nhật **số liệu của Lê To Co So Mi** ở Q3 — cô ấy vẫn đang dùng nên số sẽ tăng. Xem tại `daythem.doitay.vn/admin/users/page`
 - [ ] Đọc lại từng đáp án — **đừng nộp câu nào mình không đứng sau được**
 
 ## Nộp ở đâu
