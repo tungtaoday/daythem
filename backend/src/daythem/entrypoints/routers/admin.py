@@ -275,6 +275,35 @@ def admin_teachers(limit: int = 50, _: bool = Depends(require_admin), uow: SqlAl
         return {"items": items, "total": len(items)}
 
 
+@router.get("/admin/users")
+def admin_users(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
+    """Sức khoẻ từng giáo viên THẬT: dùng tính năng nào, kẹt ở đâu, nên làm gì.
+
+    Khác /admin/activation (đo tỷ lệ trên toàn bộ tài khoản): endpoint này LOẠI
+    tài khoản thử/seed/tester đổi chéo, và trả về theo từng người — vì ở quy mô
+    vài người dùng thì tên riêng có ích hơn phần trăm.
+    """
+    from dataclasses import asdict
+
+    from daythem.service.user_health import user_list
+    d = user_list(uow._session_factory)
+    return {
+        "real_total": d["real_total"],
+        "real_active": d["real_active"],
+        "excluded": d["excluded"],
+        "users": [asdict(u) for u in d["users"]],
+    }
+
+
+@router.get("/admin/users/page", response_class=HTMLResponse)
+def admin_users_page() -> str:
+    # Trang tự gọi /admin/users bằng token trong localStorage (như ops.html).
+    try:
+        return (_WEB / "users.html").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "<h1>Người dùng</h1><p>Thiếu users.html</p>"
+
+
 @router.get("/admin/reset-requests")
 def admin_reset_requests(_: bool = Depends(require_admin), uow: SqlAlchemyUnitOfWork = Depends(get_uow)):
     """Hàng chờ yêu cầu đặt lại mật khẩu (GV gửi từ app)."""

@@ -11,6 +11,7 @@ from sqlalchemy import select, func
 from daythem.service.activity import activation_funnel, north_star
 from daythem.service.gtm_plan import digest_lines as gtm_lines
 from daythem.service.seeding import seeding_lines
+from daythem.service.user_health import digest_lines as user_health_lines
 from daythem.service.weekly_report import TARGET_POSTS_PER_WEEK
 from daythem.adapters.orm import PasswordResetRequestORM, TrackedLinkORM, LinkClickORM, PostLogORM
 
@@ -102,6 +103,10 @@ def build_ops_digest(session_factory) -> dict:
     # Việc hôm nay đặt TRÊN CÙNG, trên cả số liệu — đọc bản tin là biết ngay
     # phải làm gì, không phải cuộn qua bốn khối chỉ số mới thấy.
     lines += gtm_lines(session_factory)
+
+    # Người dùng THẬT đặt ngay sau việc: ở quy mô vài người, biết đích danh ai
+    # đang kẹt quan trọng hơn mọi biểu đồ phần trăm.
+    lines += user_health_lines(session_factory)
 
     lines += [
         "",
