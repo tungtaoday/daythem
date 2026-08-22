@@ -1,3 +1,4 @@
+import hashlib
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -39,8 +40,25 @@ def _serve(p: Path) -> str:
 
 @router.get("/", response_class=HTMLResponse)
 @router.get("/landing", response_class=HTMLResponse)
-def landing_page() -> str:
-    return _serve(_LANDING)
+def landing_page() -> HTMLResponse:
+    """Landing chính.
+
+    Đặt Cache-Control tường minh vì trước đây trang KHÔNG có header cache nào —
+    không Cache-Control, không ETag, không Last-Modified. Trình duyệt không có
+    cách nào biết trang đã đổi, nên sau mỗi lần deploy người xem (kể cả chủ web)
+    dễ nhìn thấy bản cũ và tưởng thay đổi chưa lên.
+
+    5 phút: đủ ngắn để sửa xong là thấy gần như ngay, đủ dài để không bắt server
+    dựng lại trang cho mỗi lượt tải trong một phiên xem.
+    """
+    html = _serve(_LANDING)
+    return HTMLResponse(
+        content=html,
+        headers={
+            "Cache-Control": "public, max-age=300, must-revalidate",
+            "ETag": f'W/"{hashlib.md5(html.encode()).hexdigest()[:16]}"',
+        },
+    )
 
 
 @router.get("/landing-v1", response_class=HTMLResponse)

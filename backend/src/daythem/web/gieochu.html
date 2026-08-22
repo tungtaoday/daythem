@@ -273,7 +273,7 @@ h1,h2,h3{letter-spacing:-1px}
       <a href="#hoc-phi">Miễn phí</a>
       <a href="#hoi-dap">Hỏi đáp</a>
     </nav>
-    <a class="appstore sm" data-store="apple" href="https://apps.apple.com/vn/app/id6798274839"><svg viewBox="0 0 384 512" fill="#fff" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM255.5 78c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span><span class="l1">Tải về trên</span><span class="l2">App Store</span></span></a><a class="appstore sm" data-store="google" href="https://play.google.com/store/apps/details?id=vn.daythem.app"><svg viewBox="0 0 512 512" fill="#fff" aria-hidden="true"><path d="M47 22c0-9 5-16 12-18l248 244-248 244c-7-2-12-9-12-18V22z"/><path d="M330 224l-59 58 59 58 92-52c14-8 14-24 0-32l-92-32z" opacity=".92"/><path d="M71 4c-3 0-6 1-8 2l245 242 56-56L91 8c-7-3-14-4-20-4z" opacity=".85"/><path d="M63 506c2 1 5 2 8 2 6 0 13-1 20-4l273-152-56-56L63 506z" opacity=".78"/></svg><span><span class="l1">Tải về trên</span><span class="l2">Google Play</span></span></a><a class="navdl" href="#tai-app">Tải app</a>
+    <a class="appstore sm" data-store="apple" href="https://apps.apple.com/vn/app/id6798274839"><svg viewBox="0 0 384 512" fill="#fff" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zM255.5 78c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span><span class="l1">Tải về trên</span><span class="l2">App Store</span></span></a><a class="appstore sm" data-store="google" href="https://play.google.com/store/apps/details?id=vn.daythem.app"><svg viewBox="0 0 512 512" fill="#fff" aria-hidden="true"><path d="M47 22c0-9 5-16 12-18l248 244-248 244c-7-2-12-9-12-18V22z"/><path d="M330 224l-59 58 59 58 92-52c14-8 14-24 0-32l-92-32z" opacity=".92"/><path d="M71 4c-3 0-6 1-8 2l245 242 56-56L91 8c-7-3-14-4-20-4z" opacity=".85"/><path d="M63 506c2 1 5 2 8 2 6 0 13-1 20-4l273-152-56-56L63 506z" opacity=".78"/></svg><span><span class="l1">Tải về trên</span><span class="l2">Google Play</span></span></a><a class="navdl" id="navdl" href="#tai-app">Tải app</a>
   </div>
 </div>
 
@@ -578,6 +578,33 @@ h1,h2,h3{letter-spacing:-1px}
     });
   });
 })();
+
+  /* Nút tải ở thanh trên (chỉ hiện ở máy nhỏ) nói ĐÚNG store của máy đang mở.
+     Trước đây ghi "Tải app" chung chung: người dùng Android mở trang, thanh trên
+     không có chữ nào nhắc tới CH Play, mà huy hiệu thì nằm dưới gần 500px —
+     rất dễ tưởng app chỉ có cho iPhone. */
+  (function () {
+    var n = document.getElementById('navdl');
+    if (!n) return;
+    var ua = navigator.userAgent || '';
+    var android = /Android/i.test(ua);
+    var ios = /iPhone|iPad|iPod/i.test(ua);
+    if (android) {
+      n.textContent = 'Tải · CH Play';
+      n.href = 'https://play.google.com/store/apps/details?id=vn.daythem.app';
+      n.setAttribute('data-store', 'google');
+    } else if (ios) {
+      n.textContent = 'Tải · App Store';
+      n.href = 'https://apps.apple.com/vn/app/id6798274839';
+      n.setAttribute('data-store', 'apple');
+    }
+    n.addEventListener('click', function () {
+      if (typeof gtag === 'function') {
+        gtag('event', android ? 'click_playstore' : ios ? 'click_appstore' : 'click_taiapp',
+             { vi_tri: 'nav_mobile', nen_tang: android ? 'android' : ios ? 'ios' : 'khac' });
+      }
+    });
+  })();
 </script>
 
 </body>
