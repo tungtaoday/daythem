@@ -120,6 +120,23 @@ PLAN: list[PlanItem] = [
         "Câu trả lời của họ chính là thông điệp bán hàng cho 1.000 người tiếp theo. Không nghĩ ra được bằng cách ngồi suy luận.",
         "Kiếm khách", "docs/books/05 nhịp ngày 7",
     ),
+    PlanItem(
+        "vá-goback",
+        "Vá CreateClassScreen: tạo lớp xong dẫn thẳng sang thêm học sinh, rồi gợi ý điểm danh",
+        "Đo 22/08: 100% đăng ký → 78% tạo lớp → 44% thêm HS → 22% chạm aha → CHỈ 11% quay lại "
+        "ngày 2. Chỗ tụt mạnh nhất là 78→44, và thủ phạm là một dòng: CreateClassScreen.tsx:71 "
+        "gọi navigation.goBack() — giáo viên vừa tạo lớp xong bị ném về danh sách, không gợi ý gì. "
+        "Cả 4 cô hôm 19/08 dừng đúng đây. Một dòng này gây thiệt hại lớn hơn cả hệ marketing cộng lại.",
+        "Sản phẩm", "mobile/src/screens/Class/CreateClassScreen.tsx:71",
+    ),
+    PlanItem(
+        "hỏi-nguồn",
+        "Thêm 1 câu 'Anh/chị biết GieoChữ từ đâu?' vào onboarding (1 chạm, 5 lựa chọn)",
+        "Trường source đã có sẵn trong DB mà rỗng 9/9. Link gắn mã chỉ đo được 5 click toàn thời "
+        "đại vì phần lớn người dùng đến từ tìm kiếm trong store — link không bao giờ với tới họ. "
+        "Hỏi thẳng là cách duy nhất biết kênh nào thật sự ra khách.",
+        "Sản phẩm", "audit 22/08",
+    ),
 ]
 
 PLAN_BY_KEY = {p.key: p for p in PLAN}
