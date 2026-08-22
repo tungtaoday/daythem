@@ -135,7 +135,7 @@ export function LegalScreen({ navigation }: any) {
         <Heading>6. Liên hệ</Heading>
         <Body>
           Nếu có thắc mắc về điều khoản hoặc quyền riêng tư, vui lòng liên hệ:
-          {'\n'}support@gieochu.vn
+          {'\n'}gieochu@doitay.vn
         </Body>
 
         <Text style={s.footerNote}>

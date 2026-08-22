@@ -440,8 +440,8 @@ export function ProfileScreen({ navigation }: any) {
           <TouchableOpacity
             style={s.row}
             onPress={() =>
-              Linking.openURL('mailto:support@gieochu.vn').catch(() =>
-                Alert.alert('Liên hệ', 'Email: support@gieochu.vn'),
+              Linking.openURL('mailto:gieochu@doitay.vn').catch(() =>
+                Alert.alert('Liên hệ', 'Email: gieochu@doitay.vn'),
               )
             }
           >
