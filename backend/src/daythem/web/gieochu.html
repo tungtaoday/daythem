@@ -206,23 +206,24 @@ h1,h2,h3{letter-spacing:-1px}
   /* Hàng menu ẩn đi kéo theo cái margin-left:auto vốn đẩy mọi thứ sang phải,
      nên badge rơi về sát chữ và bỏ trống 140px mép phải. Tự đẩy lấy. */
   .nav .appstore{margin-left:auto}
-  .hero .wrap{grid-template-columns:1fr;text-align:center;padding-top:44px}
-  .hero h1{font-size:38px}
+  .hero .wrap{grid-template-columns:1fr;text-align:center;padding-top:28px;padding-bottom:24px}
+  .hero h1{font-size:32px;line-height:1.12}   /* 38px hay rớt chữ lẻ xuống dòng */
   .hero .lead{margin-left:auto;margin-right:auto}
   .badge-pill{margin-left:auto;margin-right:auto}
   .badges,.socialproof{justify-content:center}
-  .hero-art{margin-top:24px;min-height:520px}
+  .hero-art{margin-top:20px}
+  .shot{width:min(272px,70vw)}   /* ảnh vừa cột, đỡ đẩy trang dài ra */
   .phone-back{display:none}
   .phone-front{transform:none}
   .trust .wrap{grid-template-columns:repeat(2,1fr);gap:24px}
   .feat{grid-template-columns:1fr;gap:32px}
   .feat .center-art{order:2}
-  .feat h2{font-size:30px}
+  .feat h2{font-size:25px;line-height:1.2}
   .steps,.plans,.footcols{grid-template-columns:1fr}
   .testi .steps{grid-template-columns:1fr}
-  .how h2,.testi h2,.pricing h2,.faq h2{font-size:30px}
-  .finalcta h2{font-size:32px}
-  .section{padding-top:60px;padding-bottom:60px}
+  .how h2,.testi h2,.pricing h2,.faq h2{font-size:25px;line-height:1.2}
+  .finalcta h2{font-size:27px;line-height:1.15}
+  .section{padding-top:44px;padding-bottom:44px}   /* 60px x 8 mục = thừa gần 300px */
   .footcols{gap:24px}
 }
 
@@ -243,6 +244,9 @@ h1,h2,h3{letter-spacing:-1px}
 .appstore.sm .l1{font-size:7.5px}
 .appstore.sm .l2{font-size:11.5px}
 .appstore.ghost{border:1.5px solid rgba(255,255,255,.35)}
+/* Mục mở đầu không còn ảnh (ảnh trùng hero đã bỏ) → 1 cột, canh giữa cho cân. */
+.feat-solo{grid-template-columns:1fr!important;max-width:720px;margin:0 auto;text-align:center}
+.feat-solo .featlist{display:inline-block;text-align:left}
 /* Nút tải gọn, chỉ hiện ở máy nhỏ thay cho 2 huy hiệu trong nav. */
 .navdl{display:none;margin-left:auto;background:var(--g500);color:#fff;
   font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;white-space:nowrap}
@@ -302,57 +306,16 @@ h1,h2,h3{letter-spacing:-1px}
       </div>
     </div>
     <div class="hero-art">
-      <div class="phone-back">
-        <div class="phone">
-          <div class="screen"><div class="notch"></div>
-            <!-- MockTuition -->
-            <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
-            <div class="mbody">
-              <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g600),var(--g900));box-shadow:0 12px 28px rgba(70,120,90,.25)">
-                <div style="font-size:10px;font-weight:700;opacity:.85">THU HỌC PHÍ · THÁNG 5</div>
-                <div style="font-size:30px;font-weight:700;letter-spacing:-.8px;margin-top:6px">2.500.000đ</div>
-                <div style="font-size:12px;opacity:.9;margin-bottom:12px">đã thu · còn thiếu 1.500.000đ</div>
-                <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.2)"><div style="height:100%;width:62%;background:#fff;border-radius:3px"></div></div>
-              </div>
-              <div style="background:#fff;border-radius:18px;padding:6px;border:1px solid var(--ink100)">
-                <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">A</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Nguyễn Minh Anh</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="font-size:11px;font-weight:600;color:var(--g600)">✓ Đã nộp</div></div>
-                <div class="mrow" style="padding:10px;border-bottom:1px solid var(--ink100)"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">L</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Trần Bảo Long</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
-                <div class="mrow" style="padding:10px"><div class="av" style="--a:#f4a76b;--b:#d97742;width:36px;height:36px;font-size:14px">N</div><div style="flex:1"><div style="font-size:13px;font-weight:600">Phạm Quỳnh Như</div><div style="font-size:11px;color:var(--ink500)">500.000đ</div></div><div style="padding:6px 11px;border-radius:10px;border:1px solid var(--g100);color:var(--g700);font-size:11px;font-weight:600">Nhắc Zalo</div></div>
-              </div>
-            </div>
-            <div style="padding:10px 18px 20px"><div style="background:var(--g500);color:#fff;border-radius:16px;padding:14px 0;text-align:center;font-size:14px;font-weight:700">💬 Gửi nhắc 2 phụ huynh</div></div>
-          </div>
-        </div>
-      </div>
-      <div class="phone-front">
-        <div class="phone">
-          <div class="screen"><div class="notch"></div>
-            <!-- MockHome -->
-            <div class="mstatus"><span>7:32</span><span>▂▄▆█ ▮</span></div>
-            <div class="mbody">
-              <div class="mrow" style="margin-bottom:16px"><div class="av" style="--a:#c9a4d6;--b:#9b7bb0;width:40px;height:40px;font-size:16px">T</div><div style="flex:1"><div style="font-size:11px;color:var(--ink500);font-weight:600">Thứ 4, 20/05</div><div style="font-size:17px;font-weight:700">Chào thầy Tùng</div></div></div>
-              <div class="mcard-hero" style="background:linear-gradient(155deg,var(--g500),var(--g700));box-shadow:0 12px 28px rgba(85,158,118,.25)">
-                <div style="font-size:10px;font-weight:700;opacity:.9;margin-bottom:6px">● BUỔI HỌC TỐI NAY · CÒN 4 GIỜ</div>
-                <div style="font-size:22px;font-weight:700;letter-spacing:-.4px">Lớp 9 · Toán</div>
-                <div style="font-size:12px;opacity:.9;margin-top:2px;margin-bottom:14px">18:30 – 20:00 · 7 học sinh</div>
-                <div style="background:#fff;color:var(--g700);border-radius:12px;padding:10px 0;text-align:center;font-size:13px;font-weight:700">Mở lớp hôm nay</div>
-              </div>
-              <div style="font-size:13px;color:var(--ink500);font-weight:600;margin-bottom:10px">Có 2 việc thầy nên xem:</div>
-              <div style="background:#fff;border-radius:18px;padding:16px;border:1px solid var(--ink100)">
-                <div class="mrow" style="margin-bottom:8px"><div style="width:28px;height:28px;border-radius:9px;background:var(--coral100);color:var(--coral700);display:flex;align-items:center;justify-content:center;font-size:14px">₫</div><div style="font-size:10px;font-weight:700;color:var(--coral700)">HỌC PHÍ</div></div>
-                <div style="font-size:14px;font-weight:700;margin-bottom:4px">3 phụ huynh chưa nộp tháng 5</div>
-                <div style="display:flex;gap:6px">
-                  <div style="flex:1;background:var(--g500);color:#fff;border-radius:10px;padding:9px 0;text-align:center;font-size:12px;font-weight:700">Gửi nhắc Zalo</div>
-                  <div style="background:var(--surfaceAlt);color:var(--ink500);border-radius:10px;padding:9px 14px;font-size:12px;font-weight:600">Để sau</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Ảnh chụp app THẬT, giống các mục bên dưới. Trước đây chỗ này là giao
+           diện vẽ tay: nói "Có 2 việc thầy nên xem" mà chỉ hiện 1 thẻ, trống hẳn
+           1/3 phía dưới, thanh trạng thái vẽ thô — và nó là thứ đập vào mắt đầu
+           tiên, ngay cạnh những ảnh thật đẹp hơn hẳn ở dưới. -->
+      <div class="shotwrap">
+        <img class="shot" src="/assets/app-home.jpg" alt="Màn hình Hôm nay của GieoChữ"
+             width="272" height="589" loading="eager" decoding="async">
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
 <!-- TRUST -->
 <section class="trust">
@@ -366,10 +329,10 @@ h1,h2,h3{letter-spacing:-1px}
 
 <!-- FEATURE BIG -->
 <section class="section" id="tinh-nang"><div class="wrap">
-  <div class="feat">
-    <div class="center-art">
-      <img class="shot" src="/assets/app-home.jpg" width="272" height="589" alt="Màn hình Hôm nay của GieoChữ: chốt sổ tháng và các việc cần làm" loading="lazy">
-    </div>
+  <div class="feat feat-solo">
+    <!-- Ảnh đã bỏ: mục này lặp ĐÚNG màn Home vừa hiện ở hero cách đó ~600px.
+           Trên di động hai ảnh y hệt nhau nối tiếp trông rất luộm thuộm, và
+           riêng nó chiếm gần 600px chiều dài trang. Chữ ở đây tự đứng được. -->
     <div>
       <h2>Mở app là biết<br>hôm nay cần làm gì</h2>
       <p>Không phải bảng số liệu rối mắt. GieoChữ hỏi từng việc cụ thể, kiểu "3 phụ huynh chưa nộp, gửi nhắc chứ?", thầy cô chỉ việc đồng ý hoặc để sau.</p>
