@@ -244,6 +244,50 @@ h1,h2,h3{letter-spacing:-1px}
 .appstore.sm .l1{font-size:7.5px}
 .appstore.sm .l2{font-size:11.5px}
 .appstore.ghost{border:1.5px solid rgba(255,255,255,.35)}
+/* Huy hiệu trong THẺ BẢNG GIÁ là con trực tiếp của .freecard (không nằm trong
+   .badges như ở hero). Thẻ chỉ chừa 254px bề ngang mà hai huy hiệu cần 303px
+   nên chúng rơi xuống hai dòng, xếp lệch nhau trông như lỗi.
+   Nới lề thẻ + thu huy hiệu vừa đủ để hai cái nằm chung một hàng.
+   KHÔNG đụng .badges ở hero: chỗ đó vốn đã vừa (334px), và .badges còn chứa dòng
+   chú thích nên ép flex vào là bóp nát huy hiệu — đã thử và hỏng đúng như vậy. */
+@media(max-width:560px){
+  .freecard{padding:34px 16px}
+  .freecard .appstore{padding-left:11px;padding-right:11px;gap:7px}
+  .freecard .appstore .l2{font-size:13.5px}
+  .freecard .appstore svg{width:17px;height:20px}
+}
+/* CTA cuối: khung chỉ 254px mà hai huy hiệu cần 293px → cũng rơi hai dòng.
+   Thu giống thẻ bảng giá. Vẫn KHÔNG dùng flex chia đôi vì .badges ở đây cũng có
+   thể chứa chữ kèm, ép flex là bóp nát như đã hỏng ở hero. */
+@media(max-width:560px){
+  /* Đệm 40px mỗi bên + lề .wrap ăn mất 136px bề ngang: ở máy 320px khung
+     trong chỉ còn 184px, hai huy hiệu 215px không tài nào vừa. Nới đệm là
+     gốc của vấn đề — thu nhỏ huy hiệu thêm nữa chỉ làm chữ khó đọc. */
+  .finalcta{padding:44px 18px;border-radius:28px}
+  .finalcta .appstore{padding-left:11px;padding-right:11px;gap:7px}
+  .finalcta .appstore .l2{font-size:13.5px}
+  .finalcta .appstore svg{width:17px;height:20px}
+}
+/* Máy ≤360px: hero cũng hết chỗ (khung 264px, hai huy hiệu cần 289px).
+   Thu bằng cỡ chữ chứ không ép flex — .badges ở hero còn chứa dòng chú thích. */
+@media(max-width:400px){
+  .hero .badges .appstore{padding-left:11px;padding-right:11px;gap:7px}
+  .hero .badges .appstore .l2{font-size:13px}
+  .hero .badges .appstore .l1{font-size:8.5px}
+  .hero .badges .appstore svg{width:16px;height:19px}
+}
+@media(max-width:360px){
+  .freecard .appstore{padding-left:8px;padding-right:8px;gap:6px}
+  .finalcta .appstore{padding-left:8px;padding-right:8px;gap:6px}
+  .finalcta .appstore .l1{font-size:7px}
+  .finalcta .appstore .l2{font-size:11.5px}
+  .finalcta .appstore svg{width:14px;height:17px}
+  .freecard .appstore .l1{font-size:7px}
+  .freecard .appstore .l2{font-size:11.5px}
+  .freecard .appstore svg{width:14px;height:17px}
+}
+  .badges .appstore svg{width:15px;height:18px}
+}
 /* Mục mở đầu không còn ảnh (ảnh trùng hero đã bỏ) → 1 cột, canh giữa cho cân. */
 .feat-solo{grid-template-columns:1fr!important;max-width:720px;margin:0 auto;text-align:center}
 .feat-solo .featlist{display:inline-block;text-align:left}
