@@ -6,18 +6,22 @@ import urllib.parse
 from daythem.config import settings
 
 
-def _send(text: str) -> None:
+def _send(text: str, reply_markup: dict | None = None) -> None:
     token = settings.TELEGRAM_BOT_TOKEN
     chat_id = settings.TELEGRAM_CHAT_ID
     if not token or not chat_id:
         return
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    data = urllib.parse.urlencode({
+    payload = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": "HTML",
         "disable_web_page_preview": "true",
-    }).encode()
+    }
+    # Nút bấm dưới tin (inline keyboard). Telegram nhận dạng JSON chuỗi hoá.
+    if reply_markup:
+        payload["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    data = urllib.parse.urlencode(payload).encode()
     try:
         urllib.request.urlopen(urllib.request.Request(url, data=data), timeout=8)
     except Exception:

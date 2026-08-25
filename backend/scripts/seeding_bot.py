@@ -199,6 +199,19 @@ def handle(msg: dict) -> None:
     # ── Báo cáo tiến độ công việc ──
     # Đặt TRƯỚC nhánh xử lý bài đăng: lệnh bắt đầu bằng "/" nên không lẫn, nhưng
     # để trước cho rõ ý — đây là đường riêng, không đi qua model.
+    if text.startswith("/xong_gv"):
+        from daythem.adapters.database import SessionLocal
+        from daythem.service.cham_soc import KIND_XONG, ghi
+        from daythem.service.user_health import user_list
+        sdt = text[len("/xong_gv"):].strip()
+        u = next((x for x in user_list(SessionLocal)["users"] if x.phone == sdt), None)
+        if not u:
+            send(chat_id, f"Không thấy giáo viên có số <code>{sdt}</code>.")
+        else:
+            ghi(SessionLocal, u.teacher_id, KIND_XONG)
+            send(chat_id, f"🌿 Chốt <b>{u.name}</b> — không hiện lại trong bản tin nữa.")
+        return
+
     if text.startswith("/viec"):
         send(chat_id, _viec_text())
         return
@@ -310,6 +323,51 @@ def handle(msg: dict) -> None:
         send(chat_id, "❌ Có lỗi khi xử lý. Thử lại sau ít phút nhé.")
 
 
+
+def handle_callback(cq: dict) -> None:
+    """Xử lý nút bấm dưới bản tin sáng: "✓ Đã nhắn" và "💬 Họ hỏi cách".
+
+    Nút thay cho gõ lệnh vì bản tin đọc trên điện thoại — gõ "/danhan <id>" trên
+    bàn phím ảo thì không ai làm đều được, mà việc này phải làm mỗi ngày.
+    """
+    from daythem.adapters.database import SessionLocal
+    from daythem.service.cham_soc import (KIND_HUONG, KIND_NHAN, ghi, huong_dan_cho)
+    from daythem.service.user_health import user_list
+
+    data = cq.get("data") or ""
+    chat_id = cq.get("message", {}).get("chat", {}).get("id")
+    cq_id = cq.get("id")
+    if str(chat_id) != str(settings.TELEGRAM_CHAT_ID):
+        return
+    if ":" not in data:
+        tg("answerCallbackQuery", callback_query_id=cq_id)
+        return
+    ma, tid = data.split(":", 1)
+
+    u = next((x for x in user_list(SessionLocal)["users"] if x.teacher_id == tid), None)
+    ten = u.name if u else "giáo viên"
+
+    if ma == "n":
+        ghi(SessionLocal, tid, KIND_NHAN)
+        tg("answerCallbackQuery", callback_query_id=cq_id,
+           text=f"Đã ghi: nhắn {ten}. 4 ngày nữa mới hiện lại.")
+        send(chat_id, f"✓ Đã ghi <b>{ten}</b> — đang chờ trả lời.\n"
+                      f"<i>Họ hỏi cách làm thì bấm nút 💬 ở bản tin.</i>")
+        return
+
+    if ma == "h":
+        if not u:
+            tg("answerCallbackQuery", callback_query_id=cq_id, text="Không tìm thấy người này.")
+            return
+        khoa, bai = huong_dan_cho(u)
+        ghi(SessionLocal, tid, KIND_HUONG, note=khoa)
+        tg("answerCallbackQuery", callback_query_id=cq_id, text=f"Bài hướng dẫn cho {ten}")
+        send(chat_id, f"📖 <b>Gửi {ten}</b> — copy cả khối dưới:\n\n<code>{bai}</code>\n\n"
+                      f"<i>Họ làm được rồi thì nhắn /xong_gv {u.phone}</i>")
+        return
+
+    tg("answerCallbackQuery", callback_query_id=cq_id)
+
 def main() -> int:
     if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
         print("Chưa cấu hình TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID.")
@@ -323,11 +381,13 @@ def main() -> int:
     while True:
         try:
             r = tg("getUpdates", offset=offset, timeout=POLL_TIMEOUT,
-                   allowed_updates=json.dumps(["message"]))
+                   allowed_updates=json.dumps(["message", "callback_query"]))
             for upd in r.get("result", []):
                 offset = upd["update_id"] + 1
                 if "message" in upd:
                     handle(upd["message"])
+                elif "callback_query" in upd:
+                    handle_callback(upd["callback_query"])
         except KeyboardInterrupt:
             print("\nDừng.")
             return 0

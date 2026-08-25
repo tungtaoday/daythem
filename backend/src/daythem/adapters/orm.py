@@ -217,6 +217,27 @@ class ActivityEventORM(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
 
 
+class OutreachORM(Base):
+    """Nhật ký chăm sóc từng giáo viên: đã nhắn ai, ngày nào, kết quả ra sao.
+
+    Vì sao cần: bản tin sáng liệt kê ai đang kẹt, nhưng không có chỗ ghi "đã nhắn
+    rồi" nên hôm sau vẫn hiện đúng người đó — nhắn lại lần hai là phiền giáo viên
+    và làm bản tin mất tin cậy. Bảng này để bản tin biết mà bỏ qua.
+
+    kind:
+      nhan  — đã gửi tin, đang chờ trả lời
+      huong — họ hỏi cách làm, mình đã gửi hướng dẫn
+      xong  — họ đã làm được việc cần làm
+      bo    — không theo nữa (từ chối / sai đối tượng)
+    """
+    __tablename__ = "outreach"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    teacher_id: Mapped[str] = mapped_column(String(36), ForeignKey("teachers.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(12), index=True)
+    note: Mapped[Optional[str]] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now, index=True)
+
+
 class UiEventORM(Base):
     """Bước chân của GV trong app: mở màn nào, bấm gì, theo thứ tự thời gian.
 

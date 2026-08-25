@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from daythem.service.cham_soc import dang_im_lang
 from daythem.service.user_health import user_list
 
 _VN = timezone(timedelta(hours=7))
@@ -73,11 +74,20 @@ def _uu_tien(u) -> int:
     return 4
 
 
-def viec_hom_nay(session_factory, bai_hom_nay: str = "", link_group: str = "") -> str:
-    """Trả về bản tin HTML cho Telegram. Ngắn, và mỗi dòng đều là một việc."""
+def viec_hom_nay(session_factory, bai_hom_nay: str = "", link_group: str = "",
+                 kem_nut: bool = False):
+    """Bản tin HTML cho Telegram. Ngắn, và mỗi dòng đều là một việc.
+
+    kem_nut=True trả (text, reply_markup) để mỗi người có nút "Đã nhắn" /
+    "Họ hỏi cách làm" — bấm một cái thay vì gõ lệnh.
+    """
     hom_nay = datetime.now(_VN)
     d = user_list(session_factory)
-    can_goi = sorted([u for u in d["users"] if u.stuck], key=_uu_tien)
+    # Ai vừa nhắn trong 4 ngày, hoặc đã chốt, thì bỏ qua — nhắn lại là phiền họ
+    # và làm bản tin mất tin cậy nên rồi cũng bị bỏ luôn.
+    im = dang_im_lang(session_factory)
+    can_goi = sorted([u for u in d["users"] if u.stuck and u.teacher_id not in im],
+                     key=_uu_tien)
 
     L = [f"<b>🌿 {hom_nay:%d/%m}</b>", ""]
 
@@ -101,4 +111,16 @@ def viec_hom_nay(session_factory, bai_hom_nay: str = "", link_group: str = "") -
     ns = d["real_active"]
     L.append(f"<i>{d['real_total']} giáo viên thật · {ns} đang dùng đều</i>")
     L.append("<i>Số chi tiết: gieochu.vn/admin/users</i>")
-    return "\n".join(L)
+    text = '\n'.join(L)
+    if not kem_nut:
+        return text
+
+    # Mỗi người 2 nút. callback_data giới hạn 64 byte nên chỉ nhét mã ngắn + id.
+    rows = []
+    for u in can_goi[:5]:
+        ten = (u.name or "?")[:14]
+        rows.append([
+            {"text": f"✓ Đã nhắn {ten}", "callback_data": f"n:{u.teacher_id}"},
+            {"text": "💬 Họ hỏi cách", "callback_data": f"h:{u.teacher_id}"},
+        ])
+    return text, {"inline_keyboard": rows}

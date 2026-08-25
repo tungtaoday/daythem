@@ -30,8 +30,10 @@ def main() -> int:
         _send(digest["text"])
         print(f"Đã gửi bản CHỈ SỐ {digest['date']}.")
         return 0
-    text = viec_hom_nay(SessionLocal)
-    _send(text)
+    # Kèm nút bấm: "✓ Đã nhắn" / "💬 Họ hỏi cách" cho từng người. Bấm một cái
+    # thay vì gõ lệnh — việc này làm mỗi ngày trên điện thoại, gõ thì không bền.
+    text, markup = viec_hom_nay(SessionLocal, kem_nut=True)
+    _send(text, reply_markup=markup)
     print(f"Đã gửi bản VIỆC ({len(text.splitlines())} dòng).")
     return 0
 
