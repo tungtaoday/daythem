@@ -256,6 +256,12 @@ h1,h2,h3{letter-spacing:-1px}
 .appstore.sm .l1{font-size:7.5px}
 .appstore.sm .l2{font-size:11.5px}
 .appstore.ghost{border:1.5px solid rgba(255,255,255,.35)}
+/* Huy hiệu trong .freecard KHÔNG nằm trong khung flex (là con trực tiếp của thẻ,
+   xếp bằng text-align) nên khi xuống dòng không có khe hở dọc — dính sát nhau.
+   Điện thoại đặt cỡ chữ trợ năng lớn làm huy hiệu phình ra là lộ ngay lỗi này,
+   dù ở cỡ chữ mặc định chúng vẫn vừa một hàng. Lề nhỏ bảo hiểm cho MỌI cỡ chữ:
+   một hàng thì thêm 6px hai bên (vô hại), xuống dòng thì có 10px khe dọc. */
+.freecard .appstore{margin:5px 6px}
 /* Huy hiệu trong THẺ BẢNG GIÁ là con trực tiếp của .freecard (không nằm trong
    .badges như ở hero). Thẻ chỉ chừa 254px bề ngang mà hai huy hiệu cần 303px
    nên chúng rơi xuống hai dòng, xếp lệch nhau trông như lỗi.
