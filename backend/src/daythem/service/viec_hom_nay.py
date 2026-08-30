@@ -93,6 +93,9 @@ def viec_hom_nay(session_factory, bai_hom_nay: str = "", link_group: str = "",
 
     if can_goi:
         L.append(f"<b>☎️ GỌI HÔM NAY ({len(can_goi)})</b>")
+        # Bài học 29/08: nhắn Zalo từ tài khoản lạ rơi vào hộp "người lạ",
+        # không ai thấy — chủ app đã nhắn cả loạt mà im re vì đúng lỗi này.
+        L.append("<i>Zalo người lạ rơi vào hộp ẩn — GỌI trước, hoặc kết bạn kèm ghi chú rồi mới nhắn.</i>")
         for u in can_goi[:5]:
             L.append(f"• <b>{u.name}</b> · {u.phone} — {u.stuck.lower()}")
             L.append(f"<code>{_tin_nhan(u)}</code>")
