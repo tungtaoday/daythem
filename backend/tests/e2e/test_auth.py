@@ -74,3 +74,31 @@ def test_otp_account_cannot_be_claimed_by_password_login(client):
     client.post("/api/v1/auth/request-otp", json={"phone": "0901111111"})
     resp2 = client.post("/api/v1/auth/verify-otp", json={"phone": "0901111111", "code": "123456"})
     assert resp2.status_code == 200
+
+
+def test_source_ghi_lan_dau(auth_client, db):
+    """Câu 'biết GieoChữ từ đâu' trong onboarding ghi vào teachers.source."""
+    client, teacher = auth_client
+    resp = client.put("/api/v1/auth/profile", json={"source": "fb_ads"})
+    assert resp.status_code == 200
+    from daythem.adapters.orm import TeacherORM
+    t = db.get(TeacherORM, teacher["id"])
+    db.refresh(t)
+    assert t.source == "fb_ads"
+
+
+def test_source_khong_bi_de_lan_sau(auth_client, db):
+    """Attribution là dấu chân ĐẦU TIÊN — lần lưu hồ sơ sau không được đè.
+
+    Đè một lần là mất vĩnh viễn dữ liệu 'kênh nào ra khách', đúng lúc sắp chạy
+    quảng cáo cần tách ad với organic.
+    """
+    client, teacher = auth_client
+    client.put("/api/v1/auth/profile", json={"source": "fb_group"})
+    client.put("/api/v1/auth/profile", json={"source": "fb_ads"})       # thử đè
+    client.put("/api/v1/auth/profile", json={"name": "Cô Lan Mới"})     # lưu thường
+    from daythem.adapters.orm import TeacherORM
+    t = db.get(TeacherORM, teacher["id"])
+    db.refresh(t)
+    assert t.source == "fb_group", "nguồn đầu tiên phải được giữ nguyên"
+    assert t.name == "Cô Lan Mới", "các trường khác vẫn cập nhật bình thường"

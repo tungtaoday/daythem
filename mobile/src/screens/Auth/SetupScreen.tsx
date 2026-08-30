@@ -12,6 +12,14 @@ import { useClassesStore } from '../../store/classes';
 
 type SetupStep = 'profile' | 'class' | 'done';
 
+const SOURCES: { value: string; label: string }[] = [
+  { value: 'fb_group', label: 'Nhóm Facebook' },
+  { value: 'fb_ads', label: 'Quảng cáo' },
+  { value: 'gioi_thieu', label: 'Bạn bè giới thiệu' },
+  { value: 'store_search', label: 'Tự tìm trên store' },
+  { value: 'khac', label: 'Khác' },
+];
+
 const SUBJECTS = ['Toán', 'Văn', 'Anh', 'Lý', 'Hoá', 'Sinh', 'Sử', 'Địa', 'Khác'];
 const GRADES = Array.from({ length: 12 }, (_, i) => i + 1);
 const DAYS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
@@ -41,6 +49,10 @@ export function SetupScreen() {
   const [duration, setDuration] = useState(90);
   const [place, setPlace] = useState('Tại nhà');
 
+  // Câu hỏi nguồn — cách attribution duy nhất với tới lượt cài từ store/quảng cáo
+  // (link gắn mã không đo được store install). MỘT chạm, KHÔNG bắt buộc:
+  // mỗi trường bắt buộc ở cửa vào là một lớp phễu mới.
+  const [source, setSource] = useState<string | null>(null);
   const { updateProfile, isLoading } = useAuthStore();
   const { createClass } = useClassesStore();
 
@@ -73,6 +85,7 @@ export function SetupScreen() {
       }
     }
     await updateProfile(name.trim(), gender);
+    if (source) updateSource(source).catch(() => {});
   };
 
   return (
@@ -90,6 +103,7 @@ export function SetupScreen() {
           subjects={subjects} setSubjects={setSubjects}
           grades={grades} setGrades={setGrades}
           onNext={goToClass}
+          source={source} setSource={setSource}
         />
       )}
       {step === 'class' && (
@@ -108,6 +122,7 @@ export function SetupScreen() {
             // Bỏ qua tạo lớp: chỉ lưu hồ sơ rồi vào thẳng app (checklist Home sẽ dẫn tiếp).
             setClassName('');
             await updateProfile(name.trim(), gender);
+    if (source) updateSource(source).catch(() => {});
           }}
         />
       )}
@@ -125,7 +140,7 @@ export function SetupScreen() {
 }
 
 // ─── Profile Step ─────────────────────────────────────────────────────────────
-function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, grades, setGrades, onNext }: any) {
+function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, grades, setGrades, source, setSource, onNext }: any) {
   const insets = useSafeAreaInsets();
   const genderWord = gender === 'co' ? 'Cô' : 'Thầy';
   const placeholder = gender === 'co' ? 'Ví dụ: Lan, Hương, Mai...' : 'Ví dụ: Minh, Hùng, Tuấn...';
@@ -193,6 +208,20 @@ function ProfileStep({ gender, setGender, name, setName, subjects, setSubjects, 
               onPress={() => toggleSubject(sub)}
             >
               <Text style={[s.chipText, subjects.includes(sub) && s.chipTextActive]}>{sub}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={[s.sectionLabel, { marginTop: 20 }]}>{genderWord.toUpperCase()} BIẾT GIEOCHỮ TỪ ĐÂU?</Text>
+        <Text style={s.sectionHint}>Không bắt buộc — giúp tụi em biết nên tập trung ở đâu</Text>
+        <View style={s.chipWrap}>
+          {SOURCES.map(o => (
+            <TouchableOpacity
+              key={o.value}
+              style={[s.chip, source === o.value && s.chipActive]}
+              onPress={() => setSource(source === o.value ? null : o.value)}
+            >
+              <Text style={[s.chipText, source === o.value && s.chipTextActive]}>{o.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -488,4 +517,5 @@ const s = StyleSheet.create({
   summaryEmoji: { fontSize: 20, lineHeight: 24 },
   summaryName: { fontSize: 15, fontWeight: '600', color: colors.textPrimary, marginBottom: 2 },
   summarySub: { fontSize: 12, color: colors.textSecondary },
-});
+});import { updateSource } from '../../api/auth';
+

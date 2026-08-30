@@ -84,6 +84,7 @@ class UpdateProfileCommand(BaseModel):
     id_number: Optional[str] = None
     date_of_birth: Optional[str] = None
     address: Optional[str] = None
+    source: Optional[str] = None
 
 class GetTaxSummaryCommand(BaseModel):
     teacher_id: str
@@ -255,6 +256,11 @@ def handle_update_profile(cmd: UpdateProfileCommand, uow: SqlAlchemyUnitOfWork) 
         if cmd.id_number is not None: teacher.id_number = cmd.id_number
         if cmd.date_of_birth is not None: teacher.date_of_birth = cmd.date_of_birth
         if cmd.address is not None: teacher.address = cmd.address
+        # Attribution là DẤU CHÂN ĐẦU TIÊN: chỉ ghi khi đang trống. Các lần lưu
+        # hồ sơ sau (đổi tên, bật thông báo...) không được đè mất nguồn gốc —
+        # đè một lần là mất vĩnh viễn dữ liệu 'kênh nào ra khách'.
+        if cmd.source and not teacher.source:
+            teacher.source = cmd.source[:40]
         uow.commit()
         uow._session.refresh(teacher)
         return teacher

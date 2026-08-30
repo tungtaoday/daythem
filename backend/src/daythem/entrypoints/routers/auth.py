@@ -67,6 +67,7 @@ class UpdateProfileBody(BaseModel):
     id_number: str | None = None
     date_of_birth: str | None = None
     address: str | None = None
+    source: str | None = None    # nguồn biết tới app — chỉ ghi lần đầu (attribution)
 
 
 def teacher_out(t: TeacherORM) -> dict:
@@ -263,6 +264,7 @@ def update_profile(
             id_number=body.id_number,
             date_of_birth=body.date_of_birth,
             address=body.address,
+            source=body.source,
         ),
         uow,
     )

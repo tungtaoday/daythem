@@ -21,6 +21,10 @@ export type TaxProfileFields = {
   address?: string;
 };
 
+// Ghi nguồn biết tới app (attribution) — backend chỉ nhận lần đầu, gọi lại vô hại.
+export const updateSource = (source: string) =>
+  api.put('/auth/profile', { source }).then(r => r.data);
+
 export const updateTaxProfile = (fields: TaxProfileFields) =>
   api.put('/auth/profile', fields).then(r => r.data);
 
