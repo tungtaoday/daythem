@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GieoChữ — Bàn điều khiển</title>
+<style>
+ /* Cùng bảng màu với users.html/ops.html — không sinh hệ style thứ ba (ghi chú Stage 2) */
+ :root{--bg:#0c0c0d;--card:#141416;--card2:#1c1c1f;--line:#2e2e33;--t0:#fff;--t1:#d4d4d8;--t2:#a1a1aa;
+       --green:#22c4a0;--amber:#e8a020;--red:#ef4444;--blue:#3b82f6;--violet:#8b5cf6}
+ body{margin:0;background:var(--bg);color:var(--t0);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.55}
+ .wrap{max-width:860px;margin:0 auto;padding:20px 14px 60px}
+ h1{font-size:21px;margin:0 0 2px} h2{font-size:15px;margin:0 0 10px}
+ .sub{color:var(--t2);font-size:12.5px;margin-bottom:14px}
+ .navchips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding:10px 0;z-index:9}
+ .navchips a{font-size:12.5px;color:var(--t1);border:1px solid var(--line);border-radius:999px;padding:5px 12px;text-decoration:none}
+ .navchips a:hover{border-color:var(--green);color:var(--green)}
+ section{margin-bottom:26px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:10px}
+ .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+ .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+ .kpi b{font-size:22px} .kpi span{display:block;color:var(--t2);font-size:11.5px;margin-top:2px}
+ .ok{color:var(--green)} .warn{color:var(--amber)} .bad{color:var(--red)}
+ .tin{background:var(--card2);border-radius:8px;padding:9px 11px;font-size:13px;color:var(--t1);margin:8px 0;white-space:pre-wrap}
+ .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+ .btn{font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--card2);color:var(--t1);
+      border-radius:8px;padding:6px 11px;cursor:pointer}
+ .btn:hover{border-color:var(--green)} .btn.green{background:rgba(34,196,160,.14);color:var(--green);border-color:#1e4a40}
+ .btn.red{color:var(--red)} .btn:disabled{opacity:.4;cursor:default}
+ table{width:100%;border-collapse:collapse;font-size:13px}
+ th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left} th{color:var(--t2);font-weight:500;font-size:11.5px}
+ td.num,th.num{text-align:right}
+ .meta{color:var(--t2);font-size:12px}
+ .khuerr{color:var(--amber);font-size:12.5px}
+ .empty{color:var(--t2);font-size:13px;padding:8px 0}
+ .bar{display:flex;gap:3px;align-items:flex-end;height:34px;margin-top:6px}
+ .bar i{flex:1;background:var(--green);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+ .stp{font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+ .stp.act{background:rgba(34,196,160,.14);border-color:var(--green);color:var(--green)}
+ .arw{color:var(--t2);font-size:11px}
+ .sess{margin:8px 0;padding:8px 10px;background:var(--card2);border-radius:8px}
+ #login{max-width:320px;margin:60px auto;text-align:center}
+ input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--t0);font-size:15px;box-sizing:border-box}
+ #login button{margin-top:10px;width:100%;padding:11px;border-radius:9px;border:0;background:var(--green);color:#04231c;font-weight:700;font-size:14px;cursor:pointer}
+ .err{color:var(--red);font-size:12.5px;margin-top:8px}
+ .lnk{background:transparent;color:var(--t2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer}
+</style></head><body>
+
+<div id="login">
+ <h1>Bàn điều khiển</h1>
+ <div class="sub">Nhập mật khẩu quản trị</div>
+ <input id="pw" type="password" placeholder="Mật khẩu" onkeydown="if(event.key==='Enter')doLogin()">
+ <button onclick="doLogin()">Vào</button>
+ <div class="err" id="lerr"></div>
+</div>
+
+<div class="wrap" id="app" style="display:none">
+ <h1>🌿 Bàn điều khiển GieoChữ</h1>
+ <div class="sub">Một cửa: tổng quan · CRM · hành trình · marketing · chiến lược</div>
+ <div class="navchips">
+  <a href="#kOverview">Tổng quan</a><a href="#kCrm">CRM</a><a href="#kJourney">Hành trình</a>
+  <a href="#kMarketing">Marketing</a><a href="#kStrategy">Chiến lược</a>
+  <a href="/admin/users/page" style="margin-left:auto">Trang người dùng cũ ↗</a>
+ </div>
+
+ <section id="kOverview"><h2>📌 Tổng quan</h2><div id="cOverview" class="empty">Đang tải…</div></section>
+ <section id="kCrm"><h2>☎️ CRM — hàng đợi chăm sóc</h2><div id="cCrm" class="empty">Đang tải…</div></section>
+ <section id="kJourney"><h2>👣 Hành trình — ngõ cụt toàn hệ</h2><div id="cJourney" class="empty">Đang tải…</div></section>
+ <section id="kMarketing"><h2>📣 Marketing</h2><div id="cMarketing" class="empty">Đang tải…</div></section>
+ <section id="kStrategy"><h2>🧭 Chiến lược &amp; Lắng nghe</h2><div id="cStrategy" class="empty">Đang tải…</div></section>
+
+ <button class="lnk" onclick="loadAll()">Làm mới tất cả</button>
+ <button class="lnk" onclick="logout()">Đăng xuất</button>
+</div>
+
+<script>
+const KEY='gc_admin_tok';                      // cùng khoá với users.html — đăng nhập 1 lần
+const tok=()=>localStorage.getItem(KEY);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function show(a){document.getElementById('app').style.display=a?'block':'none';
+                 document.getElementById('login').style.display=a?'none':'block';}
+async function doLogin(){
+ const r=await fetch('/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},
+                                     body:JSON.stringify({password:document.getElementById('pw').value})});
+ if(!r.ok){document.getElementById('lerr').textContent='Sai mật khẩu';return;}
+ localStorage.setItem(KEY,(await r.json()).token);show(true);loadAll();
+}
+function logout(){localStorage.removeItem(KEY);show(false);}
+
+/* Mỗi khu tải ĐỘC LẬP (AC6): khu lỗi hiện lỗi tại chỗ + nút thử lại, khu khác sống. */
+async function khu(id, fn){
+ const el=document.getElementById(id);
+ try{ await fn(el); }
+ catch(e){
+   if(String(e).includes('401')||String(e).includes('403')){logout();return;}
+   el.innerHTML='<div class="khuerr">⚠ Khu này chưa tải được ('+esc(e.message||e)+') '
+     +'<button class="btn" onclick="loadAll()">Thử lại</button></div>';
+ }
+}
+async function api(path, opts){
+ const r=await fetch(path, Object.assign({headers:{'Authorization':'Bearer '+tok(),
+                                                   'Content-Type':'application/json'}}, opts||{}));
+ if(r.status===401||r.status===403) throw new Error('401');
+ if(!r.ok) throw new Error('HTTP '+r.status);
+ return r.json();
+}
+
+// ── KHU 1: Tổng quan ──
+async function loadOverview(el){
+ const d=await api('/admin/suite/overview');
+ const max=Math.max(1,...d.dang_ky_7_ngay);
+ const bars=d.dang_ky_7_ngay.map(n=>'<i style="height:'+Math.round(100*n/max)+'%" title="'+n+'"></i>').join('');
+ const nguon=Object.entries(d.nguon_hom_nay||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')||'—';
+ el.innerHTML=
+  (d.yen_ang?'<div class="card ok">🌿 Hôm nay yên ắng — không ai kẹt, chưa có đăng ký mới. Xem khu Chiến lược nếu muốn nhặt việc.</div>':'')
+  +'<div class="kpis">'
+  +'<div class="kpi"><b>'+d.gv_that+'</b><span>giáo viên thật</span></div>'
+  +'<div class="kpi"><b class="ok">'+d.dang_dung_deu+'</b><span>đang dùng đều (7 ngày)</span></div>'
+  +'<div class="kpi"><b class="'+(d.cho_cham_soc?'warn':'ok')+'">'+d.cho_cham_soc+'</b><span>chờ chăm sóc <a href="#kCrm" style="color:inherit">↓</a></span></div>'
+  +'<div class="kpi"><b>'+d.viec_ke_tiep+'</b><span>việc kế tiếp <a href="#kStrategy" style="color:inherit">↓</a></span></div>'
+  +'<div class="kpi"><div class="bar">'+bars+'</div><span>đăng ký 7 ngày · nguồn hôm nay: '+nguon+'</span></div>'
+  +'</div>'
+  +(d.loi&&d.loi.length?'<div class="khuerr">⚠ Nguồn lỗi bộ phận: '+esc(d.loi.join(', '))+' — số liên quan có thể thiếu</div>':'');
+}
+
+// ── KHU 2: CRM ──
+const NHAN_ACT={nhan:'✓ Đã nhắn', huong:'📖 Đã gửi hướng dẫn', xong:'🌿 Chốt xong', bo:'✕ Bỏ theo dõi'};
+async function loadCrm(el){
+ const d=await api('/admin/suite/crm');
+ if(!d.items.length){el.innerHTML='<div class="empty">Không ai đang chờ — hàng đợi sạch 🌿</div>';return;}
+ el.innerHTML=d.items.map(u=>{
+  const cs=u.cham_soc_gan_nhat?'<span class="meta"> · lần cuối: '+esc(u.cham_soc_gan_nhat.kind)+' '+esc(u.cham_soc_gan_nhat.ngay)+'</span>':'';
+  const acts=Object.entries(NHAN_ACT).map(([k,nhan])=>
+    '<button class="btn'+(k==='nhan'?' green':k==='bo'?' red':'')+'" onclick="act(this,\''+esc(u.teacher_id)+'\',\''+k+'\')">'+nhan+'</button>').join('');
+  return '<div class="card"><b>'+esc(u.ten)+'</b> · '+esc(u.phone)
+   +' — <span class="warn">'+esc(u.chan_doan)+'</span>'+cs
+   +'<div class="tin" id="tin_'+esc(u.teacher_id)+'">'+esc(u.tin_soan_san)+'</div>'
+   +'<div class="row">'
+   +'<button class="btn" onclick="copyTin(this,\''+esc(u.teacher_id)+'\')">📋 Copy tin</button>'
+   +acts
+   +'<button class="btn" onclick="journeyOf(this,\''+esc(u.teacher_id)+'\')">👣 Bước chân</button>'
+   +'</div><div id="j_'+esc(u.teacher_id)+'"></div></div>';
+ }).join('');
+}
+function copyTin(btn,tid){
+ navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('tin_'+tid).textContent);
+ btn.textContent='✓ đã copy'; setTimeout(()=>btn.textContent='📋 Copy tin',1600);
+}
+async function act(btn,tid,kind){
+ btn.disabled=true;
+ try{ await api('/admin/suite/crm/act',{method:'POST',body:JSON.stringify({teacher_id:tid,kind:kind})}); }
+ catch(e){ btn.disabled=false; btn.textContent='⚠ lỗi, bấm lại'; return; }  // EF2: không giả vờ thành công
+ khu('cCrm',loadCrm); khu('cOverview',loadOverview);
+}
+async function journeyOf(btn,tid){
+ const box=document.getElementById('j_'+tid);
+ if(box.innerHTML){box.innerHTML='';return;}
+ box.innerHTML='<div class="meta">đang tải…</div>';
+ try{
+  const d=await api('/admin/journey?teacher_id='+encodeURIComponent(tid));
+  const ss=d.sessions||[];
+  box.innerHTML=ss.length?ss.map(s=>{
+    const path=s.steps.map(t=>'<span class="stp'+(t.includes(' · ')?' act':'')+'">'+esc(t)+'</span>').join('<span class="arw">→</span>');
+    return '<div class="sess"><div class="meta">'+new Date(s.started).toLocaleString('vi-VN')+' · '+s.seconds+'s'
+      +(s.bounced?' · <span class="warn">mở rồi thoát, không bấm gì</span>':'')+'</div>'+path+'</div>';
+  }).join(''):'<div class="meta">Chưa có bước chân — người này chưa lên bản app 1.0.1. Hành vi gần nhất xem ở chẩn đoán phía trên.</div>';
+ }catch(e){ box.innerHTML='<div class="khuerr">⚠ '+esc(e.message)+'</div>'; }
+}
+
+// ── KHU 3: Hành trình toàn hệ ──
+async function loadJourney(el){
+ const d=await api('/admin/journey');
+ const rows=d.drop_off||[];
+ if(!rows.length){el.innerHTML='<div class="empty">Chưa có dữ liệu bước chân — cần người dùng lên bản app 1.0.1 (OTA đã phát 30/08).</div>';return;}
+ el.innerHTML='<div class="card"><table><tr><th>Màn hình</th><th class="num">phiên kết thúc tại đây</th><th class="num">lượt mở</th><th class="num">tỉ lệ thoát</th></tr>'
+  +rows.slice(0,8).map(x=>'<tr><td><b>'+esc(x.screen)+'</b></td><td class="num">'+x.ends+'</td><td class="num">'+x.views+'</td><td class="num '+(x.end_rate>=50?'bad':'')+'">'+x.end_rate+'%</td></tr>').join('')
+  +'</table></div>';
+}
+
+// ── KHU 4: Marketing ──
+async function loadMarketing(el){
+ const [attr,plog]=await Promise.all([api('/admin/suite/attribution'),api('/admin/postlog')]);
+ let html='';
+ if(attr.rows.length){
+  html+='<div class="card"><b>Phễu theo nguồn tự khai</b><table><tr><th>Nguồn</th><th class="num">đăng ký</th><th class="num">tạo lớp</th><th class="num">kích hoạt</th></tr>'
+   +attr.rows.map(r=>'<tr><td>'+esc(r.nguon)+'</td><td class="num">'+r.dang_ky+'</td><td class="num">'+r.tao_lop+'</td><td class="num '+(r.kich_hoat?'ok':'')+'">'+r.kich_hoat+'</td></tr>').join('')
+   +'</table><div class="meta" style="margin-top:6px">Chưa khai nguồn: '+attr.chua_khai_nguon+' người (đăng ký trước 1.0.1)</div></div>';
+ }else{
+  html+='<div class="card empty">Chưa ai khai nguồn — người dùng mới từ bản 1.0.1 trở đi mới được hỏi. Chưa khai: '+attr.chua_khai_nguon+' người.</div>';
+ }
+ const items=plog.items||[];
+ html+='<div class="card"><b>Sổ bài đăng</b> <span class="meta">tuần này: '+((plog.week||{}).posts||0)+' bài</span>';
+ html+=items.length?('<table><tr><th>Ngày</th><th>Kênh</th><th>Trụ</th><th class="num">reach</th></tr>'
+   +items.slice(0,8).map(r=>'<tr><td>'+esc(r.post_date)+'</td><td>'+esc(r.channel)+'</td><td>'+esc(r.pillar||'—')+'</td><td class="num">'+(r.reach||0)+'</td></tr>').join('')+'</table>')
+   :'<div class="empty">Chưa có bài nào — bấm copy bài ở trang /ngay là tự ghi vào đây.</div>';
+ html+='</div>';
+ el.innerHTML=html;
+}
+
+// ── KHU 5: Chiến lược & Lắng nghe ──
+async function loadStrategy(el){
+ const d=await api('/admin/suite/strategy');
+ let html='<div class="card"><b>Việc kế tiếp</b>';
+ html+=d.viec.length?d.viec.map(v=>
+   '<div style="margin:10px 0;padding-top:8px;border-top:1px solid var(--line)"><b>'+esc(v.title)+'</b>'
+   +(v.why?'<div class="meta">'+esc(v.why)+'</div>':'')
+   +'<div class="row" style="margin-top:6px">'
+   +'<button class="btn green" onclick="markViec(this,\''+esc(v.key)+'\',\'done\')">✓ Xong</button>'
+   +'<button class="btn" onclick="markViec(this,\''+esc(v.key)+'\',\'doing\')">Đang làm</button>'
+   +'<button class="btn red" onclick="markViec(this,\''+esc(v.key)+'\',\'skip\')">Bỏ</button>'
+   +'</div></div>').join(''):'<div class="empty">Hết việc trong kế hoạch 🌿</div>';
+ html+='</div>';
+ if(d.intel&&d.intel.ok){
+  const chuoi=JSON.stringify(d.intel).slice(0,600);
+  html+='<div class="card"><b>Kho lắng nghe</b><div class="tin">'+esc(chuoi)+'…</div>'
+   +'<div class="meta">Chi tiết đầy đủ: marketing.doitay.vn (tab Intelligence)</div></div>';
+ }else{
+  html+='<div class="card"><b>Kho lắng nghe</b><div class="khuerr">⚠ Chưa nối được hệ marketing'
+   +(d.intel&&d.intel.error?' — '+esc(d.intel.error):'')+'. Việc GTM phía trên không bị ảnh hưởng.</div></div>';
+ }
+ el.innerHTML=html;
+}
+async function markViec(btn,key,status){
+ btn.disabled=true;
+ try{ await api('/admin/suite/strategy/mark',{method:'POST',body:JSON.stringify({key:key,status:status})}); }
+ catch(e){ btn.disabled=false; btn.textContent='⚠ lỗi, bấm lại'; return; }
+ khu('cStrategy',loadStrategy); khu('cOverview',loadOverview);
+}
+
+function loadAll(){
+ khu('cOverview',loadOverview); khu('cCrm',loadCrm); khu('cJourney',loadJourney);
+ khu('cMarketing',loadMarketing); khu('cStrategy',loadStrategy);
+}
+if(tok()){show(true);loadAll();}else{show(false);}
+</script>
+</body></html>

@@ -104,6 +104,12 @@ def test_khong_kem_nut_thi_van_tra_ve_chuoi(db):
 def test_ghi_lich_su_de_biet_da_lam_gi(db):
     t = _gv(db)
     ghi(_sf(db), t.id, KIND_NHAN)
+    # Giãn mốc thời gian tường minh: hai lần ghi liên tiếp có thể rơi cùng một
+    # tick đồng hồ → sắp xếp mới-trước thành ngẫu nhiên (đã flaky thật 01/09).
+    from daythem.adapters.orm import OutreachORM
+    o = db.query(OutreachORM).one()
+    o.created_at = datetime.utcnow() - timedelta(minutes=1)
+    db.commit()
     ghi(_sf(db), t.id, "huong", note="diem_danh")
     ls = lich_su(_sf(db), t.id)
     assert [x.kind for x in ls] == ["huong", "nhan"]
